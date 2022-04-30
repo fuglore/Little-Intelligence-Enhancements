@@ -1,0 +1,46 @@
+{
+	"menu_id" : "lies_options",
+	"parent_menu_id" : "blt_options",
+	"title" : "menu_lies_title",
+	"back_callback" : "callback_lies_close",
+	"items" : [
+		{
+			"type" : "toggle",
+			"id" : "lies_lua_cover",
+			"title" : "menu_lies_lua_cover_title",
+			"description" : "menu_lies_lua_cover_desc",
+			"callback" : "callback_lies_lua_cover",
+			"value" : "lua_cover"
+		},
+		{
+			"type" : "toggle",
+			"id" : "lies_fixed_spawngroups",
+			"title" : "menu_lies_fixed_spawngroups_title",
+			"description" : "menu_lies_fixed_spawngroups_desc",
+			"callback" : "callback_lies_fixed_spawngroups",
+			"value" : "fixed_spawngroups"
+		},
+		{
+			"type" : "toggle",
+			"id" : "lies_copsretire",
+			"title" : "menu_lies_copsretire_title",
+			"description" : "menu_lies_copsretire_desc",
+			"callback" : "callback_lies_copsretire",
+			"value" : "copsretire"
+		},
+		{
+            "type" : "multiple_choice",
+            "id" : "lies_enemy_aggro_level",
+            "title" : "menu_lies_enemy_aggro_level_title",
+            "description" : "menu_lies_enemy_aggro_level_desc",
+            "callback" : "callback_lies_enemy_aggro_level",
+            "items" : [
+                "menu_lies_enemy_aggro_low",
+                "menu_lies_enemy_aggro_normal",
+                "menu_lies_enemy_aggro_high",
+				"menu_lies_enemy_aggro_poggers"
+            ],
+            "value" : "enemy_aggro_level"
+        }
+	]
+}

@@ -1,0 +1,21 @@
+{
+	"menu_lies_title" : "Little Intelligence EnhancementS Options",
+	
+	"menu_lies_lua_cover_title" : "Take Cover Through LUA",
+	"menu_lies_lua_cover_desc" : "Improves how cops take cover from players by using custom cover-finding functions instead of the original one. Not accurate to Vanilla behavior. NOTE: Requires a heist restart to take effect.",
+	
+	"menu_lies_fixed_spawngroups_title" : "Fixed Enemy Spawns",
+	"menu_lies_fixed_spawngroups_desc" : "Fixes shotgunners and certain types of enemy groups not appearing.",
+	
+	"menu_lies_copsretire_title" : "Allow Assault Groups To Retire",
+	"menu_lies_copsretire_desc" : "Allows enemy groups spawned during assault to leave the assault area when the assault is ending. Not accurate to Vanilla behavior.",
+	
+	"menu_lies_enemy_aggro_level_title" : "Aggression Level",
+	"menu_lies_enemy_aggro_level_desc" : "Adjust how aggressive you want enemies to be.",
+	"menu_lies_enemy_aggro_low" : "LOW",
+	"menu_lies_enemy_aggro_normal" : "NORMAL",
+	"menu_lies_enemy_aggro_high" : "HIGH",
+	"menu_lies_enemy_aggro_poggers" : "MOSH PIT",
+	
+	
+}

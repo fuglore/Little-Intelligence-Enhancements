@@ -124,18 +124,19 @@ function CopLogicAttack._upd_aim(data, my_data)
 				end
 			end
 		end
+		
+		local firing_range = 500
+
+		if data.internal_data.weapon_range then
+			firing_range = running and data.internal_data.weapon_range.close or data.internal_data.weapon_range.far
+		else
+			debug_pause_unit(data.unit, "[CopLogicAttack]: Unit doesn't have data.internal_data.weapon_range")
+		end
 	
 		if focus_enemy.verified or focus_enemy.nearly_visible then
 			if aim == nil and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 				if AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
 					local running = my_data.advancing and not my_data.advancing:stopping() and my_data.advancing:haste() == "run"
-					local firing_range = 500
-
-					if data.internal_data.weapon_range then
-						firing_range = running and data.internal_data.weapon_range.close or data.internal_data.weapon_range.far
-					else
-						debug_pause_unit(data.unit, "[CopLogicAttack]: Unit doesn't have data.internal_data.weapon_range")
-					end
 					
 					if AIAttentionObject.REACT_SHOOT == focus_enemy.reaction then
 						shoot = true

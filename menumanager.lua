@@ -5,6 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
+		version = "V2.4",
 		settings = {
 			lua_cover = false,
 			enemy_aggro_level = 2,
@@ -12,7 +13,8 @@ if RequiredScript == "lib/managers/menumanager" then
 			copsretire = nil
 		}
 	}
-	
+	LIES.update_url = "ttps://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
+
 	function LIES:UseLuaCover()
 		return self.settings.lua_cover
 	end
@@ -70,13 +72,34 @@ if RequiredScript == "lib/managers/menumanager" then
 		return managers.navigation:_find_cover_in_seg_through_lua(copied_threat_pos, near_pos, nav_seg_id)
 	end
 	
+	function LIES:check_for_updates()
+		dohttpreq(self.update_url, function(json_data, http_id)
+			self:set_update_data(json_data)
+		end)
+	end
+	
+	function LIES:set_update_data(json_data)
+		if json_data:is_nil_or_empty() then
+			return
+		end
+		
+		local received_data = json.decode(json_data)
+		
+		for _, data in pairs(received_data) do
+			if data.version then
+				LIES.received_version = data.version
+				log("LIES: Received update data.")
+				break
+			end
+		end
+	end
+	
 	Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_LIES", function( loc )
 		loc:load_localization_file( LIES.default_loc_path)
 	end)
 	
 	--add the menu callbacks for when menu options are changed
-	Hooks:Add( "MenuManagerInitialize", "MenuManagerInitialize_LIES", function(menu_manager)
-		
+	Hooks:Add( "MenuManagerInitialize", "MenuManagerInitialize_LIES", function(menu_manager)	
 		MenuCallbackHandler.callback_lies_lua_cover = function(self, item)
 			local on = item:value() == "on"
 			LIES.settings.lua_cover = on
@@ -114,6 +137,34 @@ if RequiredScript == "lib/managers/menumanager" then
 
 		--create menus
 		MenuHelper:LoadFromJsonFile(LIES.options_path, LIES, LIES.settings)
+		
+		if not LIES.checked_for_updates then
+			log("LIES: Checking for update data.")
+			LIES:check_for_updates()
+			LIES.checked_for_updates = true
+		end
+		
 	end)
 
+elseif RequiredScript == "lib/managers/menu/mainmenugui" then
+	if LIES then
+		local current_ver = LIES.version
+		local new_ver_string = LIES.received_version
+		
+		if not LIES.has_shown_update_warning and new_ver_string and current_ver ~= new_ver_string then
+			title = "Little Intelligence EnhancementS has a new update."
+			desc = "Visit the Modworkshop page to acquire it."
+			QuickMenu:new(
+				title,
+				desc,
+				{
+					{
+						title = "OK",
+						is_cancel_button = true
+					}
+				}
+			,true)
+			LIES.has_shown_update_warning = true
+		end
+	end
 end

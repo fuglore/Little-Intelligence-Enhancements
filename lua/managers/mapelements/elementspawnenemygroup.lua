@@ -1,8 +1,12 @@
-if not LIES.settings.fixed_spawngroups then
-	return
-end
-
 Hooks:PostHook(ElementSpawnEnemyGroup, "_finalize_values", "lies_finalize_values", function(self)
+	if type(LIES.settings.fixed_spawngroups) ~= "number" then
+		return
+	end
+
+	if LIES.settings.fixed_spawngroups == true or LIES.settings.fixed_spawngroups < 2 then
+		return
+	end
+
 	if not tweak_data.group_ai.fixed then
 		log("LIES: Attempting fixing spawngroups.")
 		tweak_data.group_ai:_fix_enemy_spawn_groups()

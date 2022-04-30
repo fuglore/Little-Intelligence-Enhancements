@@ -45,6 +45,10 @@
 			"script_path": "lua/copextensions/copbrain.lua"
 		},
 		{
+			"hook_id": "lib/units/enemies/cop/logics/coplogicbase",
+			"script_path": "lua/coplogics/coplogicbase.lua"
+		},
+		{
 			"hook_id": "lib/units/enemies/cop/logics/coplogictravel",
 			"script_path": "lua/coplogics/coplogictravel.lua"
 		},
@@ -57,8 +61,16 @@
 			"script_path": "lua/coplogics/coplogicattack.lua"
 		},
 		{
+			"hook_id": "lib/units/enemies/tank/logics/tankcoplogicattack",
+			"script_path": "lua/coplogics/specials/tankcoplogicattack.lua"
+		},
+		{
 			"hook_id": "lib/units/enemies/taser/logics/taserlogicattack",
-			"script_path": "lua/coplogics/taserlogicattack.lua"
+			"script_path": "lua/coplogics/specials/taserlogicattack.lua"
+		},
+		{
+			"hook_id": "lib/units/enemies/spooc/logics/spooclogicattack",
+			"script_path": "lua/coplogics/specials/spooclogicattack.lua"
 		},
 		{
 			"hook_id": "lib/units/player_team/logics/teamailogicidle",

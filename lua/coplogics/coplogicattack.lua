@@ -133,7 +133,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 			debug_pause_unit(data.unit, "[CopLogicAttack]: Unit doesn't have data.internal_data.weapon_range")
 		end
 	
-		if focus_enemy.verified or focus_enemy.nearly_visible then
+		if focus_enemy.verified then
 			if aim == nil and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 				if AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
 					local running = my_data.advancing and not my_data.advancing:stopping() and my_data.advancing:haste() == "run"
@@ -168,16 +168,16 @@ function CopLogicAttack._upd_aim(data, my_data)
 		elseif AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 			local time_since_verification = focus_enemy.verified_t and data.t - focus_enemy.verified_t
 				
-			if time_since_verification then
+			if time_since_verification and aim == nil then
 				if running then
 					if time_since_verification and time_since_verification < math.lerp(5, 1, math.max(0, focus_enemy.verified_dis - 500) / 600) then
 						aim = true
 					end
-				else
+				elseif time_since_verification < 5 then
 					aim = true
 				end
 
-				if aim and AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
+				if aim and time_since_verification < 3 and AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
 					if AIAttentionObject.REACT_SHOOT == focus_enemy.reaction then
 						shoot = true
 					end
@@ -236,6 +236,8 @@ function CopLogicAttack._upd_aim(data, my_data)
 	if not aim and data.char_tweak.always_face_enemy and focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
 		aim = true
 	end
+	
+	aim = shoot or aim
 
 	if aim or shoot then
 		if expected_pos then
@@ -244,7 +246,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 
 				my_data.attention_unit = mvector3.copy(expected_pos)
 			end
-		elseif focus_enemy.verified or focus_enemy.nearly_visible then
+		elseif focus_enemy.verified then
 			if my_data.attention_unit ~= focus_enemy.u_key then
 				CopLogicBase._set_attention(data, focus_enemy)
 

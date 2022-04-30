@@ -106,7 +106,7 @@ function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_rec
 	return from_pos
 end
 
-function CopLogicTravel._check_path_is_straight_line(pos_from, to_pos, u_data)
+function CopLogicTravel._check_path_is_straight_line(pos_from, to_pos, u_data) --i really, really wish i didn't have to do this. fml.
 	if math.abs(pos_from.z - to_pos.z) < 40 then
 		local ray_params = {
 			allow_entry = false,
@@ -115,18 +115,18 @@ function CopLogicTravel._check_path_is_straight_line(pos_from, to_pos, u_data)
 		}
 
 		if not managers.navigation:raycast(ray_params) then
-			local slotmask = managers.slot:get_mask("AI_graph_obstacle_check")
-			local ray_from = pos_from:with_z(pos_from.z + 40)
-			local ray_to = to_pos:with_z(to_pos.z + 40)
+			local slotmask = managers.slot:get_mask("player_ground_check")
+			local ray_from = pos_from:with_z(pos_from.z + 60)
+			local ray_to = to_pos:with_z(to_pos.z + 60)
 			
 			if u_data then
-				if not u_data.unit:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "sphere_cast_radius", 30, "ray_type", "body mover", "report") then					
+				if not u_data.unit:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "sphere_cast_radius", 50, "ray_type", "body mover", "report") then					
 					return true
 				else
 					return
 				end
 			else
-				if not World:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "sphere_cast_radius", 30, "ray_type", "body mover", "report") then
+				if not World:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "sphere_cast_radius", 50, "ray_type", "body mover", "report") then
 					return true
 				else
 					return
@@ -167,12 +167,18 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 			local his_objective = u_data.unit:brain():objective()
 
 			if his_objective and his_objective.grp_objective == my_objective.grp_objective and not his_objective.in_place then
-				local his_dis = mvector3.distance_sq(his_objective.area.pos, u_data.m_pos)
-
-				if my_dis < his_dis then
+				if his_objective.is_default then
 					can_continue = nil
 					
 					break
+				else
+					local his_dis = mvector3.distance_sq(his_objective.area.pos, u_data.m_pos)
+
+					if my_dis < his_dis then
+						can_continue = nil
+						
+						break
+					end
 				end
 			end
 		end

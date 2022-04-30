@@ -5,12 +5,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V2.5",
+		version = "V2contact",
 		settings = {
 			lua_cover = false,
 			enemy_aggro_level = 2,
-			fixed_spawngroups = true,
-			copsretire = nil
+			fixed_spawngroups = 1,
+			copsretire = false,
+			interruptoncontact = false
 		}
 	}
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
@@ -18,7 +19,7 @@ if RequiredScript == "lib/managers/menumanager" then
 	function LIES:UseLuaCover()
 		return self.settings.lua_cover
 	end
-	
+
 	function LIES:Load()
 		local file = io.open(LIES.save_path, "r")
 
@@ -72,6 +73,76 @@ if RequiredScript == "lib/managers/menumanager" then
 		return managers.navigation:_find_cover_in_seg_through_lua(copied_threat_pos, near_pos, nav_seg_id)
 	end
 	
+	local function spawn_group_id(spawn_group)
+		return spawn_group.mission_element:id()
+	end
+	
+	function LIES:_choose_best_groups(best_groups, group, group_types, allowed_groups)
+		local total_weight = 0
+
+		local previous_chosen_types = managers.groupai:state()._previous_chosen_types
+		
+		for _, group_type in ipairs(group_types) do
+			if tweak_data.group_ai.enemy_spawn_groups[group_type] then
+				local group_tweak = tweak_data.group_ai.enemy_spawn_groups[group_type]
+				local special_type, spawn_limit, current_count = nil
+				local cat_weights = allowed_groups[group_type]
+				
+				if previous_chosen_types[group_type] then
+					cat_weights = false
+				end
+
+				if cat_weights then				
+					local cat_weight = cat_weights[1]
+					
+					table.insert(best_groups, {
+						group = group,
+						group_type = group_type,
+						wght = cat_weight,
+						cat_weight = cat_weight,
+						dis_weight = cat_weight
+					})
+
+					total_weight = total_weight + cat_weight
+				end
+			end
+		end
+		
+		if total_weight == 0 then
+			managers.groupai:state()._previous_chosen_types = {}
+		end
+
+		return total_weight
+	end
+	
+	function LIES:_choose_best_group(best_groups, total_weight)
+		local rand_wgt = total_weight * math.random()
+		local best_grp, best_grp_type = nil
+		
+		for i = 1, #best_groups do
+			local candidate = best_groups[i]
+			
+			rand_wgt = rand_wgt - candidate.wght
+			
+			if rand_wgt <= 0 then
+				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + math.random(15, 20)
+				
+				best_grp = candidate.group
+				best_grp_type = candidate.group_type
+				
+				local previous_chosen_types = managers.groupai:state()._previous_chosen_types
+				
+				previous_chosen_types[best_grp_type] = true
+				
+				best_grp.delay_t = self._t + best_grp.interval
+
+				break
+			end
+		end
+
+		return best_grp, best_grp_type
+	end
+	
 	function LIES:check_for_updates()
 		dohttpreq(self.update_url, function(json_data, http_id)
 			self:set_update_data(json_data)
@@ -99,7 +170,7 @@ if RequiredScript == "lib/managers/menumanager" then
 	end)
 	
 	--add the menu callbacks for when menu options are changed
-	Hooks:Add( "MenuManagerInitialize", "MenuManagerInitialize_LIES", function(menu_manager)	
+	Hooks:Add( "MenuManagerInitialize", "MenuManagerInitialize_LIES", function(menu_manager)
 		MenuCallbackHandler.callback_lies_lua_cover = function(self, item)
 			local on = item:value() == "on"
 			LIES.settings.lua_cover = on
@@ -115,8 +186,8 @@ if RequiredScript == "lib/managers/menumanager" then
 		end
 		
 		MenuCallbackHandler.callback_lies_fixed_spawngroups = function(self, item)
-			local on = item:value() == "on"
-			LIES.settings.fixed_spawngroups = on
+			local value = item:value()
+			LIES.settings.fixed_spawngroups = value
 
 			LIES:Save()
 		end
@@ -128,20 +199,35 @@ if RequiredScript == "lib/managers/menumanager" then
 			LIES:Save()
 		end
 		
+		MenuCallbackHandler.callback_lies_interruptoncontact = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.interruptoncontact = on
+
+			LIES:Save()
+		end
+		
 		--called when the menu is closed
 		MenuCallbackHandler.callback_lies_close = function(self)
 		end
 
 		--load settings from user's mod settings txt
 		LIES:Load()
+		
+		if type(LIES.settings.fixed_spawngroups) ~= "number" then
+			log("oh")
+			LIES.settings.fixed_spawngroups = 1
+			
+			LIES:Save()
+		end
+	
 
 		--create menus
 		MenuHelper:LoadFromJsonFile(LIES.options_path, LIES, LIES.settings)
 		
-		if not LIES.checked_for_updates then
+		if not Global.checked_for_updates_lies then
 			log("LIES: Checking for update data.")
 			LIES:check_for_updates()
-			LIES.checked_for_updates = true
+			Global.checked_for_updates_lies = true
 		end
 		
 	end)

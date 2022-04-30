@@ -274,6 +274,15 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 	end
 end
 
+
+Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
+	if LIES.settings.fixed_spawngroups == 2 or LIES.settings.fixed_spawngroups == 4 then
+		self._previous_chosen_types = {}
+		self._choose_best_groups = LIES._choose_best_groups
+		self._choose_best_group = LIES._choose_best_group
+	end
+end)
+
 Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function(self)
 	if LIES.settings.copsretire then
 		local task_data = self._task_data.assault
@@ -473,6 +482,12 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.stance = "hos"
 		objective.scan = true
 		objective.interrupt_dis = 200
+	end
+	
+	if LIES.settings.interruptoncontact then
+		if objective.type == "defend_area" then
+			objective.interrupt_on_contact = true
+		end
 	end
 
 	objective.stance = grp_objective.stance or objective.stance

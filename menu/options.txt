@@ -13,11 +13,17 @@
 			"value" : "lua_cover"
 		},
 		{
-			"type" : "toggle",
+			"type" : "multiple_choice",
 			"id" : "lies_fixed_spawngroups",
 			"title" : "menu_lies_fixed_spawngroups_title",
 			"description" : "menu_lies_fixed_spawngroups_desc",
 			"callback" : "callback_lies_fixed_spawngroups",
+			 "items" : [
+                "menu_lies_spawngroups_off",
+				"menu_lies_spawngroups_norng",
+                "menu_lies_spawngroups_fixed",
+				"menu_lies_spawngroups_fixnorng"
+            ],
 			"value" : "fixed_spawngroups"
 		},
 		{
@@ -41,6 +47,14 @@
 				"menu_lies_enemy_aggro_poggers"
             ],
             "value" : "enemy_aggro_level"
-        }
+        },
+		{
+			"type" : "toggle",
+			"id" : "lies_interruptoncontact",
+			"title" : "menu_lies_interruptoncontact_title",
+			"description" : "menu_lies_interruptoncontact_desc",
+			"callback" : "callback_lies_interruptoncontact",
+			"value" : "interruptoncontact"
+		}
 	]
 }

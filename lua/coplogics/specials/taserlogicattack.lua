@@ -1,3 +1,108 @@
+function TaserLogicAttack.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+	data.unit:brain():cancel_all_pathing_searches()
+
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	data.internal_data = my_data
+	my_data.detection = data.char_tweak.detection.combat
+	my_data.tase_distance = data.char_tweak.weapon.is_rifle.tase_distance
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+		my_data.firing = old_internal_data.firing
+		my_data.shooting = old_internal_data.shooting
+		my_data.attention_unit = old_internal_data.attention_unit
+
+		CopLogicAttack._set_best_cover(data, my_data, old_internal_data.best_cover)
+		CopLogicAttack._set_nearest_cover(my_data, old_internal_data.nearest_cover)
+	end
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	local objective = data.objective
+
+	if objective then
+		my_data.attitude = data.objective.attitude or "avoid"
+	end
+	
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	my_data.cover_test_step = 1
+	data.tase_delay_t = data.tase_delay_t or -1
+
+	TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, data.attention_obj)
+	data.unit:movement():set_cool(false)
+	data.unit:brain():set_update_enabled_state(true)
+
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	data.unit:brain():set_attention_settings({
+		cbt = true
+	})
+end
+
+function TaserLogicAttack.update(data)
+	--data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	
+	if not my_data.detection_upd_t or my_data.detection_upd_t < data.t then
+		TaserLogicAttack._upd_enemy_detection(data)
+	end
+
+	if my_data ~= data.internal_data then
+		CopLogicBase._report_detections(data.detected_attention_objects)
+
+		return
+	elseif not data.attention_obj then
+		CopLogicBase._report_detections(data.detected_attention_objects)
+
+		return
+	end
+
+	if my_data.has_old_action then
+		CopLogicAttack._upd_stop_old_action(data, my_data)
+
+		if my_data.has_old_action then
+			CopLogicBase._report_detections(data.detected_attention_objects)
+			
+			return
+		end
+	end
+	
+	if my_data.tasing then
+		CopLogicBase._report_detections(data.detected_attention_objects)
+	
+		return
+	end
+
+	if CopLogicIdle._chk_relocate(data) then
+		return
+	end
+
+	local t = TimerManager:game():time()
+	data.t = t
+	local unit = data.unit
+	local objective = data.objective
+	local focus_enemy = data.attention_obj
+	local action_taken = my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data.acting or my_data.tasing
+
+	CopLogicAttack._process_pathing_results(data, my_data)
+	
+	if not action_taken then
+		if AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+			CopLogicAttack._update_cover(data)
+			CopLogicAttack._upd_combat_movement(data)
+		end
+	end
+
+	CopLogicBase._report_detections(data.detected_attention_objects)
+end
+
 function TaserLogicAttack._upd_aim(data, my_data, reaction)
 	local focus_enemy = data.attention_obj
 	local tase = reaction == AIAttentionObject.REACT_SPECIAL_ATTACK
@@ -72,13 +177,12 @@ end
 
 function TaserLogicAttack._upd_enemy_detection(data)
 	managers.groupai:state():on_unit_detection_updated(data.unit)
-
-	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
 	local min_reaction = AIAttentionObject.REACT_AIM
 
-	CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
 	
+	my_data.detection_upd_t = data.t + delay
 	
 	--removed under multiple fire check and let the taser turn to face their attention while tasing
 	local tasing = my_data.tasing

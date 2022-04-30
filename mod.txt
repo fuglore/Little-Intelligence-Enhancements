@@ -65,9 +65,10 @@
 	"updates" : [
 		{
 			"identifier" : "LIES-AI-MOD",
+			"version": "V2.3",
 			"host": {
-				"meta": "https://raw.githubusercontent.com/fuglore/Little-Intelligences-EnhancementS/autoupd/meta.json",
-				"download": "https://modworkshop.net/api/files/51356/download"
+				"meta": "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json",
+				"download": "https://github.com/fuglore/Little-Intelligence-Enhancements/archive/refs/heads/main.zip"
 			}
 		}
 	]

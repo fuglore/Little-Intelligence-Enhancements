@@ -13,7 +13,7 @@ if RequiredScript == "lib/managers/menumanager" then
 			copsretire = nil
 		}
 	}
-	LIES.update_url = "ttps://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
+	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
 
 	function LIES:UseLuaCover()
 		return self.settings.lua_cover
@@ -145,26 +145,4 @@ if RequiredScript == "lib/managers/menumanager" then
 		end
 		
 	end)
-
-elseif RequiredScript == "lib/managers/menu/mainmenugui" then
-	if LIES then
-		local current_ver = LIES.version
-		local new_ver_string = LIES.received_version
-		
-		if not LIES.has_shown_update_warning and new_ver_string and current_ver ~= new_ver_string then
-			title = "Little Intelligence EnhancementS has a new update."
-			desc = "Visit the Modworkshop page to acquire it."
-			QuickMenu:new(
-				title,
-				desc,
-				{
-					{
-						title = "OK",
-						is_cancel_button = true
-					}
-				}
-			,true)
-			LIES.has_shown_update_warning = true
-		end
-	end
 end

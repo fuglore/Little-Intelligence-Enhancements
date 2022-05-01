@@ -107,7 +107,7 @@ function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_rec
 end
 
 function CopLogicTravel._check_path_is_straight_line(pos_from, to_pos, u_data) --i really, really wish i didn't have to do this. fml.
-	do return true --fuck you for now.
+	do return end --fuck you for now.
 
 	if math.abs(pos_from.z - to_pos.z) < 40 then
 		local ray_params = {

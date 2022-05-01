@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V2.51",
+		version = "V2.6",
 		settings = {
 			lua_cover = false,
 			enemy_aggro_level = 2,
@@ -73,6 +73,76 @@ if RequiredScript == "lib/managers/menumanager" then
 		return managers.navigation:_find_cover_in_seg_through_lua(copied_threat_pos, near_pos, nav_seg_id)
 	end
 	
+	function LIES:_path_is_straight_line(pos_from, pos_to, u_data)	
+		local ray_params = {
+			allow_entry = false,
+			pos_from = pos_from,
+			pos_to = pos_to
+		}
+
+		if not managers.navigation:raycast(ray_params) then
+			local slotmask = managers.slot:get_mask("world_geometry")
+			local ray_from = pos_from:with_z(pos_from.z + 31)
+			local ray_to = pos_to:with_z(pos_to.z + 31)
+			
+			if u_data then
+				if not u_data.unit:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 30, "bundle", 9, "report") then
+					log("yay")
+					local line2 = Draw:brush(Color.blue:with_alpha(1), 3)
+					line2:cylinder(ray_to,ray_from, 5)
+					
+					return true
+				else
+					return
+				end
+			else
+				if not World:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 30, "bundle", 9, "report") then
+					return true
+				else
+					return
+				end
+			end
+		end
+	end
+	
+	function LIES:_optimize_path(path, u_data)		
+		if #path <= 2 then
+			return path
+		end
+
+		local opt_path = {}
+		local nav_path = {}
+		
+		for i = 1, #path do
+			local nav_point = path[i]
+
+			if nav_point.x then
+				nav_path[#nav_path + 1] = nav_point
+			elseif alive(nav_point) then
+				nav_path[#nav_path + 1] = {
+					element = nav_point:script_data().element,
+					c_class = nav_point
+				}
+			else
+				return path
+			end
+		end
+		
+		nav_path = CopActionWalk._calculate_simplified_path(path[1], nav_path, 3, true, true)
+		
+		for i = 1, #nav_path do
+			local nav_point = nav_path[i]
+			
+			if nav_point.c_class then
+				opt_path[#opt_path + 1] = nav_point.c_class
+			else
+				opt_path[#opt_path + 1] = nav_point
+			end
+		end
+
+		return opt_path
+	end
+
 	local function spawn_group_id(spawn_group)
 		return spawn_group.mission_element:id()
 	end

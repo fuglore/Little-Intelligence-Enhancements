@@ -1,6 +1,10 @@
 local tmp_vec1 = Vector3()
 
 function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
+	if data.cool then
+		return
+	end
+
 	local follow_unit = objective.follow_unit
 
 	local max_allowed_dis_xy = 700

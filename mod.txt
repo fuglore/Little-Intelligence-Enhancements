@@ -76,5 +76,9 @@
 			"hook_id": "lib/units/player_team/logics/teamailogicidle",
 			"script_path": "lua/teamailogics/teamailogicidle.lua"
 		},
+		{
+			"hook_id": "lib/units/player_team/logics/teamailogictravel",
+			"script_path": "lua/teamailogics/teamailogictravel.lua"
+		},
 	]
 }

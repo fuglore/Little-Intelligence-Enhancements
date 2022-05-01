@@ -617,11 +617,19 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	if obstructed_area then
 		if current_objective.moving_out and phase_is_anticipation then
 			pull_back = true
-		elseif charge and not current_objective.charge or aggression_level > 3 then
-			hard_charge = true
-		elseif current_objective.open_fire and not current_objective.pushed and (not tactics_map or not tactics_map.ranged_fire) then
-			if group.in_place_t and self._t - group.in_place_t > 7 then
+		elseif charge and not current_objective.charge then
+			if aggression_level > 3 then
 				hard_charge = true
+			else
+				push = true
+			end
+		elseif current_objective.open_fire and not current_objective.pushed and (not tactics_map or not tactics_map.ranged_fire) then
+			local t_in_place = aggression_level > 2 and 7 or aggression_level > 1 and 15
+		
+			if t_in_place and group.in_place_t and self._t - group.in_place_t > t_in_place then
+				hard_charge = true
+			else
+				push = true
 			end
 		else
 			open_fire = true

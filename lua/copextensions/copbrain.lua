@@ -37,7 +37,7 @@ function CopBrain:search_for_path(search_id, to_pos, prio, access_neg, nav_segs)
 		nav_segs = nav_segs
 	}
 	
-	if LIES:_path_is_straight_line(self._unit:movement():nav_tracker():field_position(), to_pos, self._logic_data) then
+	if not Iter and LIES:_path_is_straight_line(self._unit:movement():nav_tracker():field_position(), to_pos, self._logic_data) then
 		local path = {
 			mvector3.copy(self._unit:movement():nav_tracker():field_position()),
 			mvector3.copy(to_pos)
@@ -69,7 +69,7 @@ function CopBrain:search_for_path_from_pos(search_id, from_pos, to_pos, prio, ac
 		nav_segs = nav_segs
 	}
 	
-	if LIES:_path_is_straight_line(from_pos, to_pos, self._logic_data) then
+	if not Iter and LIES:_path_is_straight_line(from_pos, to_pos, self._logic_data) then
 		local path = {
 			mvector3.copy(from_pos),
 			mvector3.copy(to_pos)
@@ -101,7 +101,7 @@ function CopBrain:search_for_path_to_cover(search_id, cover, offset_pos, access_
 		access_neg = access_neg
 	}
 	
-	if LIES:_path_is_straight_line(params.tracker_from:field_position(), params.tracker_to:field_position(), self._logic_data) then
+	if not Iter and LIES:_path_is_straight_line(params.tracker_from:field_position(), params.tracker_to:field_position(), self._logic_data) then
 		local path = {
 			mvector3.copy(params.tracker_from:field_position()),
 			mvector3.copy(params.tracker_to:field_position())
@@ -115,6 +115,9 @@ function CopBrain:search_for_path_to_cover(search_id, cover, offset_pos, access_
 
 	return true
 end
+
+
+if not Iter then
 
 local orig_clbk_pathing_results = CopBrain.clbk_pathing_results 
 
@@ -136,6 +139,8 @@ function CopBrain:clbk_pathing_results(search_id, path)
 	end
 	
 	orig_clbk_pathing_results(self, search_id, path)
+end
+
 end
 
 Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, search_id, path)

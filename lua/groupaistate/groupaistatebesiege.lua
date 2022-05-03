@@ -277,9 +277,30 @@ end
 
 Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 	if LIES.settings.fixed_spawngroups == 2 or LIES.settings.fixed_spawngroups == 4 then
-		self._previous_chosen_types = {}
+		self._group_type_order = {
+			assault = {group_types = {}, index = 1},
+			recon = {group_types = {}, index = 1},
+			reenforce = {group_types = {}, index = 1},
+			cloaker = {group_types = {}, index = 1}
+		}
+		
+		for group_name, info_table in pairs(self._tweak_data.assault.groups) do
+			if tweak_data.group_ai.enemy_spawn_groups[group_name] and info_table[1] > 0 then
+				table.insert(self._group_type_order.assault.group_types, tostring(group_name))
+			end
+		end
+		
+		for group_name, info_table in pairs(self._tweak_data.recon.groups) do
+			if tweak_data.group_ai.enemy_spawn_groups[group_name] and info_table[1] > 0 then
+				table.insert(self._group_type_order.recon.group_types, tostring(group_name))
+			end
+		end
+		
 		self._choose_best_groups = LIES._choose_best_groups
 		self._choose_best_group = LIES._choose_best_group
+		self._find_spawn_group_near_area = LIES._find_spawn_group_near_area
+		self._upd_assault_task = LIES._upd_assault_task
+		self._upd_recon_tasks = LIES._upd_recon_tasks
 	end
 end)
 

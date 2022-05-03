@@ -81,3 +81,40 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 
 	return false, false
 end
+
+function CopLogicBase.queue_task(internal_data, id, func, data, exec_t, asap)
+	if not id then
+		log("bad task queued")
+		log(tostring(data.name))
+		log(tostring(id))
+		log(tostring(func))
+		
+		return
+	end
+
+	if internal_data.unit and internal_data ~= internal_data.unit:brain()._logic_data.internal_data then
+		debug_pause("[CopLogicBase.queue_task] Task queued from the wrong logic", internal_data.unit, id, func, data, exec_t, asap)
+		log("task queued from the wrong logic")
+		log(tostring(data.name))
+		log(tostring(id))
+		log(tostring(func))
+		
+		return
+	end
+
+	local qd_tasks = internal_data.queued_tasks
+
+	if qd_tasks then
+		if qd_tasks[id] then
+			debug_pause("[CopLogicBase.queue_task] Task queued twice", internal_data.unit, id, func, data, exec_t, asap)
+		end
+
+		qd_tasks[id] = true
+	else
+		internal_data.queued_tasks = {
+			[id] = true
+		}
+	end
+
+	managers.enemy:queue_task(id, func, data, exec_t, callback(CopLogicBase, CopLogicBase, "on_queued_task", internal_data), asap)
+end

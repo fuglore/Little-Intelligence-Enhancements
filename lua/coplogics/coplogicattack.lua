@@ -100,6 +100,26 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	end
 end
 
+function CopLogicAttack._upd_stop_old_action(data, my_data)
+	if my_data.advancing then
+		if not data.unit:movement():chk_action_forbidden("idle") then
+			data.brain:action_request({
+				body_part = 2,
+				type = "idle"
+			})
+		end
+	elseif data.unit:anim_data().act or data.unit:anim_data().act_idle or data.unit:anim_data().to_idle then
+		if not my_data.starting_idle_action_from_act then
+			my_data.starting_idle_action_from_act = true
+			CopLogicIdle._start_idle_action_from_act(data)
+		end
+	else
+		my_data.starting_idle_action_from_act = nil
+	end
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+end
+
 function CopLogicAttack._upd_aim(data, my_data)
 	local shoot, aim, expected_pos = nil
 	local focus_enemy = data.attention_obj
@@ -377,14 +397,14 @@ function CopLogicAttack._upd_combat_movement(data)
 	elseif my_data.charge_path then
 		local path = my_data.charge_path
 		my_data.charge_path = nil
-		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path)
+		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
 		if in_cover then
 			if data.objective and data.objective.grp_objective and data.objective.grp_objective.charge and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6) then
 				if my_data.charge_path then
 					local path = my_data.charge_path
 					my_data.charge_path = nil
-					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path)
+					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 				elseif not my_data.charge_path_search_id and data.attention_obj.nav_tracker then
 					my_data.charge_pos = CopLogicTravel._get_pos_on_wall(data.attention_obj.nav_tracker:field_position(), my_data.weapon_range.close, 45, nil)
 
@@ -416,7 +436,7 @@ function CopLogicAttack._upd_combat_movement(data)
 						my_tracker:position(),
 						shoot_from_pos
 					}
-					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, math.random() < 0.5 and "run" or "walk")
+					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "walk")
 				else
 					my_data.cover_test_step = my_data.cover_test_step + 1
 				end
@@ -500,6 +520,73 @@ function CopLogicAttack._upd_combat_movement(data)
 
 	action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 end
+
+function CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
+	CopLogicAttack._correct_path_start_pos(data, my_data.cover_path)
+
+	local haste = nil
+	local pose = nil
+	local i = 1
+	local travel_dis = 0
+	
+	repeat
+		if my_data.cover_path[i + 1] then
+			travel_dis = travel_dis + mvector3.distance_sq(my_data.cover_path[i], my_data.cover_path[i + 1])
+			i = i + 1
+		else
+			break
+		end
+	until travel_dis > 400 or i >= #my_data.cover_path
+	
+	if travel_dis > 200 then
+		haste = "run"
+	end
+	
+	if travel_dis > 400 then
+		pose = "stand"
+	else
+		pose = data.unit:anim_data().crouch and "crouch"
+	end
+
+	haste = haste or "walk"
+	pose = pose or data.is_suppressed and "crouch" or "stand"
+
+	if pose == "crouch" and not data.char_tweak.crouch_move then
+		pose = "stand"
+	end
+	
+	local end_pose = "crouch"
+
+	if data.char_tweak.allowed_poses then
+		if not data.char_tweak.allowed_poses.crouch then
+			pose = "stand"
+			end_pose = "stand"
+		elseif not data.char_tweak.allowed_poses.stand then
+			pose = "crouch"
+			end_pose = "crouch"
+		end
+	end
+
+	local new_action_data = {
+		type = "walk",
+		body_part = 2,
+		nav_path = my_data.cover_path,
+		variant = haste,
+		pose = pose,
+		end_pose = end_pose
+	}
+	my_data.cover_path = nil
+	my_data.advancing = data.unit:brain():action_request(new_action_data)
+
+	if my_data.advancing then
+		my_data.moving_to_cover = my_data.best_cover
+		my_data.at_cover_shoot_pos = nil
+		my_data.in_cover = nil
+
+		data.brain:rem_pos_rsrv("path")
+	end
+end
+
 
 function CopLogicAttack._process_pathing_results(data, my_data)
 	if not data.pathing_results then
@@ -590,7 +677,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	elseif my_data.charge_path then
 		local path = my_data.charge_path
 		
-		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path)
+		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 		
 		my_data.charge_path = nil
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
@@ -612,7 +699,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 						my_tracker:position(),
 						shoot_from_pos
 					}
-					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, math.random() < 0.5 and "run" or "walk")
+					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "walk")
 				else
 					my_data.cover_test_step = my_data.cover_test_step + 1
 				end

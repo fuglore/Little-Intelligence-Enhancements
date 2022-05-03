@@ -1,3 +1,10 @@
+Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
+	CopBrain._logic_variants.tank.attack = BossLogicAttack
+	CopBrain._logic_variants.tank_medic.attack = BossLogicAttack
+	CopBrain._logic_variants.tank_mini.attack = BossLogicAttack
+	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
+end)
+
 function CopBrain:search_for_coarse_immediate(search_id, to_seg, verify_clbk, access_neg)
 	local params = {
 		from_tracker = self._unit:movement():nav_tracker(),
@@ -30,8 +37,18 @@ function CopBrain:search_for_path(search_id, to_pos, prio, access_neg, nav_segs)
 		nav_segs = nav_segs
 	}
 	
-	self._logic_data.active_searches[search_id] = true
-	managers.navigation:search_pos_to_pos(params)
+	if LIES:_path_is_straight_line(self._unit:movement():nav_tracker():field_position(), to_pos, self._logic_data) then
+		local path = {
+			mvector3.copy(self._unit:movement():nav_tracker():field_position()),
+			mvector3.copy(to_pos)
+		}
+	
+		self:clbk_pathing_results(search_id, path)
+	else
+		self._logic_data.active_searches[search_id] = true
+
+		managers.navigation:search_pos_to_pos(params)
+	end
 
 	return true
 end
@@ -52,8 +69,18 @@ function CopBrain:search_for_path_from_pos(search_id, from_pos, to_pos, prio, ac
 		nav_segs = nav_segs
 	}
 	
-	self._logic_data.active_searches[search_id] = true
-	managers.navigation:search_pos_to_pos(params)
+	if LIES:_path_is_straight_line(from_pos, to_pos, self._logic_data) then
+		local path = {
+			mvector3.copy(from_pos),
+			mvector3.copy(to_pos)
+		}
+	
+		self:clbk_pathing_results(search_id, path)
+	else
+		self._logic_data.active_searches[search_id] = true
+
+		managers.navigation:search_pos_to_pos(params)
+	end
 
 	return true
 end
@@ -74,8 +101,17 @@ function CopBrain:search_for_path_to_cover(search_id, cover, offset_pos, access_
 		access_neg = access_neg
 	}
 	
-	self._logic_data.active_searches[search_id] = true
-	managers.navigation:search_pos_to_pos(params)
+	if LIES:_path_is_straight_line(params.tracker_from:field_position(), params.tracker_to:field_position(), self._logic_data) then
+		local path = {
+			mvector3.copy(params.tracker_from:field_position()),
+			mvector3.copy(params.tracker_to:field_position())
+		}
+	
+		self:clbk_pathing_results(search_id, path)
+	else
+		self._logic_data.active_searches[search_id] = true
+		managers.navigation:search_pos_to_pos(params)
+	end
 
 	return true
 end
@@ -83,7 +119,7 @@ end
 local orig_clbk_pathing_results = CopBrain.clbk_pathing_results 
 
 function CopBrain:clbk_pathing_results(search_id, path)
-	if path then
+	if path and #path > 2 then
 		--local line = Draw:brush(Color.yellow:with_alpha(0.25), 3)
 		
 		if line then
@@ -106,7 +142,7 @@ Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, s
 	if path and path ~= "failed" then
 		--local line2 = Draw:brush(Color.green:with_alpha(0.5), 3)
 		
-		if line2 then
+		if line2 and #path > 2 then
 			for i = 1, #path do
 				if path[i + 1] then
 					if path[i].z and path[i + 1].z then

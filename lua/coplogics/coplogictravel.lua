@@ -1,3 +1,154 @@
+function CopLogicTravel.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+	data.unit:brain():cancel_all_pathing_searches()
+
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	local is_cool = data.unit:movement():cool()
+
+	if is_cool then
+		my_data.detection = data.char_tweak.detection.ntl
+	else
+		my_data.detection = data.char_tweak.detection.recon
+	end
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+		my_data.firing = old_internal_data.firing
+		my_data.shooting = old_internal_data.shooting
+		my_data.attention_unit = old_internal_data.attention_unit
+
+		if old_internal_data.nearest_cover then
+			my_data.nearest_cover = old_internal_data.nearest_cover
+
+			managers.navigation:reserve_cover(my_data.nearest_cover[1], data.pos_rsrv_id)
+		end
+
+		if old_internal_data.best_cover then
+			my_data.best_cover = old_internal_data.best_cover
+
+			managers.navigation:reserve_cover(my_data.best_cover[1], data.pos_rsrv_id)
+		end
+	end
+
+	if data.char_tweak.announce_incomming then
+		my_data.announce_t = data.t + 2
+	end
+
+	data.internal_data = my_data
+	local key_str = tostring(data.key)
+	my_data.upd_task_key = "CopLogicTravel.queued_update" .. key_str
+
+	CopLogicTravel.queue_update(data, my_data)
+
+	my_data.cover_update_task_key = "CopLogicTravel._update_cover" .. key_str
+
+	if my_data.nearest_cover or my_data.best_cover then
+		CopLogicBase.add_delayed_clbk(my_data, my_data.cover_update_task_key, callback(CopLogicTravel, CopLogicTravel, "_update_cover", data), data.t + 1)
+	end
+
+	my_data.advance_path_search_id = "CopLogicTravel_detailed" .. tostring(data.key)
+	my_data.coarse_path_search_id = "CopLogicTravel_coarse" .. tostring(data.key)
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+	
+	if my_data.advancing then
+		my_data.old_action_advancing = true
+	end
+
+	local objective = data.objective
+	local path_data = objective.path_data
+
+	if objective.path_style == "warp" then
+		my_data.warp_pos = objective.pos
+	elseif path_data then
+		local path_style = objective.path_style
+
+		if path_style == "precise" then
+			local path = {
+				mvector3.copy(data.m_pos)
+			}
+
+			for _, point in ipairs(path_data.points) do
+				table.insert(path, mvector3.copy(point.position))
+			end
+
+			my_data.advance_path = path
+			my_data.coarse_path_index = 1
+			local start_seg = data.unit:movement():nav_tracker():nav_segment()
+			local end_pos = mvector3.copy(path[#path])
+			local end_seg = managers.navigation:get_nav_seg_from_pos(end_pos)
+			my_data.coarse_path = {
+				{
+					start_seg
+				},
+				{
+					end_seg,
+					end_pos
+				}
+			}
+			my_data.path_is_precise = true
+		elseif path_style == "coarse" then
+			local nav_manager = managers.navigation
+			local f_get_nav_seg = nav_manager.get_nav_seg_from_pos
+			local start_seg = data.unit:movement():nav_tracker():nav_segment()
+			local path = {
+				{
+					start_seg
+				}
+			}
+
+			for _, point in ipairs(path_data.points) do
+				local pos = mvector3.copy(point.position)
+				local nav_seg = f_get_nav_seg(nav_manager, pos)
+
+				table.insert(path, {
+					nav_seg,
+					pos
+				})
+			end
+
+			my_data.coarse_path = path
+			my_data.coarse_path_index = CopLogicTravel.complete_coarse_path(data, my_data, path)
+		elseif path_style == "coarse_complete" then
+			my_data.coarse_path_index = 1
+			my_data.coarse_path = deep_clone(objective.path_data)
+			my_data.coarse_path_index = CopLogicTravel.complete_coarse_path(data, my_data, my_data.coarse_path)
+		end
+	end
+
+	if objective.stance then
+		local upper_body_action = data.unit:movement()._active_actions[3]
+
+		if not upper_body_action or upper_body_action:type() ~= "shoot" then
+			data.unit:movement():set_stance(objective.stance)
+		end
+	end
+
+	if data.attention_obj and AIAttentionObject.REACT_AIM < data.attention_obj.reaction then
+		data.unit:movement():set_cool(false, managers.groupai:state().analyse_giveaway(data.unit:base()._tweak_table, data.attention_obj.unit))
+	end
+
+	if is_cool then
+		data.unit:brain():set_attention_settings({
+			peaceful = true
+		})
+	else
+		data.unit:brain():set_attention_settings({
+			cbt = true
+		})
+	end
+
+	my_data.attitude = data.objective.attitude or "avoid"
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	my_data.path_safely = data.team.foes[tweak_data.levels:get_default_team_ID("player")]
+	my_data.path_ahead = data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.is_converted or data.objective.grp_objective and data.objective.grp_objective.type == "retire"
+
+	data.unit:brain():set_update_enabled_state(false)
+end
+
 function CopLogicTravel._chk_close_to_criminal(data, my_data)
 	if data.unit:in_slot(16) or LIES.settings.enemy_aggro_level > 1 then
 		return
@@ -205,6 +356,10 @@ function CopLogicTravel.upd_advance(data)
 			CopLogicTravel._on_destination_reached(data)
 		end
 	elseif my_data.advancing then
+		if my_data.processing_advance_path or my_data.processing_coarse_path then
+			CopLogicTravel._upd_pathing(data, my_data)
+		end
+		
 		if my_data.coarse_path then
 			if not data.cool and not data.unit:in_slot(16) then
 				CopLogicTravel._chk_say_clear(data)
@@ -214,6 +369,13 @@ function CopLogicTravel.upd_advance(data)
 
 			if my_data ~= data.internal_data then
 				return
+			end
+			
+			if my_data.advance_path and my_data.advancing and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+				if not my_data.advancing:stopping() and not my_data.advancing._end_of_path and my_data.advancing:append_path_mid_logic(my_data.advance_path) then
+					my_data.advance_path = nil
+					my_data.path_elongated = true
+				end
 			end
 			
 			if objective.type == "defend_area" and objective.area and objective.grp_objective and objective.grp_objective.type ~= "retire" then
@@ -555,8 +717,9 @@ function CopLogicTravel.action_complete_clbk(data, action)
 	local action_type = action:type()
 
 	if action_type == "walk" then
-		if action:expired() and not my_data.starting_advance_action and my_data.coarse_path_index and not my_data.has_old_action and my_data.advancing then
-			my_data.coarse_path_index = my_data.coarse_path_index + 1
+		if action:expired() and not my_data.starting_advance_action and my_data.coarse_path_index and not my_data.has_old_action and not my_data.old_action_advancing and my_data.advancing then
+			local coarse_index_increment = my_data.path_elongated and 2 or 1
+			my_data.coarse_path_index = my_data.coarse_path_index + coarse_index_increment
 
 			if my_data.coarse_path_index > #my_data.coarse_path then
 				debug_pause_unit(data.unit, "[CopLogicTravel.action_complete_clbk] invalid coarse path index increment", data.unit, inspect(my_data.coarse_path), my_data.coarse_path_index)
@@ -659,7 +822,7 @@ end
 function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 	local objective = data.objective
 
-	if objective.type ~= "follow" or data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then
+	if not objective or objective.type ~= "follow" or data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then
 		return
 	end
 
@@ -686,6 +849,8 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 			objective.in_place = true
 
 			data.logic.on_new_objective(data)
+			
+			return
 		end
 	else
 		local follow_unit = data.objective.follow_unit
@@ -713,6 +878,8 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 			objective.in_place = true
 
 			data.logic.on_new_objective(data)
+			
+			return
 		end
 	end
 end
@@ -801,7 +968,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 			}
 			to_pos = cover[1]
 		else
-			to_pos = coarse_path[nav_index][2]
+			to_pos = managers.navigation:find_random_position_in_segment(nav_seg)
 			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
 			wants_reservation = true
 		end

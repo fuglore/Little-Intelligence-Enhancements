@@ -81,11 +81,16 @@ function BossLogicAttack.enter(data, new_logic_name, enter_params)
 	end
 end
 
+local AI_REACT_COMBAT = AIAttentionObject.REACT_COMBAT
+
 function BossLogicAttack._pathing_complete_clbk(data)
 	local my_data = data.internal_data
 
 	if my_data.pathing_to_chase_pos then
 		BossLogicAttack._process_pathing_results(data, my_data)
-		BossLogicAttack._upd_combat_movement(data, my_data)
+	
+		if data.attention_obj and data.attention_obj.reaction >= AI_REACT_COMBAT then
+			BossLogicAttack._upd_combat_movement(data, my_data)
+		end
 	end
 end

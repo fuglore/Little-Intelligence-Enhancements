@@ -110,23 +110,3 @@ function CopLogicIdle._chk_relocate(data)
 		end
 	end
 end
-
-function CopLogicIdle._upd_stop_old_action(data, my_data, objective)
-	if my_data.advancing then
-		if not data.unit:movement():chk_action_forbidden("walk") then
-			data.brain:action_request({
-				body_part = 2,
-				type = "idle"
-			})
-		end
-	elseif data.unit:anim_data().act or data.unit:anim_data().act_idle or data.unit:anim_data().to_idle then
-		if not my_data.starting_idle_action_from_act then
-			my_data.starting_idle_action_from_act = true
-			CopLogicIdle._start_idle_action_from_act(data)
-		end
-	else
-		my_data.starting_idle_action_from_act = nil
-	end
-
-	CopLogicIdle._chk_has_old_action(data, my_data)
-end

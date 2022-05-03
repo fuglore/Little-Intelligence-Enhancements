@@ -239,10 +239,8 @@ function CopActionWalk:append_path_mid_logic(path)
 		end
 	end
 	
-	if self._simplified_path == 1 and not nav_path[1].x then
+	if #self._simplified_path == 1 and not nav_path[1].x then
 		self._next_is_nav_link = nav_path[1]
-	else
-		self._end_of_path = nil
 	end
 	
 	for i = 1, #nav_path do

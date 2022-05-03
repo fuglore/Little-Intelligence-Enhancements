@@ -370,13 +370,13 @@ function CopLogicTravel.upd_advance(data)
 			if my_data ~= data.internal_data then
 				return
 			end
-			
-			if my_data.advance_path and my_data.advancing and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+	
+			--[[if my_data.advance_path and my_data.advancing and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
 				if not my_data.advancing:stopping() and not my_data.advancing._end_of_path and my_data.advancing:append_path_mid_logic(my_data.advance_path) then
 					my_data.advance_path = nil
 					my_data.path_elongated = true
 				end
-			end
+			end]]
 			
 			if objective.type == "defend_area" and objective.area and objective.grp_objective and objective.grp_objective.type ~= "retire" then
 				local m_tracker = data.unit:movement():nav_tracker()

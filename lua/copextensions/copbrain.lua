@@ -5,6 +5,46 @@ Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
 	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
 end)
 
+function CopBrain:set_objective(new_objective, params)
+	local old_objective = self._logic_data.objective
+	
+	if new_objective and self._logic_data.buddypalchum then
+		local level = Global.level_data and Global.level_data.level_id
+
+		if new_objective.element then
+			if tweak_data.levels[level] and tweak_data.levels[level].ignored_so_elements and tweak_data.levels[level].ignored_so_elements[new_objective.element._id] then
+				if new_objective.complete_clbk then
+					new_objective.complete_clbk(self._unit, self._logic_data)
+				end
+				
+				if new_objective.action_start_clbk then
+					new_objective.action_start_clbk(self._unit)
+				end
+				
+				return
+			end
+		end
+		
+		if tweak_data.levels[level].trigger_follower_behavior_element and new_objective.element and tweak_data.levels[level].trigger_follower_behavior_element[new_objective.element._id] then
+			self._logic_data.check_crim_jobless = true
+		end
+
+		if new_objective.stance == "ntl" then
+			new_objective.stance = nil
+		end
+	end
+	
+	self._logic_data.objective = new_objective
+
+	if new_objective and new_objective.followup_objective and new_objective.followup_objective.interaction_voice then
+		self._unit:network():send("set_interaction_voice", new_objective.followup_objective.interaction_voice)
+	elseif old_objective and old_objective.followup_objective and old_objective.followup_objective.interaction_voice then
+		self._unit:network():send("set_interaction_voice", "")
+	end
+
+	self._current_logic.on_new_objective(self._logic_data, old_objective, params)
+end
+
 function CopBrain:search_for_coarse_immediate(search_id, to_seg, verify_clbk, access_neg)
 	local params = {
 		from_tracker = self._unit:movement():nav_tracker(),

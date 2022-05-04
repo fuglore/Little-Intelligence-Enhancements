@@ -58,12 +58,16 @@ function CopLogicAttack.update(data)
 		CopLogicAttack._update_cover(data)
 		CopLogicAttack._upd_combat_movement(data)
 	end
+	
+	if data.is_converted or data.check_crim_jobless or data.team.id == "criminal1" then
+		if not data.objective or data.objective.type == "free" then
+			if not data.path_fail_t or data.t - data.path_fail_t > 6 then
+				managers.groupai:state():on_criminal_jobless(data.unit)
 
-	if data.team.id == "criminal1" and (not data.objective or data.objective.type == "free") and (not data.path_fail_t or data.t - data.path_fail_t > 6) then
-		managers.groupai:state():on_criminal_jobless(data.unit)
-
-		if my_data ~= data.internal_data then
-			return
+				if my_data ~= data.internal_data then
+					return
+				end
+			end
 		end
 	end
 
@@ -99,6 +103,11 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		end
 	end
 end
+
+function CopLogicAttack.chk_should_turn(data, my_data)
+	return not my_data.turning and not my_data.has_old_action and not data.unit:movement():chk_action_forbidden("walk") and not my_data.moving_to_cover and not my_data.walking_to_cover_shoot_pos and not my_data.surprised and not my_data.advancing
+end
+
 
 function CopLogicAttack._upd_aim(data, my_data)
 	local shoot, aim, expected_pos = nil

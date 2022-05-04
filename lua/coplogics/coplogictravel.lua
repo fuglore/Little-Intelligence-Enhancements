@@ -74,6 +74,15 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 			for _, point in ipairs(path_data.points) do
 				table.insert(path, mvector3.copy(point.position))
 			end
+			
+			if LIES:_path_is_straight_line(data.m_pos, #path, data) then
+				path = {
+					path[1],
+					path[#path]
+				}
+			else
+				path = LIES:_optimize_path(path, data)
+			end
 
 			my_data.advance_path = path
 			my_data.coarse_path_index = 1
@@ -91,23 +100,45 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 			}
 			my_data.path_is_precise = true
 		elseif path_style == "coarse" then
+			local m_tracker = data.unit:movement():nav_tracker()
 			local nav_manager = managers.navigation
 			local f_get_nav_seg = nav_manager.get_nav_seg_from_pos
-			local start_seg = data.unit:movement():nav_tracker():nav_segment()
+			local start_seg = m_tracker:nav_segment()
 			local path = {
 				{
 					start_seg
 				}
 			}
+			local points = path_data.points
+			
+			local target_pos = points[#path_data.points].position
+			local target_seg = managers.navigation:get_nav_seg_from_pos(target_pos)
+			
+			local alt_coarse_params = {
+				from_tracker = m_tracker,
+				to_seg = target_seg,
+				to_pos = target_pos,
+				access = {
+					"walk"
+				},
+				id = "CivilianLogicEscort.alt_coarse_search" .. tostring(data.key),
+				access_pos = data.char_tweak.access
+			}
+			
+			local alt_coarse = managers.navigation:search_coarse(alt_coarse_params)
 
-			for _, point in ipairs(path_data.points) do
-				local pos = mvector3.copy(point.position)
-				local nav_seg = f_get_nav_seg(nav_manager, pos)
+			if alt_coarse and #alt_coarse < #points then
+				path = alt_coarse
+			else
+				for _, point in ipairs(path_data.points) do
+					local pos = mvector3.copy(point.position)
+					local nav_seg = f_get_nav_seg(nav_manager, pos)
 
-				table.insert(path, {
-					nav_seg,
-					pos
-				})
+					table.insert(path, {
+						nav_seg,
+						pos
+					})
+				end
 			end
 
 			my_data.coarse_path = path
@@ -356,11 +387,15 @@ function CopLogicTravel.upd_advance(data)
 			CopLogicTravel._on_destination_reached(data)
 		end
 	elseif my_data.advancing then
-		if my_data.processing_advance_path or my_data.processing_coarse_path then
-			CopLogicTravel._upd_pathing(data, my_data)
-		end
+		if not my_data.old_action_advancing and my_data.coarse_path then
+			if my_data.processing_advance_path or my_data.processing_coarse_path then
+				CopLogicTravel._upd_pathing(data, my_data)
+			end
+			
+			if my_data ~= data.internal_data then
+				return
+			end
 		
-		if my_data.coarse_path then
 			if not data.cool and not data.unit:in_slot(16) then
 				CopLogicTravel._chk_say_clear(data)
 			end
@@ -377,18 +412,6 @@ function CopLogicTravel.upd_advance(data)
 					my_data.path_elongated = true
 				end
 			end]]
-			
-			if objective.type == "defend_area" and objective.area and objective.grp_objective and objective.grp_objective.type ~= "retire" then
-				local m_tracker = data.unit:movement():nav_tracker()
-				local my_nav_seg = m_tracker:nav_segment()
-				
-				if objective.area.nav_segs[my_nav_seg] or objective.nav_seg == my_nav_seg then
-					--log("wee")
-					CopLogicTravel._on_destination_reached(data)
-
-					return
-				end
-			end
 		end
 	elseif my_data.advance_path then
 		if CopLogicTravel.chk_group_ready_to_move(data, my_data) then
@@ -403,23 +426,39 @@ function CopLogicTravel.upd_advance(data)
 
 		if my_data ~= data.internal_data then
 			return
-		end
-	elseif objective and (objective.nav_seg or objective.type == "follow") then
-		if my_data.coarse_path then
-			if my_data.coarse_path_index == #my_data.coarse_path then
-				CopLogicTravel._on_destination_reached(data)
+		elseif my_data.advance_path then
+			if CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+				CopLogicTravel._chk_begin_advance(data, my_data)
 
-				return
+				if my_data.advancing and my_data.path_ahead then
+					CopLogicTravel._check_start_path_ahead(data)
+				end
+			end
+		elseif my_data.coarse_path then
+			CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+		end
+	elseif not data.unit:movement():chk_action_forbidden("walk") then
+		if objective then
+			if objective.nav_seg or objective.type == "follow" then
+				if my_data.coarse_path then
+					if my_data.coarse_path_index == #my_data.coarse_path then
+						CopLogicTravel._on_destination_reached(data)
+					else
+						CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+					end
+				else
+					CopLogicTravel._begin_coarse_pathing(data, my_data)
+				end
 			else
-				CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+				local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
+
+				CopLogicBase._exit(data.unit, wanted_state)
 			end
 		else
-			CopLogicTravel._begin_coarse_pathing(data, my_data)
-		end
-	else
-		CopLogicBase._exit(data.unit, "idle")
+			local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
 
-		return
+			CopLogicBase._exit(data.unit, wanted_state)
+		end
 	end
 end
 
@@ -722,13 +761,18 @@ function CopLogicTravel.action_complete_clbk(data, action)
 			my_data.coarse_path_index = my_data.coarse_path_index + coarse_index_increment
 
 			if my_data.coarse_path_index > #my_data.coarse_path then
-				debug_pause_unit(data.unit, "[CopLogicTravel.action_complete_clbk] invalid coarse path index increment", data.unit, inspect(my_data.coarse_path), my_data.coarse_path_index)
+				log("coarse_path faulty???")
+				for path_i = 1, #my_data.coarse_path do
+					local seg_pos = my_data.coarse_path[path_i][2]
+					line2:cylinder(seg_pos, seg_pos + math_up * 185, 20)
+				end
 
 				my_data.coarse_path_index = my_data.coarse_path_index - 1
 			end
 		end
 
 		my_data.advancing = nil
+		my_data.old_action_advancing = nil
 
 		if my_data.moving_to_cover then
 			if action:expired() then

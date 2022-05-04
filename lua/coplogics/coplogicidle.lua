@@ -1,3 +1,62 @@
+function CopLogicIdle.queued_update(data)
+	local my_data = data.internal_data
+	local delay = data.logic._upd_enemy_detection(data)
+
+	if data.internal_data ~= my_data then
+		CopLogicBase._report_detections(data.detected_attention_objects)
+
+		return
+	end
+
+	local objective = data.objective
+
+	if my_data.has_old_action then
+		CopLogicIdle._upd_stop_old_action(data, my_data, objective)
+		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
+
+		return
+	end
+
+	if data.is_converted or data.check_crim_jobless or data.team.id == "criminal1" then
+		if not data.objective or data.objective.type == "free" then
+			if not data.path_fail_t or data.t - data.path_fail_t > 6 then
+				managers.groupai:state():on_criminal_jobless(data.unit)
+
+				if my_data ~= data.internal_data then
+					return
+				end
+			end
+		end
+	end
+
+	if CopLogicIdle._chk_exit_non_walkable_area(data) then
+		return
+	end
+
+	if CopLogicIdle._chk_relocate(data) then
+		return
+	end
+
+	CopLogicIdle._perform_objective_action(data, my_data, objective)
+	CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
+	CopLogicIdle._upd_pathing(data, my_data)
+	CopLogicIdle._upd_scan(data, my_data)
+
+	if data.cool then
+		CopLogicIdle.upd_suspicion_decay(data)
+	end
+
+	if data.internal_data ~= my_data then
+		CopLogicBase._report_detections(data.detected_attention_objects)
+
+		return
+	end
+
+	delay = data.important and 0 or delay or 0.3
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
+end
+
 function CopLogicIdle.on_new_objective(data, old_objective)
 	local new_objective = data.objective
 

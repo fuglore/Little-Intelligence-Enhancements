@@ -75,7 +75,7 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 				table.insert(path, mvector3.copy(point.position))
 			end
 			
-			if LIES:_path_is_straight_line(data.m_pos, #path, data) then
+			if LIES:_path_is_straight_line(data.m_pos, path[#path], data) then
 				path = {
 					path[1],
 					path[#path]
@@ -121,7 +121,7 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 				access = {
 					"walk"
 				},
-				id = "CivilianLogicEscort.alt_coarse_search" .. tostring(data.key),
+				id = "CopLogicTravel.alt_coarse_search" .. tostring(data.key),
 				access_pos = data.char_tweak.access
 			}
 			

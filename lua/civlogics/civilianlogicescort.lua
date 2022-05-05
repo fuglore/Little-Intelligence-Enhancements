@@ -13,7 +13,7 @@ function CivilianLogicEscort._get_objective_path_data(data, my_data)
 				table.insert(path, point.position)
 			end
 			
-			if LIES:_path_is_straight_line(data.m_pos, #path, data) then
+			if LIES:_path_is_straight_line(data.m_pos, path[#path], data) then
 				path = {
 					path[1],
 					path[#path]

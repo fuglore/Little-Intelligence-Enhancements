@@ -357,8 +357,8 @@ function CopLogicAttack._upd_combat_movement(data)
 	local t = data.t
 	local unit = data.unit
 	local focus_enemy = data.attention_obj
-	local in_cover = my_data.in_cover
 	local best_cover = my_data.best_cover
+	local in_cover = my_data.in_cover
 	local aggro_level = LIES.settings.enemy_aggro_level
 	local enemy_visible = focus_enemy.verified
 	local enemy_visible_soft = focus_enemy.verified_t and t - focus_enemy.verified_t < 2
@@ -378,8 +378,14 @@ function CopLogicAttack._upd_combat_movement(data)
 	elseif my_data.attitude == "engage" and not my_data.stay_out_time and not enemy_visible_soft and my_data.at_cover_shoot_pos and not action_taken and not want_to_take_cover then
 		my_data.stay_out_time = t + 7
 	end
-
-	if action_taken then
+	
+	if data.is_converted then
+		if action_taken then
+		
+		elseif want_to_take_cover then
+			move_to_cover = true
+		end
+	elseif action_taken then
 		-- Nothing
 	elseif want_to_take_cover and not my_data.charge_path then
 		move_to_cover = true
@@ -474,31 +480,33 @@ function CopLogicAttack._upd_combat_movement(data)
 	else
 		my_data.flank_cover = nil
 	end
-
-	if data.important and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
-		if data.is_suppressed and data.t - data.unit:character_damage():last_suppression_t() < 0.7 then
-			action_taken = CopLogicBase.chk_start_action_dodge(data, "scared")
-		end
-
-		if not action_taken and focus_enemy.is_person and focus_enemy.dis < 2000 and (data.group and data.group.size > 1 or math.random() < 0.5) then
-			local dodge = nil
-
-			if focus_enemy.is_local_player then
-				local e_movement_state = focus_enemy.unit:movement():current_state()
-
-				if not e_movement_state:_is_reloading() and not e_movement_state:_interacting() and not e_movement_state:is_equipping() then
-					dodge = true
-				end
-			else
-				local e_anim_data = focus_enemy.unit:anim_data()
-
-				if (e_anim_data.move or e_anim_data.idle) and not e_anim_data.reload then
-					dodge = true
-				end
+	
+	if not data.is_converted then
+		if data.important and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
+			if data.is_suppressed and data.t - data.unit:character_damage():last_suppression_t() < 0.7 then
+				action_taken = CopLogicBase.chk_start_action_dodge(data, "scared")
 			end
 
-			if dodge and focus_enemy.aimed_at then
-				action_taken = CopLogicBase.chk_start_action_dodge(data, "preemptive")
+			if not action_taken and focus_enemy.is_person and focus_enemy.dis < 2000 and (data.group and data.group.size > 1 or math.random() < 0.5) then
+				local dodge = nil
+
+				if focus_enemy.is_local_player then
+					local e_movement_state = focus_enemy.unit:movement():current_state()
+
+					if not e_movement_state:_is_reloading() and not e_movement_state:_interacting() and not e_movement_state:is_equipping() then
+						dodge = true
+					end
+				else
+					local e_anim_data = focus_enemy.unit:anim_data()
+
+					if (e_anim_data.move or e_anim_data.idle) and not e_anim_data.reload then
+						dodge = true
+					end
+				end
+
+				if dodge and focus_enemy.aimed_at then
+					action_taken = CopLogicBase.chk_start_action_dodge(data, "preemptive")
+				end
 			end
 		end
 	end
@@ -508,6 +516,60 @@ function CopLogicAttack._upd_combat_movement(data)
 	end
 
 	action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
+end
+
+function CopLogicAttack.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
+
+	if action_type == "walk" then
+		my_data.advancing = nil
+
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+		CopLogicAttack._cancel_charge(data, my_data)
+
+		if my_data.surprised then
+			my_data.surprised = false
+		elseif my_data.moving_to_cover then
+			if action:expired() then
+				my_data.in_cover = my_data.moving_to_cover
+				my_data.cover_enter_t = data.t
+			end
+
+			my_data.moving_to_cover = nil
+		elseif my_data.walking_to_cover_shoot_pos then
+			my_data.walking_to_cover_shoot_pos = nil
+			my_data.at_cover_shoot_pos = true
+		end
+	elseif action_type == "shoot" then
+		my_data.shooting = nil
+	elseif action_type == "turn" then
+		my_data.turning = nil
+	elseif action_type == "heal" then
+		if action:expired() then
+			CopLogicAttack._cancel_cover_pathing(data, my_data)
+		
+			data.logic._upd_aim(data, my_data)
+		end
+	elseif action_type == "hurt" or action_type == "healed" then
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+
+		if data.is_converted or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
+			data.logic._upd_aim(data, my_data)
+		end
+	elseif action_type == "dodge" then
+		local timeout = action:timeout()
+
+		if timeout then
+			data.dodge_timeout_t = TimerManager:game():time() + math.lerp(timeout[1], timeout[2], math.random())
+		end
+
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+
+		if action:expired() then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
+	end
 end
 
 function CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
@@ -637,8 +699,8 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	local t = data.t
 	local unit = data.unit
 	local focus_enemy = data.attention_obj
-	local in_cover = my_data.in_cover
 	local best_cover = my_data.best_cover
+	local in_cover = my_data.in_cover
 	local aggro_level = LIES.settings.enemy_aggro_level
 	local enemy_visible = focus_enemy.verified
 	local enemy_visible_soft = focus_enemy.verified_t and t - focus_enemy.verified_t < 2
@@ -658,20 +720,43 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	elseif my_data.attitude == "engage" and not my_data.stay_out_time and not enemy_visible_soft and my_data.at_cover_shoot_pos and not action_taken and not want_to_take_cover then
 		my_data.stay_out_time = t + 7
 	end
-
-	if action_taken then
+	
+	if data.is_converted then
+		if action_taken then
+		
+		elseif want_to_take_cover then
+			move_to_cover = true
+		end
+	elseif action_taken then
 		-- Nothing
 	elseif want_to_take_cover and not my_data.charge_path then
 		move_to_cover = true
 	elseif my_data.charge_path then
 		local path = my_data.charge_path
-		
-		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
-		
 		my_data.charge_path = nil
+		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
 		if in_cover then
-			if my_data.cover_test_step <= 2 then
+			if data.objective and data.objective.grp_objective and data.objective.grp_objective.charge and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6) then
+				if my_data.charge_path then
+					local path = my_data.charge_path
+					my_data.charge_path = nil
+					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
+				elseif not my_data.charge_path_search_id and data.attention_obj.nav_tracker then
+					my_data.charge_pos = CopLogicTravel._get_pos_on_wall(data.attention_obj.nav_tracker:field_position(), my_data.weapon_range.close, 45, nil)
+
+					if my_data.charge_pos then
+						my_data.charge_path_search_id = "charge" .. tostring(data.key)
+
+						unit:brain():search_for_path(my_data.charge_path_search_id, my_data.charge_pos, nil, nil, nil)
+					else
+						--log("gods")
+						debug_pause_unit(data.unit, "failed to find charge_pos", data.unit)
+
+						my_data.charge_path_failed_t = TimerManager:game():time()
+					end
+				end
+			elseif my_data.cover_test_step <= 2 then
 				local height = nil
 
 				if in_cover[4] then
@@ -726,31 +811,33 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	else
 		my_data.flank_cover = nil
 	end
-
-	if data.important and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
-		if data.is_suppressed and data.t - data.unit:character_damage():last_suppression_t() < 0.7 then
-			action_taken = CopLogicBase.chk_start_action_dodge(data, "scared")
-		end
-
-		if not action_taken and focus_enemy.is_person and focus_enemy.dis < 2000 and (data.group and data.group.size > 1 or math.random() < 0.5) then
-			local dodge = nil
-
-			if focus_enemy.is_local_player then
-				local e_movement_state = focus_enemy.unit:movement():current_state()
-
-				if not e_movement_state:_is_reloading() and not e_movement_state:_interacting() and not e_movement_state:is_equipping() then
-					dodge = true
-				end
-			else
-				local e_anim_data = focus_enemy.unit:anim_data()
-
-				if (e_anim_data.move or e_anim_data.idle) and not e_anim_data.reload then
-					dodge = true
-				end
+	
+	if not data.is_converted then
+		if data.important and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
+			if data.is_suppressed and data.t - data.unit:character_damage():last_suppression_t() < 0.7 then
+				action_taken = CopLogicBase.chk_start_action_dodge(data, "scared")
 			end
 
-			if dodge and focus_enemy.aimed_at then
-				action_taken = CopLogicBase.chk_start_action_dodge(data, "preemptive")
+			if not action_taken and focus_enemy.is_person and focus_enemy.dis < 2000 and (data.group and data.group.size > 1 or math.random() < 0.5) then
+				local dodge = nil
+
+				if focus_enemy.is_local_player then
+					local e_movement_state = focus_enemy.unit:movement():current_state()
+
+					if not e_movement_state:_is_reloading() and not e_movement_state:_interacting() and not e_movement_state:is_equipping() then
+						dodge = true
+					end
+				else
+					local e_anim_data = focus_enemy.unit:anim_data()
+
+					if (e_anim_data.move or e_anim_data.idle) and not e_anim_data.reload then
+						dodge = true
+					end
+				end
+
+				if dodge and focus_enemy.aimed_at then
+					action_taken = CopLogicBase.chk_start_action_dodge(data, "preemptive")
+				end
 			end
 		end
 	end

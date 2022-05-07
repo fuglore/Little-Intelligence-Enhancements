@@ -13,6 +13,14 @@
 			"value" : "lua_cover"
 		},
 		{
+			"type" : "toggle",
+			"id" : "lies_jokerhurts",
+			"title" : "menu_lies_jokerhurts_title",
+			"description" : "menu_lies_jokerhurts_desc",
+			"callback" : "callback_lies_jokerhurts",
+			"value" : "jokerhurts"
+		},
+		{
 			"type" : "multiple_choice",
 			"id" : "lies_fixed_spawngroups",
 			"title" : "menu_lies_fixed_spawngroups_title",

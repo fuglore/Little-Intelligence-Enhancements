@@ -169,3 +169,37 @@ function CopLogicIdle._chk_relocate(data)
 		end
 	end
 end
+
+function CopLogicIdle.action_complete_clbk(data, action)
+	local action_type = action:type()
+
+	if action_type == "turn" then
+		data.internal_data.turning = nil
+
+		if data.internal_data.fwd_offset then
+			local return_spin = data.internal_data.rubberband_rotation:to_polar_with_reference(data.unit:movement():m_rot():y(), math.UP).spin
+
+			if math.abs(return_spin) < 15 then
+				data.internal_data.fwd_offset = nil
+			end
+		end
+	elseif action_type == "act" then
+		local my_data = data.internal_data
+
+		if my_data.action_started == action then
+			if my_data.scan and not my_data.exiting and (not my_data.queued_tasks or not my_data.queued_tasks[my_data.wall_stare_task_key]) and not my_data.stare_path_pos then
+				CopLogicBase.queue_task(my_data, my_data.wall_stare_task_key, CopLogicIdle._chk_stare_into_wall_1, data, data.t)
+			end
+
+			if action:expired() then
+				if not my_data.action_timeout_clbk_id then
+					data.objective_complete_clbk(data.unit, data.objective)
+				end
+			elseif not my_data.action_expired then
+				data.objective_failed_clbk(data.unit, data.objective)
+			end
+		end
+	elseif not data.is_converted and action_type == "hurt" and data.important and action:expired() then
+		CopLogicBase.chk_start_action_dodge(data, "hit")
+	end
+end

@@ -5,9 +5,10 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V2.81",
+		version = "V2.9",
 		settings = {
 			lua_cover = false,
+			jokerhurts = false,
 			enemy_aggro_level = 2,
 			fixed_spawngroups = 1,
 			copsretire = false,
@@ -82,17 +83,17 @@ if RequiredScript == "lib/managers/menumanager" then
 
 		if not managers.navigation:raycast(ray_params) then
 			local slotmask = managers.slot:get_mask("world_geometry")
-			local ray_from = pos_from:with_z(pos_from.z + 31)
-			local ray_to = pos_to:with_z(pos_to.z + 31)
+			local ray_from = pos_from:with_z(pos_from.z + 51)
+			local ray_to = pos_to:with_z(pos_to.z + 51)
 			
 			if u_data then
-				if not u_data.unit:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 30, "bundle", 9, "report") then
+				if not u_data.unit:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 50, "bundle", 9, "report") then
 					return true
 				else
 					return
 				end
 			else
-				if not World:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 30, "bundle", 9, "report") then
+				if not World:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 50, "bundle", 9, "report") then
 					return true
 				else
 					return
@@ -671,6 +672,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_lua_cover = function(self, item)
 			local on = item:value() == "on"
 			LIES.settings.lua_cover = on
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_jokerhurts = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.jokerhurts = on
 
 			LIES:Save()
 		end

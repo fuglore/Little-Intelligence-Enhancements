@@ -43,11 +43,11 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 
 	CopLogicTravel.queue_update(data, my_data)
 
-	my_data.cover_update_task_key = "CopLogicTravel._update_cover" .. key_str
+	--my_data.cover_update_task_key = "CopLogicTravel._update_cover" .. key_str
 
-	if my_data.nearest_cover or my_data.best_cover then
-		CopLogicBase.add_delayed_clbk(my_data, my_data.cover_update_task_key, callback(CopLogicTravel, CopLogicTravel, "_update_cover", data), data.t + 1)
-	end
+	--if my_data.nearest_cover or my_data.best_cover then
+		--CopLogicBase.add_delayed_clbk(my_data, my_data.cover_update_task_key, callback(CopLogicTravel, CopLogicTravel, "_update_cover", data), data.t + 1)
+	--end
 
 	my_data.advance_path_search_id = "CopLogicTravel_detailed" .. tostring(data.key)
 	my_data.coarse_path_search_id = "CopLogicTravel_coarse" .. tostring(data.key)
@@ -174,10 +174,32 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 
 	my_data.attitude = data.objective.attitude or "avoid"
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
-	my_data.path_safely = data.team.foes[tweak_data.levels:get_default_team_ID("player")]
+	my_data.path_safely = my_data.attitude == "avoid" and data.team.foes[tweak_data.levels:get_default_team_ID("player")]
 	my_data.path_ahead = data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.is_converted or data.objective.grp_objective and data.objective.grp_objective.type == "retire"
 
 	data.unit:brain():set_update_enabled_state(false)
+end
+
+function CopLogicTravel._update_cover(ignore_this, data)
+	local my_data = data.internal_data
+	local cover_release_dis = 100
+	local nearest_cover = my_data.nearest_cover
+	local best_cover = my_data.best_cover
+	local m_pos = data.m_pos
+
+	if not my_data.in_cover and nearest_cover and cover_release_dis < mvector3.distance(nearest_cover[1][1], m_pos) then
+		managers.navigation:release_cover(nearest_cover[1])
+
+		my_data.nearest_cover = nil
+		nearest_cover = nil
+	end
+
+	if best_cover and cover_release_dis < mvector3.distance(best_cover[1][1], m_pos) then
+		managers.navigation:release_cover(best_cover[1])
+
+		my_data.best_cover = nil
+		best_cover = nil
+	end
 end
 
 function CopLogicTravel._chk_close_to_criminal(data, my_data)
@@ -291,7 +313,7 @@ end
 function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 	local to_pos = CopLogicTravel._get_exact_move_pos(data, my_data.coarse_path_index + 1)	
 	my_data.processing_advance_path = true
-	local prio = data.logic.get_pathing_prio(data)
+	local prio = CopLogicTravel.get_pathing_prio(data)
 	local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
 
 	data.unit:brain():search_for_path(my_data.advance_path_search_id, to_pos, prio, nil, nav_segs)
@@ -343,6 +365,33 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 	end
 
 	return can_continue
+end
+
+function CopLogicTravel._chk_request_action_walk_to_advance_pos(data, my_data, speed, end_rot, no_strafe, pose, end_pose)
+	if not data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then
+		CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
+
+		local path = my_data.advance_path
+		local new_action_data = {
+			type = "walk",
+			body_part = 2,
+			nav_path = path,
+			variant = speed or "run",
+			end_rot = end_rot,
+			path_simplified = my_data.path_is_precise,
+			no_strafe = no_strafe,
+			pose = pose,
+			end_pose = end_pose
+		}
+		my_data.advance_path = nil
+		my_data.starting_advance_action = true
+		my_data.advancing = data.unit:brain():action_request(new_action_data)
+		my_data.starting_advance_action = false
+
+		if my_data.advancing then
+			data.brain:rem_pos_rsrv("path")
+		end
+	end
 end
 
 function CopLogicTravel.upd_advance(data)
@@ -459,6 +508,10 @@ function CopLogicTravel.upd_advance(data)
 
 			CopLogicBase._exit(data.unit, wanted_state)
 		end
+	end
+	
+	if data.internal_data == my_data then
+		CopLogicTravel._update_cover(nil, data)
 	end
 end
 
@@ -836,10 +889,20 @@ function CopLogicTravel.action_complete_clbk(data, action)
 			--log("wee")
 			CopLogicTravel.upd_advance(data)
 		end
+		
+		CopLogicTravel._update_cover(nil, data)
 	elseif action_type == "turn" then
 		data.internal_data.turning = nil
 	elseif action_type == "shoot" then
 		data.internal_data.shooting = nil
+	elseif action_type == "heal" then
+		if action:expired() then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
+	elseif action_type == "hurt" or action_type == "healed" then
+		if data.is_converted or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
 	elseif action_type == "dodge" then
 		local objective = data.objective
 		local allow_trans, obj_failed = CopLogicBase.is_obstructed(data, objective, nil, nil)
@@ -870,7 +933,7 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 		return
 	end
 
-	if not my_data.coarse_path_index then
+	if not my_data.coarse_path_index or my_data.coarse_path and #my_data.coarse_path - 1 == 1 then
 		return
 	end
 	

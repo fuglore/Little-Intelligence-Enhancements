@@ -5,6 +5,14 @@ function GroupAITweakData:_fix_enemy_spawn_groups()
 		return
 	end
 	
+	self._tactics.tazer_flanking = {
+		"flank",
+		"charge",
+		"provide_coverfire",
+		"smoke_grenade",
+		"murder"
+	}
+	
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	

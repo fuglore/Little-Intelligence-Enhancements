@@ -3,7 +3,35 @@ Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
 	CopBrain._logic_variants.tank_medic.attack = BossLogicAttack
 	CopBrain._logic_variants.tank_mini.attack = BossLogicAttack
 	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
+	CopBrain._logic_variants.biker_boss = CopBrain._logic_variants.tank
 end)
+
+Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", function(self, mastermind_criminal)
+	local char_tweaks = deep_clone(self._unit:base()._char_tweak)
+	
+	char_tweaks.suppression = nil
+	char_tweaks.crouch_move = false
+	
+	if LIES.settings.jokerhurts then
+		char_tweaks.damage.hurt_severity = tweak_data.character.presets.hurt_severities.only_light_hurt
+		
+		char_tweaks.damage.hurt_severity.explosion = {
+			health_reference = 1,
+			zones = {
+				{
+					light = 1
+				}
+			}
+		}
+	end
+	
+	self._logic_data.char_tweak = char_tweaks
+	self._unit:base()._char_tweak = char_tweaks
+	self._unit:character_damage()._char_tweak = char_tweaks
+	self._unit:movement()._tweak_data = char_tweaks
+	self._unit:movement()._action_common_data.char_tweak = char_tweaks
+end)
+
 
 function CopBrain:set_objective(new_objective, params)
 	local old_objective = self._logic_data.objective

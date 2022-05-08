@@ -989,7 +989,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	local reservation, wants_reservation = nil
 
 	if total_nav_points <= nav_index then
-		local new_occupation = data.logic._determine_destination_occupation(data, objective)
+		local new_occupation = CopLogicTravel._determine_destination_occupation(data, objective)
 
 		if new_occupation then
 			if new_occupation.type == "guard" then

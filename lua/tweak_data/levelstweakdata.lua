@@ -1,5 +1,4 @@
 Hooks:PostHook(LevelsTweakData, "init", "lies_fixed_ai_obj", function(self)
-	log("yuck")
 	self.spa.ignored_so_elements = {
 		[101834] = true,
 		[135495] = true,

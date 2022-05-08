@@ -54,7 +54,6 @@ function CivilianLogicEscort._get_objective_path_data(data, my_data)
 			
 			local alt_coarse_params = {
 				from_tracker = m_tracker,
-				to_seg = target_seg,
 				to_pos = target_pos,
 				access = {
 					"walk"

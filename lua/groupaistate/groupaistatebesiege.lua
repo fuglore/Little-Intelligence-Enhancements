@@ -990,12 +990,15 @@ function GroupAIStateBesiege:_chk_group_area_presence(group, area_to_chk)
 	local group_in_area = nil
 
 	for u_key, u_data in pairs(group.units) do
-		local nav_seg = u_data.tracker:nav_segment()
+	
+		if u_data.tracker and alive(u_data.tracker) then
+			local nav_seg = u_data.tracker:nav_segment()
 
-		if area_to_chk.nav_segs[nav_seg] then
-			group_in_area = true
-		else
-			group_in_area = nil
+			if area_to_chk.nav_segs[nav_seg] then
+				group_in_area = true
+			else
+				group_in_area = nil
+			end
 		end
 	end
 	

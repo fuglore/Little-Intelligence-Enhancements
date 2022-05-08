@@ -16,6 +16,62 @@ function GroupAITweakData:_fix_enemy_spawn_groups()
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	
+	if difficulty_index < 6 then
+		self.unit_categories.FBI_swat_R870.unit_types = {
+			america = {
+				Idstring("units/payday2/characters/ene_fbi_swat_2/ene_fbi_swat_2")
+			},
+			russia = {
+				Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_swat_r870/ene_akan_fbi_swat_r870")
+			},
+			zombie = {
+				Idstring("units/pd2_dlc_hvh/characters/ene_fbi_swat_hvh_2/ene_fbi_swat_hvh_2")
+			},
+			murkywater = {
+				Idstring("units/pd2_dlc_bph/characters/ene_murkywater_light_r870/ene_murkywater_light_r870")
+			},
+			federales = {
+				Idstring("units/pd2_dlc_bex/characters/ene_swat_policia_federale_r870/ene_swat_policia_federale_r870")
+			}
+		}
+	elseif difficulty_index < 8 then
+		self.unit_categories.FBI_swat_R870.unit_types = {
+			america = {
+				Idstring("units/payday2/characters/ene_city_swat_2/ene_city_swat_2")
+			},
+			russia = {
+				Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_swat_dw_r870/ene_akan_fbi_swat_dw_r870")
+			},
+			zombie = {
+				Idstring("units/pd2_dlc_hvh/characters/ene_fbi_swat_hvh_2/ene_fbi_swat_hvh_2")
+			},
+			murkywater = {
+				Idstring("units/pd2_dlc_bph/characters/ene_murkywater_light_city_r870/ene_murkywater_light_city_r870")
+			},
+			federales = {
+				Idstring("units/pd2_dlc_bex/characters/ene_swat_policia_federale_city_r870/ene_swat_policia_federale_city_r870")
+			}
+		}
+	else
+		self.unit_categories.FBI_swat_R870.unit_types = {
+			america = {
+				Idstring("units/pd2_dlc_gitgud/characters/ene_zeal_swat/ene_zeal_swat")
+			},
+			russia = {
+				Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_swat_dw_r870/ene_akan_fbi_swat_dw_r870")
+			},
+			zombie = {
+				Idstring("units/pd2_dlc_hvh/characters/ene_fbi_swat_hvh_2/ene_fbi_swat_hvh_2")
+			},
+			murkywater = {
+				Idstring("units/pd2_dlc_bph/characters/ene_murkywater_light/ene_murkywater_light")
+			},
+			federales = {
+				Idstring("units/pd2_dlc_bex/characters/ene_swat_policia_federale/ene_swat_policia_federale")
+			}
+		}
+	end
+	
 	if difficulty_index <= 2 then
 		self.enemy_spawn_groups.tac_swat_shotgun_rush = {
 			amount = {

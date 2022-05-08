@@ -57,6 +57,48 @@ function CopLogicIdle.queued_update(data)
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
 end
 
+function CopLogicIdle._upd_enemy_detection(data)
+	managers.groupai:state():on_unit_detection_updated(data.unit)
+
+	data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	local min_reaction = not data.cool and AIAttentionObject.REACT_AIM or nil 
+	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects)
+
+	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
+
+	if new_reaction and AIAttentionObject.REACT_SUSPICIOUS < new_reaction then
+		local objective = data.objective
+		local wanted_state = nil
+		local allow_trans, obj_failed = CopLogicBase.is_obstructed(data, objective, nil, new_attention)
+
+		if allow_trans then
+			wanted_state = CopLogicBase._get_logic_state_from_reaction(data)
+		end
+
+		if wanted_state and wanted_state ~= data.name then
+			if obj_failed then
+				data.objective_failed_clbk(data.unit, data.objective)
+			end
+
+			if my_data == data.internal_data then
+				CopLogicBase._exit(data.unit, wanted_state)
+			end
+		end
+	end
+
+	if my_data == data.internal_data then
+		CopLogicBase._chk_call_the_police(data)
+
+		if my_data ~= data.internal_data then
+			return delay
+		end
+	end
+
+	return delay
+end
+
 function CopLogicIdle.on_new_objective(data, old_objective)
 	local new_objective = data.objective
 

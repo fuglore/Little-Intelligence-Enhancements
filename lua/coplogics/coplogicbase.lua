@@ -1,3 +1,60 @@
+local tmp_vec1 = Vector3()
+local tmp_vec2 = Vector3()
+
+local mvec3_set = mvector3.set
+local mvec3_norm = mvector3.normalize
+local mvec3_dir = mvector3.direction
+local mvec3_dot = mvector3.dot
+
+local m_rot_x = mrotation.x
+local m_rot_y = mrotation.y
+local m_rot_z = mrotation.z
+
+function CopLogicBase.chk_am_i_aimed_at(data, attention_obj, max_dot)
+	if not attention_obj.is_person or not attention_obj.is_alive then
+		return
+	end
+
+	if attention_obj.dis < 700 and max_dot > 0.3 then
+		max_dot = math.lerp(0.3, max_dot, (attention_obj.dis - 50) / 650)
+	end
+
+	local enemy_look_dir = tmp_vec1
+	local weapon_rot = nil
+
+	if attention_obj.is_husk_player then
+		mvec3_set(enemy_look_dir, attention_obj.unit:movement():detect_look_dir())
+	else
+		if attention_obj.is_local_player then
+			m_rot_y(attention_obj.unit:movement():m_head_rot(), enemy_look_dir)
+		else
+			if attention_obj.unit:inventory() and attention_obj.unit:inventory():equipped_unit() then
+				if attention_obj.unit:movement()._stance.values[3] >= 0.6 then
+					local weapon_fire_obj = attention_obj.unit:inventory():equipped_unit():get_object(Idstring("fire"))
+
+					if alive(weapon_fire_obj) then
+						weapon_rot = weapon_fire_obj:rotation()
+					end
+				end
+			end
+
+			if weapon_rot then
+				m_rot_y(weapon_rot, enemy_look_dir)
+			else
+				m_rot_z(attention_obj.unit:movement():m_head_rot(), enemy_look_dir)
+			end
+		end
+
+		mvec3_norm(enemy_look_dir)
+	end
+
+	local enemy_vec = tmp_vec2
+
+	mvec3_dir(enemy_vec, attention_obj.m_head_pos, data.unit:movement():m_com())
+
+	return max_dot < mvec3_dot(enemy_vec, enemy_look_dir)
+end
+
 function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	local my_data = data.internal_data
 	attention = attention or data.attention_obj

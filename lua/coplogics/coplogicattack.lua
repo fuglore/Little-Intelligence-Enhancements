@@ -270,28 +270,15 @@ function CopLogicAttack._upd_aim(data, my_data)
 				my_data.attention_unit = mvector3.copy(look_pos)
 			end
 		end
+		
+		if not my_data.shooting and not my_data.spooc_attack and not data.unit:movement():chk_action_forbidden("action") then
+			local shoot_action = {
+				body_part = 3,
+				type = "shoot"
+			}
 
-		if not my_data.shooting and not my_data.spooc_attack and not data.unit:anim_data().reload and not data.unit:movement():chk_action_forbidden("action") then
-			local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
-			
-			if ammo < 1 then
-				local new_action = {
-					body_part = 3,
-					type = "reload"
-				}
-
-				data.unit:brain():action_request(new_action)
-				
-				my_data.shooting = nil
-			else
-				local shoot_action = {
-					body_part = 3,
-					type = "shoot"
-				}
-
-				if data.unit:brain():action_request(shoot_action) then
-					my_data.shooting = true
-				end
+			if data.unit:brain():action_request(shoot_action) then
+				my_data.shooting = true
 			end
 		end
 	else
@@ -300,21 +287,12 @@ function CopLogicAttack._upd_aim(data, my_data)
 				body_part = 3,
 				type = "idle"
 			}
-	
 
 			data.unit:brain():action_request(new_action)
-		else
-			local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
-
-			if ammo / ammo_max < 0.5 then
-				local new_action = {
-					body_part = 3,
-					type = "reload"
-				}
-
-				data.unit:brain():action_request(new_action)
-			end
+			
+			my_data.shooting = nil
 		end
+
 
 		if my_data.attention_unit then
 			CopLogicBase._reset_attention(data)
@@ -602,7 +580,7 @@ function CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
 	haste = haste or "walk"
 	pose = pose or data.is_suppressed and "crouch" or "stand"
 
-	if pose == "crouch" and not data.char_tweak.crouch_move then
+	if pose == "crouch" and data.char_tweak.crouch_move ~= true then
 		pose = "stand"
 	end
 	
@@ -637,7 +615,6 @@ function CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
 		data.brain:rem_pos_rsrv("path")
 	end
 end
-
 
 function CopLogicAttack._process_pathing_results(data, my_data)
 	if not data.pathing_results then

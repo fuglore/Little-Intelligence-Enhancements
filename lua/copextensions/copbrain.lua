@@ -4,6 +4,7 @@ Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
 	CopBrain._logic_variants.tank_mini.attack = BossLogicAttack
 	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
 	CopBrain._logic_variants.biker_boss = CopBrain._logic_variants.tank
+	CopBrain._logic_variants.drug_lord_boss = CopBrain._logic_variants.tank
 end)
 
 Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", function(self, mastermind_criminal)

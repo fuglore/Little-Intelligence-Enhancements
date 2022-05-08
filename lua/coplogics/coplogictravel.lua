@@ -116,7 +116,6 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 			
 			local alt_coarse_params = {
 				from_tracker = m_tracker,
-				to_seg = target_seg,
 				to_pos = target_pos,
 				access = {
 					"walk"
@@ -475,16 +474,6 @@ function CopLogicTravel.upd_advance(data)
 
 		if my_data ~= data.internal_data then
 			return
-		elseif my_data.advance_path then
-			if CopLogicTravel.chk_group_ready_to_move(data, my_data) then
-				CopLogicTravel._chk_begin_advance(data, my_data)
-
-				if my_data.advancing and my_data.path_ahead then
-					CopLogicTravel._check_start_path_ahead(data)
-				end
-			end
-		elseif my_data.coarse_path then
-			CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 		end
 	elseif not data.unit:movement():chk_action_forbidden("walk") then
 		if objective then

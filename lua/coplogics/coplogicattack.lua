@@ -11,6 +11,97 @@ local temp_vec1 = Vector3()
 local temp_vec2 = Vector3()
 local temp_vec3 = Vector3()
 
+function CopLogicAttack.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+	data.unit:brain():cancel_all_pathing_searches()
+
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	data.internal_data = my_data
+	my_data.detection = data.char_tweak.detection.combat
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+		my_data.firing = old_internal_data.firing
+		my_data.shooting = old_internal_data.shooting
+		my_data.attention_unit = old_internal_data.attention_unit
+
+		CopLogicAttack._set_best_cover(data, my_data, old_internal_data.best_cover)
+	end
+
+	my_data.cover_test_step = 1
+	local key_str = tostring(data.key)
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	my_data.attitude = data.objective and data.objective.attitude or "avoid"
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+
+	data.unit:brain():set_update_enabled_state(true)
+
+	if data.cool then
+		data.unit:movement():set_cool(false)
+	end
+
+	if (not data.objective or not data.objective.stance) and data.unit:movement():stance_code() == 1 then
+		data.unit:movement():set_stance("hos")
+	end
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	if data.objective and (data.objective.action_duration or data.objective.action_timeout_t and data.t < data.objective.action_timeout_t) then
+		my_data.action_timeout_clbk_id = "CopLogicIdle_action_timeout" .. tostring(data.key)
+		local action_timeout_t = data.objective.action_timeout_t or data.t + data.objective.action_duration
+		data.objective.action_timeout_t = action_timeout_t
+
+		CopLogicBase.add_delayed_clbk(my_data, my_data.action_timeout_clbk_id, callback(CopLogicIdle, CopLogicIdle, "clbk_action_timeout", data), action_timeout_t)
+	end
+
+	data.unit:brain():set_attention_settings({
+		cbt = true
+	})
+end
+
+function CopLogicAttack.queued_update(data)
+	local my_data = data.internal_data
+	data.t = TimerManager:game():time()
+	
+	CopLogicAttack._upd_enemy_detection(data, true)
+	
+	if data.internal_data == my_data then
+		if data.attention_obj and AIAttentionObject.REACT_AIM <= data.attention_obj.reaction then
+			CopLogicAttack.update(data)
+		end
+	end
+
+	if data.internal_data == my_data then
+		CopLogicAttack.queue_update(data, data.internal_data)
+	end
+end
+
+function CopLogicAttack.queue_update(data, my_data)
+	CopLogicBase.queue_task(my_data, my_data.update_queue_id, data.logic.queued_update, data, data.t + (data.important and 0.2 or 0.7), true)
+end
+
+function CopLogicAttack.damage_clbk(data, damage_info)
+	CopLogicIdle.damage_clbk(data, damage_info)
+	
+	if data.important then
+		if not data.unit:movement():chk_action_forbidden("walk") then
+			local my_data = data.internal_data
+			local moving_to_cover = my_data.moving_to_cover or my_data.at_cover_shoot_pos
+
+			if not moving_to_cover and not my_data.tasing and not my_data.spooc_attack then
+				CopLogicBase.chk_start_action_dodge(data, "hit")
+			end
+		end
+	end
+end
+
 function CopLogicAttack.update(data)
 	local my_data = data.internal_data
 

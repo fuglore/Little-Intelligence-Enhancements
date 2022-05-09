@@ -470,10 +470,32 @@ function CopLogicTravel.upd_advance(data)
 			end
 		end
 	elseif my_data.processing_advance_path or my_data.processing_coarse_path then
+		local was_processing_advance_path = my_data.processing_advance_path
+	
 		CopLogicTravel._upd_pathing(data, my_data)
 
 		if my_data ~= data.internal_data then
 			return
+		end
+		
+		if not my_data.processing_advance_path and not my_data.processing_coarse_path then
+			if was_processing_advance_path then
+				if my_data.advance_path and not my_data.advancing then
+					CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
+
+					if my_data ~= data.internal_data then
+						return
+					end
+
+					CopLogicTravel._chk_begin_advance(data, my_data)
+
+					if my_data.advancing and my_data.path_ahead then
+						CopLogicTravel._check_start_path_ahead(data)
+					end
+				end
+			elseif my_data.coarse_path and not my_data.advancing then
+				CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+			end
 		end
 	elseif not data.unit:movement():chk_action_forbidden("walk") then
 		if objective then
@@ -530,9 +552,15 @@ function CopLogicTravel._upd_enemy_detection(data)
 	local my_data = data.internal_data
 	--this prevents units from looking at broken glass or other dumb things while in loud, and saves performance a decent bit
 	local min_reaction = not data.cool and AIAttentionObject.REACT_AIM or nil 
-	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
 	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects, nil)
 	local old_att_obj = data.attention_obj
+	
+	local delay = 0 --whisper mode updates need to be as CONSTANT as possible to keep units moving smoothly and predictably
+	
+	if not managers.groupai:state():whisper_mode() then
+		delay = data.important and 0.5 or 1 --units in travel update less often than units in attack, i can run a lot of stuff through action_complete_clbk and single-update states
+	end
 
 	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
 

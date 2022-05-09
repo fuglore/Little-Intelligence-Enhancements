@@ -138,7 +138,8 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 						target_u_key = focus_enemy.u_key,
 						start_t = data.t
 					}
-
+					
+					CopLogicAttack.aim_allow_fire(true, true, data, my_data)
 					CopLogicAttack._cancel_charge(data, my_data)
 					managers.groupai:state():on_tase_start(data.key, focus_enemy.u_key)
 				end
@@ -157,22 +158,38 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 				}
 
 				data.unit:brain():action_request(new_action)
-			else
-				local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
-
-				if ammo / ammo_max < 0.5 then
-					local new_action = {
-						body_part = 3,
-						type = "reload"
-					}
-
-					data.unit:brain():action_request(new_action)
-				end
-			end
+			end	
 		
 			CopLogicAttack._upd_aim(data, my_data)
 		end
 	end
+end
+
+function TaserLogicAttack._chk_reaction_to_attention_object(data, attention_data, stationary)
+	local reaction = CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, stationary)
+
+	if reaction < AIAttentionObject.REACT_SHOOT or not attention_data.criminal_record or not attention_data.is_person then
+		return reaction
+	end
+
+	if attention_data.is_human_player and not attention_data.unit:movement():is_taser_attack_allowed() then
+		return AIAttentionObject.REACT_COMBAT
+	end
+
+	if (attention_data.is_human_player or not attention_data.unit:movement():chk_action_forbidden("hurt")) and attention_data.verified and attention_data.verified_dis < data.internal_data.tase_distance * 0.9 then
+		if data.tase_delay_t < data.t then
+			local vis_ray = data.unit:raycast("ray", data.unit:movement():m_head_pos(), attention_data.m_head_pos, "slot_mask", managers.slot:get_mask("bullet_impact_targets_no_criminals"), "sphere_cast_radius", 30, "ignore_unit", attention_data.unit, "report")
+			
+			if not vis_ray then
+				return AIAttentionObject.REACT_SPECIAL_ATTACK
+			end
+		end
+		
+		
+		return AIAttentionObject.REACT_COMBAT
+	end
+
+	return reaction
 end
 
 function TaserLogicAttack._upd_enemy_detection(data)
@@ -234,5 +251,71 @@ function TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, focus_ene
 		data.last_charge_snd_play_t = data.t
 
 		data.unit:sound():play("taser_charge", nil, true)
+	end
+end
+
+function TaserLogicAttack.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
+
+	if action_type == "walk" then
+		my_data.advancing = nil
+
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+		CopLogicAttack._cancel_charge(data, my_data)
+
+		if my_data.surprised then
+			my_data.surprised = false
+		elseif my_data.moving_to_cover then
+			if action:expired() then
+				my_data.in_cover = my_data.moving_to_cover
+				my_data.cover_enter_t = data.t
+			end
+
+			my_data.moving_to_cover = nil
+		elseif my_data.walking_to_cover_shoot_pos then
+			my_data.walking_to_cover_shoot_pos = nil
+			my_data.at_cover_shoot_pos = true
+		end
+	elseif action_type == "shoot" then
+		my_data.shooting = nil
+	elseif action_type == "turn" then
+		my_data.turning = nil
+	elseif action_type == "heal" then
+		if action:expired() then
+			CopLogicAttack._cancel_cover_pathing(data, my_data)
+		
+			data.logic._upd_aim(data, my_data)
+		end
+	elseif action_type == "hurt" or action_type == "healed" then
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+
+		if data.is_converted or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
+			data.logic._upd_aim(data, my_data)
+		end
+	elseif action_type == "dodge" then
+		local timeout = action:timeout()
+
+		if timeout then
+			data.dodge_timeout_t = TimerManager:game():time() + math.lerp(timeout[1], timeout[2], math.random())
+		end
+
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+
+		if action:expired() then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
+	elseif action_type == "tase" then
+		if action:expired() and my_data.tasing then
+			local record = managers.groupai:state():criminal_record(my_data.tasing.target_u_key)
+
+			if record and record.status then
+				data.tase_delay_t = TimerManager:game():time() + 45
+			end
+		end
+
+		managers.groupai:state():on_tase_end(my_data.tasing.target_u_key)
+
+		my_data.tasing = nil
 	end
 end

@@ -57,10 +57,7 @@ function BossLogicAttack.enter(data, new_logic_name, enter_params)
 	local objective = data.objective
 	new_internal_data.attitude = objective and objective.attitude or "engage"
 	local key_str = tostring(data.key)
-	local detection_task_key = "BossLogicAttack._upd_enemy_detection" .. key_str
-	new_internal_data.detection_task_key = detection_task_key
 
-	CopLogicBase.queue_task(new_internal_data, detection_task_key, BossLogicAttack._upd_enemy_detection, data, data.t, true)
 	CopLogicIdle._chk_has_old_action(data, new_internal_data)
 
 	if objective and (objective.action_duration or objective.action_timeout_t and data.t < objective.action_timeout_t) then
@@ -93,4 +90,33 @@ function BossLogicAttack._pathing_complete_clbk(data)
 			BossLogicAttack._upd_combat_movement(data, my_data)
 		end
 	end
+end
+
+function BossLogicAttack.queued_update(data)
+	local my_data = data.internal_data
+	data.t = TimerManager:game():time()
+
+	BossLogicAttack._upd_enemy_detection(data, true)
+	
+	if data.internal_data == my_data then
+		if data.attention_obj and AIAttentionObject.REACT_AIM <= data.attention_obj.reaction then
+			BossLogicAttack.update(data)
+		end
+	end
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	BossLogicAttack.queue_update(data, data.internal_data)
+end
+
+function BossLogicAttack.queue_update(data, my_data)
+	local delay = 0 --whisper mode updates need to be as CONSTANT as possible to keep units moving smoothly and predictably
+	
+	if not managers.groupai:state():whisper_mode() then
+		delay = data.important and 0.2 or 0.5 
+	end
+
+	CopLogicBase.queue_task(my_data, my_data.update_queue_id, BossLogicAttack.queued_update, data, data.t + delay, true)
 end

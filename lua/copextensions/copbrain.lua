@@ -33,6 +33,22 @@ Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", func
 	self._unit:movement()._action_common_data.char_tweak = char_tweaks
 end)
 
+function CopBrain:on_suppressed(state)
+	if state ~= self._logic_data.is_suppressed then
+		self._logic_data.is_suppressed = state or nil
+		
+		if self._logic_data.is_suppressed then
+			if self._current_logic.on_suppressed_state then
+				self._current_logic.on_suppressed_state(self._logic_data)
+
+				if self._logic_data.char_tweak.chatter.suppress then
+					self._unit:sound():say("hlp", true)
+				end
+			end
+		end
+	end
+end
+
 
 function CopBrain:set_objective(new_objective, params)
 	local old_objective = self._logic_data.objective

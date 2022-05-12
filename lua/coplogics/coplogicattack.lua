@@ -1,4 +1,6 @@
 local mvec3_set = mvector3.set
+local mvec3_add = mvector3.add
+local mvec3_mul = mvector3.multiply
 local mvec3_set_z = mvector3.set_z
 local mvec3_sub = mvector3.subtract
 local mvec3_dir = mvector3.direction
@@ -614,6 +616,10 @@ function CopLogicAttack.action_complete_clbk(data, action)
 		my_data.shooting = nil
 	elseif action_type == "turn" then
 		my_data.turning = nil
+		
+		if action:expired() then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
 	elseif action_type == "heal" then
 		if action:expired() then
 			CopLogicAttack._cancel_cover_pathing(data, my_data)
@@ -955,4 +961,25 @@ function CopLogicAttack.is_available_for_assignment(data, new_objective)
 	end
 
 	return true
+end
+
+function CopLogicAttack._chk_covered(data, cover_pos, threat_pos, slotmask)
+	local ray_from = temp_vec1
+
+	mvec3_set(ray_from, math.UP)
+	mvec3_mul(ray_from, 82.5)
+	mvec3_add(ray_from, cover_pos)
+
+	local ray_to_pos = threat_pos
+
+	local low_ray = data.unit:raycast("ray", ray_from, ray_to_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
+	local high_ray = nil
+
+	if low_ray then		
+		mvec3_set_z(ray_from, ray_from.z + 82.5)
+
+		high_ray = data.unit:raycast("ray", ray_from, ray_to_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
+	end
+
+	return low_ray, high_ray
 end

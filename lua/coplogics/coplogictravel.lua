@@ -910,6 +910,10 @@ function CopLogicTravel.action_complete_clbk(data, action)
 		CopLogicTravel._update_cover(nil, data)
 	elseif action_type == "turn" then
 		data.internal_data.turning = nil
+
+		if action:expired() then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
 	elseif action_type == "shoot" then
 		data.internal_data.shooting = nil
 	elseif action_type == "heal" then
@@ -1076,7 +1080,8 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	else
 		local nav_seg = coarse_path[nav_index][1]
 		local area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg)
-		local cover = CopLogicTravel._find_cover(data, nav_seg, coarse_path[nav_index][2])
+		local door_pos = CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)	
+		local cover = CopLogicTravel._find_cover(data, nav_seg, door_pos)
 
 		if my_data.moving_to_cover then
 			managers.navigation:release_cover(my_data.moving_to_cover[1])
@@ -1092,8 +1097,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 			}
 			to_pos = cover[1]
 		else
-			to_pos = managers.navigation:find_random_position_in_segment(nav_seg)
-			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
+			to_pos = CopLogicTravel._get_pos_on_wall(coarse_path[nav_index][2])
 			wants_reservation = true
 		end
 	end
@@ -1106,4 +1110,48 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	end
 
 	return to_pos
+end
+
+function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)
+	local nav_seg = managers.navigation._nav_segments[nav_seg]
+	
+	local next_pos = coarse_path[nav_index + 1][2]
+	local best_dis, best_pos
+	
+	for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
+		if neighbour_nav_seg_id == coarse_path[nav_index + 1][1] then
+			for i = 1, #door_list do
+				local pos = nil
+				local door_id = door_list[i]
+				
+				if type(door_id) == "number" then
+					pos = managers.navigation._room_doors[door_id].center
+				else
+					pos = door_id:script_data().element:nav_link_end_pos()
+				end
+				
+				local dis = mvector3.distance_sq(pos, next_pos)
+			
+				if not best_dis or dis < best_dis then
+					best_pos = pos
+					best_dis = dis
+				end
+			end
+		end
+	end
+	
+	if best_pos then
+		return best_pos
+	end
+end
+
+function CopLogicTravel._chk_cover_height(data, cover, slotmask)
+	local low_ray, high_ray
+	
+	if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+		local threat_pos = data.attention_obj.m_head_pos
+		low_ray, high_ray = CopLogicAttack._chk_covered(data, cover[1], threat_pos, slotmask)
+	end
+
+	return high_ray
 end

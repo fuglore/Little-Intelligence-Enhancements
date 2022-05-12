@@ -281,6 +281,10 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 		my_data.shooting = nil
 	elseif action_type == "turn" then
 		my_data.turning = nil
+		
+		if action:expired() then
+			CopLogicAttack._upd_aim(data, my_data)
+		end
 	elseif action_type == "heal" then
 		if action:expired() then
 			CopLogicAttack._cancel_cover_pathing(data, my_data)

@@ -1,0 +1,264 @@
+function ShieldLogicAttack._upd_enemy_detection(data)
+	managers.groupai:state():on_unit_detection_updated(data.unit)
+
+	data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	local min_reaction = AIAttentionObject.REACT_AIM
+	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	local focus_enemy, focus_enemy_angle, focus_enemy_reaction = nil
+	local detected_enemies = data.detected_attention_objects
+	local enemies = {}
+	local enemies_cpy = {}
+	local passive_enemies = {}
+	local threat_epicenter, threats = nil
+	local nr_threats = 0
+	local verified_chk_t = data.t - 8
+
+	for key, enemy_data in pairs(detected_enemies) do
+		if AIAttentionObject.REACT_COMBAT <= enemy_data.reaction and enemy_data.identified and enemy_data.verified_t and verified_chk_t < enemy_data.verified_t then
+			enemies[key] = enemy_data
+			enemies_cpy[key] = enemy_data
+		end
+	end
+
+	for key, enemy_data in pairs(enemies) do
+		threat_epicenter = threat_epicenter or Vector3()
+
+		mvector3.add(threat_epicenter, enemy_data.m_pos)
+
+		nr_threats = nr_threats + 1
+		enemy_data.aimed_at = CopLogicIdle.chk_am_i_aimed_at(data, enemy_data, enemy_data.aimed_at and 0.95 or 0.985)
+	end
+
+	if threat_epicenter then
+		mvector3.divide(threat_epicenter, nr_threats)
+
+		local from_threat = mvector3.copy(threat_epicenter)
+
+		mvector3.subtract(from_threat, data.m_pos)
+		mvector3.normalize(from_threat)
+
+		local furthest_pt_dist = 0
+		local furthest_line = nil
+
+		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 100 then
+			my_data.threat_epicenter = mvector3.copy(threat_epicenter)
+
+			for key1, enemy_data1 in pairs(enemies) do
+				enemies_cpy[key1] = nil
+
+				for key2, enemy_data2 in pairs(enemies_cpy) do
+					if nr_threats == 2 then
+						local AB = mvector3.copy(enemy_data1.m_pos)
+
+						mvector3.subtract(AB, enemy_data2.m_pos)
+						mvector3.normalize(AB)
+
+						local PA = mvector3.copy(data.m_pos)
+
+						mvector3.subtract(PA, enemy_data1.m_pos)
+						mvector3.normalize(PA)
+
+						local PB = mvector3.copy(data.m_pos)
+
+						mvector3.subtract(PB, enemy_data2.m_pos)
+						mvector3.normalize(PB)
+
+						local dot1 = mvector3.dot(AB, PA)
+						local dot2 = mvector3.dot(AB, PB)
+
+						if dot1 < 0 and dot2 < 0 or dot1 > 0 and dot2 > 0 then
+							break
+						else
+							furthest_line = {
+								enemy_data1.m_pos,
+								enemy_data2.m_pos
+							}
+
+							break
+						end
+					end
+
+					local pt = math.line_intersection(enemy_data1.m_pos, enemy_data2.m_pos, threat_epicenter, data.m_pos)
+					local to_pt = mvector3.copy(threat_epicenter)
+
+					mvector3.subtract(to_pt, pt)
+					mvector3.normalize(to_pt)
+
+					if mvector3.dot(from_threat, to_pt) > 0 then
+						local line = mvector3.copy(enemy_data2.m_pos)
+
+						mvector3.subtract(line, enemy_data1.m_pos)
+
+						local line_len = mvector3.normalize(line)
+						local pt_line = mvector3.copy(pt)
+
+						mvector3.subtract(pt_line, enemy_data1.m_pos)
+
+						local dot = mvector3.dot(line, pt_line)
+
+						if dot < line_len and dot > 0 then
+							local dist = mvector3.distance(pt, threat_epicenter)
+
+							if furthest_pt_dist < dist then
+								furthest_pt_dist = dist
+								furthest_line = {
+									enemy_data1.m_pos,
+									enemy_data2.m_pos
+								}
+							end
+						end
+					end
+				end
+			end
+		end
+
+		local optimal_direction = nil
+
+		if furthest_line then
+			local BA = mvector3.copy(furthest_line[2])
+
+			mvector3.subtract(BA, furthest_line[1])
+
+			local PA = mvector3.copy(furthest_line[1])
+
+			mvector3.subtract(PA, data.m_pos)
+
+			local out = nil
+
+			if nr_threats == 2 then
+				mvector3.normalize(BA)
+
+				local len = mvector3.dot(BA, PA)
+				local x = mvector3.copy(furthest_line[1])
+
+				mvector3.multiply(BA, len)
+				mvector3.subtract(x, BA)
+
+				out = mvector3.copy(data.m_pos)
+
+				mvector3.subtract(out, x)
+			else
+				local EA = mvector3.copy(threat_epicenter)
+
+				mvector3.subtract(EA, furthest_line[1])
+
+				local rot_axis = Vector3()
+
+				mvector3.cross(rot_axis, BA, EA)
+				mvector3.set_static(rot_axis, 0, 0, rot_axis.z)
+
+				out = Vector3()
+
+				mvector3.cross(out, BA, rot_axis)
+			end
+
+			mvector3.normalize(out)
+
+			optimal_direction = mvector3.copy(out)
+
+			mvector3.multiply(optimal_direction, -1)
+			mvector3.multiply(out, mvector3.dot(out, PA) + 600)
+
+			my_data.optimal_pos = mvector3.copy(data.m_pos)
+
+			mvector3.add(my_data.optimal_pos, out)
+		else
+			optimal_direction = mvector3.copy(threat_epicenter)
+
+			mvector3.subtract(optimal_direction, data.m_pos)
+			mvector3.normalize(optimal_direction)
+
+			local optimal_length = 0
+
+			for _, enemy in pairs(enemies) do
+				local enemy_dir = mvector3.copy(threat_epicenter)
+
+				mvector3.subtract(enemy_dir, enemy.m_pos)
+
+				local len = mvector3.dot(enemy_dir, optimal_direction)
+				optimal_length = math.max(len, optimal_length)
+			end
+
+			local optimal_pos = mvector3.copy(optimal_direction)
+
+			mvector3.multiply(optimal_pos, -(optimal_length + 600))
+			mvector3.add(optimal_pos, threat_epicenter)
+
+			my_data.optimal_pos = optimal_pos
+		end
+
+		for key, enemy_data in pairs(enemies) do
+			local reaction = CopLogicSniper._chk_reaction_to_attention_object(data, enemy_data, true)
+
+			if not focus_enemy_reaction or focus_enemy_reaction <= reaction then
+				local enemy_dir = my_data.tmp_vec1
+
+				mvector3.direction(enemy_dir, data.m_pos, enemy_data.m_pos)
+
+				local angle = mvector3.dot(optimal_direction, enemy_dir)
+
+				if data.attention_obj and key == data.attention_obj.u_key then
+					angle = angle + 0.15
+				end
+
+				if not focus_enemy or enemy_data.verified and not focus_enemy.verified or (enemy_data.verified or not focus_enemy.verified) and focus_enemy_angle < angle then
+					focus_enemy = enemy_data
+					focus_enemy_angle = angle
+					focus_enemy_reaction = reaction
+				end
+			end
+		end
+
+		CopLogicBase._set_attention_obj(data, focus_enemy, focus_enemy_reaction)
+	else
+		local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects, nil)
+		local old_att_obj = data.attention_obj
+
+		CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
+
+		if new_attention then
+			if old_att_obj and old_att_obj.u_key ~= new_attention.u_key then
+				CopLogicAttack._cancel_charge(data, my_data)
+
+				if not data.unit:movement():chk_action_forbidden("walk") then
+					ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
+				end
+			end
+
+			if AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker then
+				my_data.optimal_pos = CopLogicAttack._find_flank_pos(data, my_data, new_attention.nav_tracker)
+			end
+		elseif old_att_obj and not data.unit:movement():chk_action_forbidden("walk") then
+			ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
+		end
+	end
+
+	CopLogicAttack._chk_exit_attack_logic(data, data.attention_obj and data.attention_obj.reaction)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	ShieldLogicAttack._upd_aim(data, my_data)
+
+	if my_data.optimal_pos and focus_enemy then
+		mvector3.set_z(my_data.optimal_pos, focus_enemy.m_pos.z)
+	end
+end
+
+function ShieldLogicAttack._pathing_complete_clbk(data)
+	local my_data = data.internal_data
+
+	if my_data.pathing_to_optimal_pos then
+		ShieldLogicAttack._process_pathing_results(data, my_data)
+	
+		if my_data.optimal_path then
+			ShieldLogicAttack._chk_request_action_walk_to_optimal_pos(data, my_data)
+		end
+	end
+end
+
+function ShieldLogicAttack.queue_update(data, my_data)
+	CopLogicBase.queue_task(my_data, my_data.update_queue_id, ShieldLogicAttack.queued_update, data, data.t + (data.important and 0.2 or 0.7), data.important and true)
+end

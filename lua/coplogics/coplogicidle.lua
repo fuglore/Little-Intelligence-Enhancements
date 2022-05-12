@@ -52,8 +52,6 @@ function CopLogicIdle.queued_update(data)
 		return
 	end
 
-	delay = data.important and 0 or delay or 0.3
-
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
 end
 

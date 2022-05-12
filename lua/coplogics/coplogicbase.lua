@@ -112,7 +112,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	end
 	
 	if objective.interrupt_on_contact then
-		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction then
+		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and attention.verified_t and data.t - attention.verified_t <= 15 then
 			local z_diff = math.abs(attention.m_pos.z - data.m_pos.z)
 			local enemy_dis = attention.dis * (1 - strictness)
 			
@@ -126,10 +126,6 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 			end
 			
 			interrupt_dis = interrupt_dis * (1 - strictness)
-			
-			if not attention.verified_t or data.t - attention.verified_t > 5 then
-				interrupt_dis = interrupt_dis * 0.5
-			end
 			
 			if objective.grp_objective and objective.grp_objective.push then
 				interrupt_dis = interrupt_dis * 0.5

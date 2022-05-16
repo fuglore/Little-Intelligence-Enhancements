@@ -595,8 +595,8 @@ function CopLogicAttack._upd_pose(data, my_data)
 	local stand_objective = data.objective and data.objective.pose == "stand"
 	local crouch_objective = data.objective and data.objective.pose == "crouch"
 	local need_cover = my_data.want_to_take_cover and (not my_data.in_cover or not my_data.in_cover[4])
-
-	if not unit_can_stand or need_cover and not my_data.cover_test_step > 2 then
+	
+	if not unit_can_stand or need_cover and my_data.cover_test_step and not my_data.cover_test_step > 2 then
 		if not data.unit:anim_data().crouch and unit_can_crouch then
 			return CopLogicAttack._chk_request_action_crouch(data)
 		end

@@ -40,6 +40,14 @@ function CopLogicAttack.enter(data, new_logic_name, enter_params)
 
 	my_data.attitude = data.objective and data.objective.attitude or "avoid"
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	
+	if not my_data.weapon_range then
+		my_data.weapon_range = {
+			optimal = 2000,
+			far = 5000,
+			close = 1000
+		}
+	end
 
 	data.unit:brain():set_update_enabled_state(true)
 

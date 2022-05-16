@@ -243,6 +243,116 @@ function CopLogicIdle.action_complete_clbk(data, action)
 		CopLogicBase.chk_start_action_dodge(data, "hit")
 	end
 end
+function CopLogicIdle.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+
+	local my_data = {
+		unit = data.unit
+	}
+	local is_cool = data.unit:movement():cool()
+
+	if is_cool then
+		my_data.detection = data.char_tweak.detection.ntl
+	else
+		my_data.detection = data.char_tweak.detection.idle
+	end
+
+	local old_internal_data = data.internal_data
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+
+		if old_internal_data.firing then
+			data.unit:movement():set_allow_fire(false)
+		end
+
+		if old_internal_data.shooting then
+			data.unit:brain():action_request({
+				body_part = 3,
+				type = "idle"
+			})
+		end
+
+		local lower_body_action = data.unit:movement()._active_actions[2]
+		my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
+
+		if old_internal_data.best_cover then
+			my_data.best_cover = old_internal_data.best_cover
+
+			managers.navigation:reserve_cover(my_data.best_cover[1], data.pos_rsrv_id)
+		end
+
+		if old_internal_data.nearest_cover then
+			my_data.nearest_cover = old_internal_data.nearest_cover
+
+			managers.navigation:reserve_cover(my_data.nearest_cover[1], data.pos_rsrv_id)
+		end
+	end
+
+	data.internal_data = my_data
+	local key_str = tostring(data.unit:key())
+	my_data.detection_task_key = "CopLogicIdle.update" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t)
+
+	if my_data.nearest_cover or my_data.best_cover then
+		my_data.cover_update_task_key = "CopLogicIdle._update_cover" .. key_str
+
+		CopLogicBase.add_delayed_clbk(my_data, my_data.cover_update_task_key, callback(CopLogicTravel, CopLogicTravel, "_update_cover", data), data.t + 1)
+	end
+
+	local objective = data.objective
+
+	if objective then
+		if (objective.nav_seg or objective.type == "follow") and not objective.in_place then
+			debug_pause_unit(data.unit, "[CopLogicIdle.enter] wrong logic", data.unit)
+		end
+
+		my_data.scan = objective.scan
+		my_data.rubberband_rotation = objective.rubberband_rotation and data.unit:movement():m_rot():y()
+	else
+		my_data.scan = true
+	end
+
+	if my_data.scan then
+		my_data.stare_path_search_id = "stare" .. key_str
+		my_data.wall_stare_task_key = "CopLogicIdle._chk_stare_into_wall" .. key_str
+	end
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	if my_data.scan and (not objective or not objective.action) then
+		CopLogicBase.queue_task(my_data, my_data.wall_stare_task_key, CopLogicIdle._chk_stare_into_wall_1, data, data.t)
+	end
+
+	if is_cool then
+		data.unit:brain():set_attention_settings({
+			peaceful = true
+		})
+	else
+		data.unit:brain():set_attention_settings({
+			cbt = true
+		})
+	end
+
+	local usage = data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage
+	my_data.weapon_range = (data.char_tweak.weapon[usage] or {}).range
+	
+	if not my_data.weapon_range then
+		my_data.weapon_range = {
+			optimal = 2000,
+			far = 5000,
+			close = 1000
+		}
+	end
+
+	data.unit:brain():set_update_enabled_state(false)
+	CopLogicIdle._perform_objective_action(data, my_data, objective)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+end
 
 function CopLogicIdle.on_alert(data, alert_data)
 	local alert_type = alert_data[1]

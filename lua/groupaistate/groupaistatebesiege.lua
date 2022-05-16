@@ -274,7 +274,6 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 	end
 end
 
-
 Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 	if LIES.settings.fixed_spawngroups == 2 or LIES.settings.fixed_spawngroups == 4 then
 		self._group_type_order = {
@@ -490,6 +489,7 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.stance = "hos"
 		objective.pose = "stand"
 		objective.scan = true
+		objective.interrupt_suppression = true
 	elseif grp_objective.type == "create_phalanx" then
 		objective.type = "phalanx"
 		objective.stance = "hos"
@@ -907,7 +907,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				
 				if push then
 					attitude = "engage"
-				elseif not phase_is_anticipation and aggression_level > 2 then
+				elseif not phase_is_anticipation and aggression_level > 1 then
 					attitude = "engage"
 				end
 

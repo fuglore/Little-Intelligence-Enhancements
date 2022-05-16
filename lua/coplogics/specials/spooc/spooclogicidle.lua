@@ -3,7 +3,7 @@ function SpoocLogicIdle._chk_exit_hiding(data)
 
 	for u_key, attention_data in pairs(attention_objects) do
 		if AIAttentionObject.REACT_SHOOT <= attention_data.reaction and data.unit:anim_data().hide_loop then
-			if attention_data.dis < 1500 and data.attention_obj.verified then
+			if attention_data.dis < 1500 and attention_data.verified then
 				SpoocLogicIdle._exit_hiding(data)
 				
 				break

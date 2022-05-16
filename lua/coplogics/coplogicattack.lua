@@ -589,6 +589,24 @@ function CopLogicAttack._upd_combat_movement(data)
 	action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 end
 
+function CopLogicAttack._upd_pose(data, my_data)
+	local unit_can_stand = not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.stand
+	local unit_can_crouch = not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch
+	local stand_objective = data.objective and data.objective.pose == "stand"
+	local crouch_objective = data.objective and data.objective.pose == "crouch"
+	local need_cover = my_data.want_to_take_cover and (not my_data.in_cover or not my_data.in_cover[4])
+
+	if not unit_can_stand or need_cover and not my_data.cover_test_step > 2 then
+		if not data.unit:anim_data().crouch and unit_can_crouch then
+			return CopLogicAttack._chk_request_action_crouch(data)
+		end
+	else
+		if not data.unit:anim_data().stand and unit_can_stand then
+			return CopLogicAttack._chk_request_action_stand(data)
+		end
+	end
+end
+
 function CopLogicAttack.action_complete_clbk(data, action)
 	local my_data = data.internal_data
 	local action_type = action:type()

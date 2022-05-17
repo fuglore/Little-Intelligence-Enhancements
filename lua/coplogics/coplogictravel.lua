@@ -1140,11 +1140,13 @@ function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path,
 					pos = door_id:script_data().element:nav_link_end_pos()
 				end
 				
-				local dis = mvector3.distance_sq(pos, next_pos)
-			
-				if not best_dis or dis < best_dis then
-					best_pos = pos
-					best_dis = dis
+				if pos then --there is apparently cases where this can happen, i'm interested.
+					local dis = mvector3.distance_sq(pos, next_pos)
+				
+					if not best_dis or dis < best_dis then
+						best_pos = pos
+						best_dis = dis
+					end
 				end
 			end
 		end

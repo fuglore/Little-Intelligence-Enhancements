@@ -120,7 +120,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 			local interrupt_dis = nil
 			
 			if aggro_level > 2 then
-				interrupt_dis = my_data.weapon_range and my_data.weapon_range.close or 2000
+				interrupt_dis = my_data.weapon_range and my_data.weapon_range.close or 1000
 			else
 				interrupt_dis = my_data.weapon_range and my_data.weapon_range.optimal or 2000
 			end

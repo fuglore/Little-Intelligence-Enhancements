@@ -218,7 +218,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 		local last_sup_t = data.unit:character_damage():last_suppression_t()
 		
 		if not data.char_tweak.always_face_enemy then
-			if data.unit:anim_data().run and math.lerp(my_data.weapon_range.close, my_data.weapon_range.optimal, 0) < focus_enemy.dis then
+			if data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis then
 				local walk_to_pos = data.unit:movement():get_walk_to_pos()
 
 				if walk_to_pos then
@@ -402,7 +402,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 		end
 	end
 	
-	if data.logic.chk_should_turn(data, my_data) and (focus_enemy or expected_pos) then
+	if CopLogicAttack.chk_should_turn(data, my_data) and (focus_enemy or expected_pos) then
 		local enemy_pos = expected_pos or (focus_enemy.verified or focus_enemy.nearly_visible) and focus_enemy.m_pos or focus_enemy.verified_pos
 
 		CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, enemy_pos)
@@ -638,13 +638,17 @@ function CopLogicAttack.action_complete_clbk(data, action)
 			my_data.walking_to_cover_shoot_pos = nil
 			my_data.at_cover_shoot_pos = true
 		end
+		
+		if action:expired() then
+			data.logic._upd_aim(data, my_data) --on finishing a walk action, enemies will try to turn to attention at the end of it
+		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
 	elseif action_type == "turn" then
 		my_data.turning = nil
 		
 		if action:expired() then
-			CopLogicAttack._upd_aim(data, my_data)
+			CopLogicAttack._upd_aim(data, my_data) --check if i need to turn again
 		end
 	elseif action_type == "heal" then
 		if action:expired() then

@@ -915,6 +915,10 @@ function CopLogicTravel.action_complete_clbk(data, action)
 		else
 			--log("wee")
 			CopLogicTravel.upd_advance(data)
+			
+			if not data.cool then
+				CopLogicAttack._upd_aim(data, my_data)
+			end
 		end
 		
 		CopLogicTravel._update_cover(nil, data)
@@ -1090,7 +1094,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	else
 		local nav_seg = coarse_path[nav_index][1]
 		local area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg)
-		local door_pos = CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)	
+		local door_pos = CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg, area)	
 		local cover = CopLogicTravel._find_cover(data, nav_seg, door_pos)
 
 		if my_data.moving_to_cover then
@@ -1122,10 +1126,15 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	return to_pos
 end
 
-function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)
+function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg, area)
 	local nav_seg = managers.navigation._nav_segments[nav_seg]
 	
 	local next_pos = coarse_path[nav_index + 1][2]
+	
+	if not next_pos then --this is stupid. this won't happen without iter.
+		next_pos = mvector3.copy(area.pos) 
+	end
+
 	local best_dis, best_pos
 	
 	for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do

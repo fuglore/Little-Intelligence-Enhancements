@@ -62,7 +62,13 @@ function CopLogicAttack.enter(data, new_logic_name, enter_params)
 	if my_data ~= data.internal_data then
 		return
 	end
-
+	
+	CopLogicAttack._upd_enemy_detection(data, true)
+	
+	if my_data ~= data.internal_data then
+		return
+	end
+	
 	if data.objective and (data.objective.action_duration or data.objective.action_timeout_t and data.t < data.objective.action_timeout_t) then
 		my_data.action_timeout_clbk_id = "CopLogicIdle_action_timeout" .. tostring(data.key)
 		local action_timeout_t = data.objective.action_timeout_t or data.t + data.objective.action_duration
@@ -497,7 +503,7 @@ function CopLogicAttack._upd_combat_movement(data)
 				local height = nil
 
 				if in_cover[4] then
-					height = 150
+					height = 160
 				else
 					height = 80
 				end
@@ -864,7 +870,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 				local height = nil
 
 				if in_cover[4] then
-					height = 150
+					height = 160
 				else
 					height = 80
 				end

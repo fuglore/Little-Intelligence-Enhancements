@@ -69,23 +69,12 @@ function SpoocLogicAttack.update(data)
 	if my_data.has_old_action then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
 
-		return
+		if my_data.has_old_action then
+			return
+		end
 	end
 
 	if CopLogicIdle._chk_relocate(data) then
-		return
-	end
-
-	if my_data.wants_stop_old_walk_action then
-		if not data.unit:anim_data().to_idle and not data.unit:movement():chk_action_forbidden("walk") then
-			data.unit:movement():action_request({
-				body_part = 2,
-				type = "idle"
-			})
-
-			my_data.wants_stop_old_walk_action = nil
-		end
-
 		return
 	end
 
@@ -140,11 +129,15 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
+	elseif action_type == "act" then
+		if action:expired() then
+			SpoocLogicAttack._upd_aim(data, my_data)
+		end
 	elseif action_type == "turn" then
 		my_data.turning = nil
 		
 		if action:expired() then
-			CopLogicAttack._upd_aim(data, my_data)
+			SpoocLogicAttack._upd_aim(data, my_data)
 		end
 	elseif action_type == "spooc" then
 		data.spooc_attack_timeout_t = TimerManager:game():time() + math.lerp(data.char_tweak.spooc_attack_timeout[1], data.char_tweak.spooc_attack_timeout[2], math.random())

@@ -426,7 +426,7 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 
 			my_data.firing = true
 
-			if not data.unit:in_slot(16) and data.char_tweak.chatter.aggressive and managers.groupai:state():is_detection_persistent() then
+			if not data.unit:in_slot(16) and data.char_tweak.chatter and data.char_tweak.chatter.aggressive and managers.groupai:state():is_detection_persistent() then
 				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "aggressive")
 			end
 		end

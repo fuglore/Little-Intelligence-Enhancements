@@ -306,8 +306,10 @@ end)
 Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function(self)
 	if LIES.settings.copsretire then
 		local task_data = self._task_data.assault
-
-		if task_data.said_retreat then
+		
+		if task_data.phase == "fade" then
+			self:_assign_assault_groups_to_retire()
+		elseif task_data.said_retreat then
 			self:_assign_assault_groups_to_retire()
 		elseif not task_data or not task_data.active then
 			self:_assign_assault_groups_to_retire()

@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V2.96",
+		version = "V2.97",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -216,6 +216,18 @@ if RequiredScript == "lib/managers/menumanager" then
 
 	function LIES:_upd_assault_task()
 		local task_data = self._task_data.assault
+		
+		if LIES.settings.copsretire then
+			local task_data = self._task_data.assault
+			
+			if task_data.phase == "fade" then
+				self:_assign_assault_groups_to_retire()
+			elseif task_data.said_retreat then
+				self:_assign_assault_groups_to_retire()
+			elseif not task_data or not task_data.active then
+				self:_assign_assault_groups_to_retire()
+			end
+		end
 
 		if not task_data.active then
 			return

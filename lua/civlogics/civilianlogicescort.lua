@@ -1,3 +1,5 @@
+if not Iter then
+
 function CivilianLogicEscort._get_objective_path_data(data, my_data)
 	local objective = data.objective
 	local path_data = objective.path_data
@@ -113,4 +115,6 @@ function CivilianLogicEscort.action_complete_clbk(data, action)
 	elseif action_type == "act" and my_data.getting_up then
 		my_data.getting_up = nil
 	end
+end
+
 end

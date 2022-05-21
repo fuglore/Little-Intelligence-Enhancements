@@ -55,15 +55,30 @@ function SpoocLogicAttack.update(data)
 	local my_data = data.internal_data
 
 	if my_data.spooc_attack then
-		if my_data.spooc_attack.action:complete() and data.attention_obj and (not data.attention_obj.criminal_record or not data.attention_obj.criminal_record.status) and (data.attention_obj.verified or data.attention_obj.nearly_visible) and data.attention_obj.dis < my_data.weapon_range.close then
-			SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
-		end
+		if my_data.spooc_attack.action._beating_end_t and my_data.spooc_attack.action._beating_end_t < TimerManager:game():time() then			
+			local attention_objects = data.detected_attention_objects
 
-		if data.internal_data == my_data then
-			CopLogicBase._report_detections(data.detected_attention_objects)
+			for u_key, attention_data in pairs(attention_objects) do
+				if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
+					if not attention_data.criminal_record or not attention_data.criminal_record.status then
+						if attention_data.verified or attention_data.nearly_visible then
+							if data.attention_obj.dis < my_data.weapon_range.close then
+								SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
+								break
+							end
+						end
+					end
+				end
+			end
 		end
-
-		return
+		
+		if my_data.spooc_attack then
+			if data.internal_data == my_data then
+				CopLogicBase._report_detections(data.detected_attention_objects)
+			end
+		
+			return
+		end
 	end
 
 	if my_data.has_old_action then
@@ -95,13 +110,25 @@ function SpoocLogicAttack.update(data)
 	end
 
 	if AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
-		my_data.want_to_take_cover = CopLogicAttack._chk_wants_to_take_cover(data, my_data)
+		my_data.want_to_take_cover = SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 
 		CopLogicAttack._update_cover(data)
 		CopLogicAttack._upd_combat_movement(data)
 	end
 
 	CopLogicBase._report_detections(data.detected_attention_objects)
+end
+
+function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
+	if not data.attention_obj or data.attention_obj.reaction < AIAttentionObject.REACT_COMBAT then
+		return
+	end
+	
+	if data.spooc_attack_timeout_t and data.t < data.spooc_attack_timeout_t then
+		return true
+	end
+	
+	return CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 end
 
 function SpoocLogicAttack.action_complete_clbk(data, action)
@@ -141,9 +168,12 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		end
 	elseif action_type == "spooc" then
 		data.spooc_attack_timeout_t = TimerManager:game():time() + math.lerp(data.char_tweak.spooc_attack_timeout[1], data.char_tweak.spooc_attack_timeout[2], math.random())
-
-		if action:complete() and data.char_tweak.spooc_attack_use_smoke_chance > 0 and math.random() <= data.char_tweak.spooc_attack_use_smoke_chance and not managers.groupai:state():is_smoke_grenade_active() then
-			managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), math.lerp(15, 30, math.random()), false)
+		
+		
+		if not data.brain._next_grenade_use_t or data.brain._next_grenade_use_t < data.t then
+			if action:complete() and data.char_tweak.spooc_attack_use_smoke_chance > 0 and math.random() <= data.char_tweak.spooc_attack_use_smoke_chance then
+				managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), math.lerp(15, 30, math.random()), false)
+			end
 		end
 
 		my_data.spooc_attack = nil

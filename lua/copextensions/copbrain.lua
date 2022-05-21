@@ -258,3 +258,29 @@ Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, s
 		end
 	end
 end)
+
+function CopBrain:_chk_use_cover_grenade(unit)
+	if not Network:is_server() or not self._logic_data.char_tweak.dodge_with_grenade or not self._logic_data.attention_obj then
+		return
+	end
+
+	local t = TimerManager:game():time()
+	
+	if not self._next_grenade_use_t or self._next_grenade_use_t < t then
+		if self._logic_data.char_tweak.dodge_with_grenade.smoke then
+			local duration_tweak = self._logic_data.char_tweak.dodge_with_grenade.smoke.duration
+			local duration = math.lerp(duration_tweak[1], duration_tweak[2], math.random())
+
+			managers.groupai:state():detonate_smoke_grenade(self._logic_data.m_pos + math.UP * 10, self._unit:movement():m_head_pos(), duration, false)
+
+			self._next_grenade_use_t = t + duration
+		elseif self._logic_data.char_tweak.dodge_with_grenade.flash then
+			local duration_tweak = self._logic_data.char_tweak.dodge_with_grenade.flash.duration
+			local duration = math.lerp(duration_tweak[1], duration_tweak[2], math.random())
+
+			managers.groupai:state():detonate_smoke_grenade(self._logic_data.m_pos + math.UP * 10, self._unit:movement():m_head_pos(), duration, true)
+
+			self._next_grenade_use_t = t + duration
+		end
+	end
+end

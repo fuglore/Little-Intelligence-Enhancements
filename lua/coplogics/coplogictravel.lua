@@ -1111,7 +1111,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 			}
 			to_pos = cover[1]
 		else
-			to_pos = CopLogicTravel._get_pos_on_wall(coarse_path[nav_index][2])
+			to_pos = CopLogicTravel._get_pos_on_wall(area.pos)
 			wants_reservation = true
 		end
 	end

@@ -249,7 +249,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 			debug_pause_unit(data.unit, "[CopLogicAttack]: Unit doesn't have data.internal_data.weapon_range")
 		end
 	
-		if focus_enemy.verified then
+		if focus_enemy.verified or focus_enemy.nearly_visible then
 			if aim == nil and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 				if AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
 					local running = my_data.advancing and not my_data.advancing:stopping() and my_data.advancing:haste() == "run"
@@ -409,7 +409,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 	end
 	
 	if CopLogicAttack.chk_should_turn(data, my_data) and (focus_enemy or expected_pos) then
-		local enemy_pos = expected_pos or (focus_enemy.verified or focus_enemy.nearly_visible) and focus_enemy.m_pos or focus_enemy.verified_pos
+		local enemy_pos = expected_pos or focus_enemy.last_verified_pos or focus_enemy.verified_pos
 
 		CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, enemy_pos)
 	end

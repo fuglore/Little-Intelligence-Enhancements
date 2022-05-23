@@ -5,14 +5,15 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V2.98",
+		version = "V3",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
 			enemy_aggro_level = 2,
 			fixed_spawngroups = 1,
 			copsretire = false,
-			interruptoncontact = false
+			interruptoncontact = false,
+			spawngroupdelays = false
 		}
 	}
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
@@ -545,8 +546,10 @@ if RequiredScript == "lib/managers/menumanager" then
 			end
 		end
 
-		if not timer_can_spawn then
-			self._spawn_group_timers = {}
+		if not LIES.settings.spawngroupdelays then
+			if not timer_can_spawn then
+				self._spawn_group_timers = {}
+			end
 		end
 
 		for id in pairs(valid_spawn_groups) do
@@ -719,6 +722,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_interruptoncontact = function(self, item)
 			local on = item:value() == "on"
 			LIES.settings.interruptoncontact = on
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_spawngroupdelays = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.spawngroupdelays = on
 
 			LIES:Save()
 		end

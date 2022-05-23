@@ -224,7 +224,7 @@ function CopActionWalk:append_path_mid_logic(path)
 
 	local nav_path = {}
 		
-	for i = 2, #path do
+	for i = 1, #path do
 		local nav_point = path[i]
 
 		if nav_point.x then
@@ -238,18 +238,24 @@ function CopActionWalk:append_path_mid_logic(path)
 			return
 		end
 	end
-	
-	if #self._simplified_path == 1 and not nav_path[1].x then
-		self._next_is_nav_link = nav_path[1]
-	end
-	
+
 	for i = 1, #nav_path do
 		local nav_point = nav_path[i]
 		table.insert(self._simplified_path, nav_point)
 	end
 	
-	self._unit:brain():rem_pos_rsrv("stand")
-	self._unit:brain():rem_pos_rsrv("move_dest")
+	if not self._simplified_path[1].x then
+		self._simplified_path[1] = self._simplified_path[1].c_class:end_position()
+	end
+	
+	if #self._simplified_path == 2 then
+		table.insert(self._simplified_path, 2, path[1])
+	end
+
+	if self._curve_path and self._simplified_path[2] ~= self._curve_path[#self._curve_path] then
+		table.insert(self._simplified_path, 2, self._curve_path[#self._curve_path])
+	end
+
 	self._unit:brain():add_pos_rsrv("move_dest", {
 		radius = 30,
 		position = mvector3.copy(self._simplified_path[#self._simplified_path])

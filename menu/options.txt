@@ -63,6 +63,14 @@
 			"description" : "menu_lies_interruptoncontact_desc",
 			"callback" : "callback_lies_interruptoncontact",
 			"value" : "interruptoncontact"
+		},
+		{
+			"type" : "toggle",
+			"id" : "lies_spawngroupdelays",
+			"title" : "menu_lies_spawngroupdelays_title",
+			"description" : "menu_lies_spawngroupdelays_desc",
+			"callback" : "callback_lies_spawngroupdelays",
+			"value" : "spawngroupdelays"
 		}
 	]
 }

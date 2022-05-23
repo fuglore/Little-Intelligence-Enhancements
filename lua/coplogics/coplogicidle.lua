@@ -188,9 +188,15 @@ function CopLogicIdle._chk_relocate(data)
 
 		if not relocate then
 			local ray_params = {
-				tracker_from = data.unit:movement():nav_tracker(),
 				pos_to = follow_unit_pos
 			}
+			
+			if data.objective.relocated_to then
+				ray_params.pos_from = data.objective.relocated_to
+			else
+				ray_params.tracker_from = data.unit:movement():nav_tracker()
+			end
+			
 			local ray_res = managers.navigation:raycast(ray_params)
 
 			if ray_res then

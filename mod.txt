@@ -101,12 +101,20 @@
 			"script_path": "lua/coplogics/boss/bosslogicattack.lua"
 		},
 		{
+			"hook_id": "lib/units/player_team/teamaimovement",
+			"script_path": "lua/teamaiextensions/teamaimovement.lua"
+		},
+		{
 			"hook_id": "lib/units/player_team/logics/teamailogicidle",
 			"script_path": "lua/teamailogics/teamailogicidle.lua"
 		},
 		{
 			"hook_id": "lib/units/player_team/logics/teamailogictravel",
 			"script_path": "lua/teamailogics/teamailogictravel.lua"
+		},
+		{
+			"hook_id": "lib/units/player_team/logics/teamailogicassault",
+			"script_path": "lua/teamailogics/teamailogicassault.lua"
 		},
 		{
 			"hook_id": "lib/units/civilians/logics/civilianlogicescort",

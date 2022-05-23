@@ -106,7 +106,7 @@ end
 function CopLogicAttack.damage_clbk(data, damage_info)
 	CopLogicIdle.damage_clbk(data, damage_info)
 	
-	if data.important then
+	if data.important and not data.is_converted then
 		if not data.unit:movement():chk_action_forbidden("walk") then
 			local my_data = data.internal_data
 			local moving_to_cover = my_data.moving_to_cover or my_data.at_cover_shoot_pos

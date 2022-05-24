@@ -62,7 +62,7 @@ function SpoocLogicAttack.update(data)
 				if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
 					if not attention_data.criminal_record or not attention_data.criminal_record.status then
 						if attention_data.verified or attention_data.nearly_visible then
-							if data.attention_obj.dis < my_data.weapon_range.close then
+							if attention_data.dis < my_data.weapon_range.close then
 								SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
 								break
 							end

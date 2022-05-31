@@ -58,6 +58,14 @@
         },
 		{
 			"type" : "toggle",
+			"id" : "lies_teamaihelpers",
+			"title" : "menu_lies_teamaihelpers_title",
+			"description" : "menu_lies_teamaihelpers_desc",
+			"callback" : "callback_lies_teamaihelpers",
+			"value" : "teamaihelpers"
+		},
+		{
+			"type" : "toggle",
 			"id" : "lies_interruptoncontact",
 			"title" : "menu_lies_interruptoncontact_title",
 			"description" : "menu_lies_interruptoncontact_desc",

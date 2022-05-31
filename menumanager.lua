@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V3.1",
+		version = "V3.2",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -13,6 +13,7 @@ if RequiredScript == "lib/managers/menumanager" then
 			fixed_spawngroups = 1,
 			copsretire = false,
 			interruptoncontact = false,
+			teamaihelpers = false,
 			spawngroupdelays = false
 		}
 	}
@@ -715,6 +716,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_copsretire = function(self, item)
 			local on = item:value() == "on"
 			LIES.settings.copsretire = on
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_teamaihelpers = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.teamaihelpers = on
 
 			LIES:Save()
 		end

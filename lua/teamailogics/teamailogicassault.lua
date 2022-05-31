@@ -122,6 +122,8 @@ function TeamAILogicAssault._upd_enemy_detection(data, is_synchronous)
 			else
 				TeamAILogicIdle.intimidate_civilians(data, data.unit, true, false)
 			end
+		elseif LIES.settings.teamaihelpers then
+			TeamAILogicIdle.intimidate_others(data, my_data, can_turn)
 		end
 	end
 

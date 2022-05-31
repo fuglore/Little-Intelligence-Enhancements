@@ -2,7 +2,6 @@ Hooks:PostHook(CharacterTweakData, "init", "lies_fix_nosup", function(self, twea
 	self:fix_no_supress()
 end)
 
-
 function CharacterTweakData:fix_no_supress()
 	if self.medic then
 		self.medic.no_suppressed_reaction = true

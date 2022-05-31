@@ -72,4 +72,68 @@ function TeamAILogicTravel.enter(data, new_logic_name, enter_params)
 	end
 end
 
+function TeamAILogicTravel._upd_enemy_detection(data)
+	data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	local max_reaction = nil
+
+	if data.cool then
+		max_reaction = AIAttentionObject.REACT_SURPRISED
+	end
+
+	local delay = CopLogicBase._upd_attention_obj_detection(data, AIAttentionObject.REACT_CURIOUS, max_reaction)
+	local new_attention, new_prio_slot, new_reaction = TeamAILogicIdle._get_priority_attention(data, data.detected_attention_objects, nil)
+
+	TeamAILogicBase._set_attention_obj(data, new_attention, new_reaction)
+
+	if new_attention then
+		local objective = data.objective
+		local allow_trans, obj_failed = nil
+		local dont_exit = false
+
+		if data.unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().act_idle then
+			dont_exit = true
+		else
+			allow_trans, obj_failed = CopLogicBase.is_obstructed(data, objective, nil, new_attention)
+		end
+
+		if obj_failed and not dont_exit then
+			if objective.type == "follow" then
+				debug_pause_unit(data.unit, "failing follow", allow_trans, obj_failed, inspect(objective))
+			end
+
+			data.objective_failed_clbk(data.unit, data.objective)
+
+			return
+		end
+	end
+
+	CopLogicAttack._upd_aim(data, my_data)
+
+	if not my_data._intimidate_t or my_data._intimidate_t + 2 < data.t then
+		local civ = TeamAILogicIdle.intimidate_civilians(data, data.unit, true, false)
+
+		if civ then
+			my_data._intimidate_t = data.t
+
+			if not data.attention_obj then
+				CopLogicBase._set_attention_on_unit(data, civ)
+
+				local key = "RemoveAttentionOnUnit" .. tostring(data.key)
+
+				CopLogicBase.queue_task(my_data, key, TeamAILogicTravel._remove_enemy_attention, {
+					data = data,
+					target_key = civ:key()
+				}, data.t + 1.5)
+			end
+		elseif LIES.settings.teamaihelpers then
+			TeamAILogicIdle.intimidate_others(data, my_data, can_turn)
+		end
+	end
+
+	TeamAILogicAssault._chk_request_combat_chatter(data, my_data)
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, TeamAILogicTravel._upd_enemy_detection, data, data.t + delay)
+end
+
 TeamAILogicTravel._pathing_complete_clbk = CopLogicTravel._pathing_complete_clbk

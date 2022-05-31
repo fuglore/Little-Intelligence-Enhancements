@@ -24,6 +24,9 @@
 	"menu_lies_enemy_aggro_high" : "HIGH",
 	"menu_lies_enemy_aggro_poggers" : "MOSH PIT",
 	
+	"menu_lies_teamaihelpers_title" : "Team AI QOL",
+	"menu_lies_teamaihelpers_desc" : "Allows Team AI to help players with escorts and surrendering cops. Not accurate to Vanilla.",
+	
 	"menu_lies_interruptoncontact_title" : "Smart Engagement",
 	"menu_lies_interruptoncontact_desc" : "Minimizes the tendency for enemies to continue moving into danger if engaging at a distance would be viable for their purposes. Not accurate to Vanilla.",
 	

@@ -1,3 +1,5 @@
+TeamAILogicIdle.global_last_cop_int_t = 0
+TeamAILogicIdle.global_last_advance_int_t = 0
 local tmp_vec1 = Vector3()
 
 function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
@@ -333,6 +335,8 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 				else
 					TeamAILogicIdle.intimidate_civilians(data, data.unit, true, false)
 				end
+			elseif LIES.settings.teamaihelpers then
+				TeamAILogicIdle.intimidate_others(data, my_data, can_turn)
 			end
 		end
 	end
@@ -499,4 +503,130 @@ function TeamAILogicIdle.intimidate_civilians(data, criminal, play_sound, play_a
 	end
 
 	return primary_target or best_civ
+end
+
+function TeamAILogicIdle.intimidate_others(data, my_data, can_turn)
+	local can_intimidate_escort = not my_data._advance_intimidate_t or data.t - my_data._advance_intimidate_t > 4
+	
+	if can_intimidate_escort then
+		if data.t - TeamAILogicIdle.global_last_advance_int_t < 2 then
+			can_intimidate_escort = nil
+		end
+	end
+	
+	local can_intimidate_cop = data.t - TeamAILogicIdle.global_last_cop_int_t > 1.4
+	
+	if not can_intimidate_cop and not can_intimidate_escort then
+		return
+	end
+
+	local best_unit, best_weight
+
+	local groupaistate = managers.groupai:state()
+	local enemies = groupaistate._police
+	local is_escort, is_intimidated_cop
+	local m_pos = data.m_pos
+	local my_head_pos = data.unit:movement():m_head_pos()
+	local my_look_vec = data.unit:movement():m_rot():y()	
+	local mvec3_dis_sq = mvector3.distance_sq
+
+	for u_key, attention_data in pairs(data.detected_attention_objects) do	
+		if attention_data.is_person and (attention_data.verified or attention_data.nearly_visible) then
+			local unit = attention_data.unit
+			
+			if unit and unit.brain then
+				local brain = unit:brain()
+				
+				if brain then
+					if enemies[u_key] then
+						if can_intimidate_cop and brain._logic_data.name == "intimidated" then
+							local internal_data = brain._logic_data.internal_data
+								
+							if not internal_data.tied then
+								local dis = mvec3_dis_sq(m_pos, attention_data.m_pos)
+								
+								if dis < 640000 then
+									local vec = attention_data.m_head_pos - my_head_pos
+									local weight = dis * (1 - vec:dot(my_look_vec))
+									
+									if not best_unit or weight < best_weight then
+										best_unit = unit
+										best_weight = weight
+										is_escort = nil
+									end
+								end
+							end
+						end
+					elseif can_intimidate_escort then
+						if brain._logic_data.name == "escort" then
+							local internal_data = brain._logic_data.internal_data
+							
+							if internal_data.advance_path and not internal_data.commanded_to_move then
+								local dis = mvec3_dis_sq(m_pos, attention_data.m_pos)
+								
+								if dis < 640000 then
+									local vec = attention_data.m_head_pos - my_head_pos
+									local weight = dis * (1 - vec:dot(my_look_vec))
+									
+									if not best_unit or weight < best_weight then
+										best_unit = unit
+										best_weight = weight
+										is_escort = true
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	if best_unit then
+		if can_turn then
+			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.unit:movement():m_pos(), best_unit:movement():m_pos())
+		end
+	
+		if is_escort then			
+			data.unit:sound():say("f40_any", true)
+			
+			if not data.unit:movement():chk_action_forbidden("action") then
+				local redir_name = "cmd_gogo"
+
+				if data.unit:movement():play_redirect(redir_name) then
+					managers.network:session():send_to_peers_synched("play_distance_interact_redirect", data.unit, redir_name)
+				end
+			end
+			
+			my_data._advance_intimidate_t = data.t
+			TeamAILogicIdle.global_last_advance_int_t = data.t
+		else
+			local redir_name, sound
+		
+			if best_unit:anim_data().hands_back then
+				redir_name = "cmd_down"
+				sound = "l03x_sin"
+			elseif best_unit:anim_data().surrender then
+				redir_name = "cmd_down"
+				sound = "l02x_sin"
+			else
+				redir_name = "cmd_stop"
+				sound = "l01x_sin"
+			end
+			
+			data.unit:sound():say(sound, true)
+			
+			if not data.unit:movement():chk_action_forbidden("action") then
+				if data.unit:movement():play_redirect(redir_name) then
+					managers.network:session():send_to_peers_synched("play_distance_interact_redirect", data.unit, redir_name)
+				end
+			end
+			
+			TeamAILogicIdle.global_last_cop_int_t = data.t
+		end
+
+		my_data._intimidate_t = data.t
+		
+		best_unit:brain():on_intimidated(1, data.unit)
+	end
 end

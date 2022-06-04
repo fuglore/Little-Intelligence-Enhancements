@@ -300,6 +300,8 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._find_spawn_group_near_area = LIES._find_spawn_group_near_area
 		self._upd_assault_task = LIES._upd_assault_task
 		self._upd_recon_tasks = LIES._upd_recon_tasks
+	elseif LIES.settings.spawngroupdelays then
+		self._find_spawn_group_near_area = self._find_spawn_group_near_area_LIES
 	end
 end)
 
@@ -1143,9 +1145,7 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 	end
 end
 
-if LIES.settings.spawngroupdelays then
-
-function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
+function GroupAIStateBesiege:_find_spawn_group_near_area_LIES(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
 	local all_areas = self._area_data
 	local mvec3_dis = mvector3.distance_sq
 	max_dis = max_dis and max_dis * max_dis
@@ -1267,6 +1267,4 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 	end
 
 	return self:_choose_best_group(candidate_groups, total_weight)
-end
-
 end

@@ -225,19 +225,25 @@ function NavigationManager:_find_cover_in_seg_through_lua(threat_pos, near_pos, 
 	return best_cover
 end
 
-function NavigationManager:_find_cover_through_lua(threat_pos, near_pos, far_pos, min_dis, max_dis)
+function NavigationManager:_find_cover_through_lua(threat_pos, near_pos, far_pos, min_dis, search_from_pos)
 	local v3_dis_sq = mvec3_dis_sq
 	local world_g = World
 	local slotmask = managers.slot:get_mask("AI_visibility")
 	
 	min_dis = min_dis and min_dis * min_dis
-	max_dis = max_dis or v3_dis_sq(near_pos, far_pos)
+	max_dis = v3_dis_sq(near_pos, far_pos)
 	
 	if threat_pos then
 		threat_pos = threat_pos + math_up * 160
 	end
 	
-	local pos_tracker = self:create_nav_tracker(near_pos)
+	local pos_tracker = nil
+	
+	if search_from_pos then
+		pos_tracker = self:create_nav_tracker(search_from_pos)
+	else
+		pos_tracker = self:create_nav_tracker(near_pos)
+	end
 
 	local function _f_check_max_dis(cover, near_pos, max_dis) --checking if the cover is further than our max search distance.
 		local dis_sq = v3_dis_sq

@@ -12,12 +12,9 @@ function CopLogicIdle.queued_update(data)
 
 	if my_data.has_old_action then
 		CopLogicIdle._upd_stop_old_action(data, my_data, objective)
-		
-		if my_data.has_old_action then
-			CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
+		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
 
-			return
-		end
+		return
 	end
 
 	if data.is_converted or data.check_crim_jobless then
@@ -39,17 +36,11 @@ function CopLogicIdle.queued_update(data)
 	if CopLogicIdle._chk_relocate(data) then
 		return
 	end
-	
-	if not CopLogicIdle._move_back_into_field_position(data, my_data) then
-		CopLogicIdle._perform_objective_action(data, my_data, objective)
-		CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
-		CopLogicIdle._upd_pathing(data, my_data)
-		CopLogicIdle._upd_scan(data, my_data)
-		
-		if not my_data.action_started then
-			CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
-		end
-	end
+
+	CopLogicIdle._perform_objective_action(data, my_data, objective)
+	CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
+	CopLogicIdle._upd_pathing(data, my_data)
+	CopLogicIdle._upd_scan(data, my_data)
 
 	if data.cool then
 		CopLogicIdle.upd_suspicion_decay(data)
@@ -254,13 +245,10 @@ function CopLogicIdle.action_complete_clbk(data, action)
 				data.objective_failed_clbk(data.unit, data.objective)
 			end
 		end
-	elseif action_type == "walk" then		
-		data.internal_data.advancing = nil
 	elseif not data.is_converted and action_type == "hurt" and data.important and action:expired() then
 		CopLogicBase.chk_start_action_dodge(data, "hit")
 	end
 end
-
 function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	CopLogicBase.enter(data, new_logic_name, enter_params)
 
@@ -425,68 +413,6 @@ function CopLogicIdle.on_alert(data, alert_data)
 
 		if attention_obj then
 			local att_obj_data, is_new = CopLogicBase.identify_attention_obj_instant(data, attention_obj.u_key)
-		end
-	end
-end
-
-function CopLogicIdle._move_back_into_field_position(data, my_data)
-	if data.unit:movement():chk_action_forbidden("walk") then
-		return
-	end
-
-	local my_tracker = data.unit:movement():nav_tracker()
-	
-	if my_tracker:lost() then
-		local field_position = my_tracker:field_position()
-		
-		if mvector3.distance_sq(data.m_pos, field_position) > 900 then	
-			local path = {
-				mvector3.copy(data.m_pos),
-				field_position
-			}
-
-			local new_action_data = {
-				type = "walk",
-				body_part = 2,
-				nav_path = path,
-				variant = data.cool and "walk" or "run"
-			}
-			my_data.advancing = data.unit:brain():action_request(new_action_data)
-
-			return my_data.advancing
-		end
-	end
-end
-
-function CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
-	if data.unit:movement():chk_action_forbidden("walk") then
-		return
-	end
-
-	local reservation = {
-		radius = 30,
-		position = data.m_pos,
-		filter = data.pos_rsrv_id
-	}
-
-	if not managers.navigation:is_pos_free(reservation) then
-		local to_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 500)
-
-		if to_pos then
-			local path = {
-				mvector3.copy(data.m_pos),
-				to_pos
-			}
-
-			local new_action_data = {
-				type = "walk",
-				body_part = 2,
-				nav_path = path,
-				variant = data.cool and "walk" or "run"
-			}
-			my_data.advancing = data.unit:brain():action_request(new_action_data)
-
-			return my_data.advancing
 		end
 	end
 end

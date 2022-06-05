@@ -46,8 +46,6 @@ function SpoocLogicAttack.enter(data, new_logic_name, enter_params)
 	data.unit:brain():set_attention_settings({
 		cbt = true
 	})
-	
-	data.unit:brain():set_update_enabled_state(true)
 end
 
 function SpoocLogicAttack.update(data)

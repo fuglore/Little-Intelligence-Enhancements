@@ -5,12 +5,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V3.2",
+		version = "V3.3",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
 			enemy_aggro_level = 2,
 			fixed_spawngroups = 1,
+			fixed_specialspawncaps = false,
 			copsretire = false,
 			interruptoncontact = false,
 			teamaihelpers = false,
@@ -49,7 +50,7 @@ if RequiredScript == "lib/managers/menumanager" then
 	function LIES:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_pos, near_pos, search_from_pos, angle, min_dis, nav_seg, optimal_threat_dis, rsrv_filter)
 		local copied_threat_pos = threat_pos and mvec3_cpy(threat_pos) or nil
 		
-		return managers.navigation:_find_cover_through_lua(copied_threat_pos, near_pos, furthest_pos, min_dis)
+		return managers.navigation:_find_cover_through_lua(copied_threat_pos, near_pos, furthest_pos, min_dis, search_from_pos)
 	end
 
 	function LIES:find_cover_in_nav_seg_3(nav_seg_id, max_near_dis, near_pos, threat_pos)
@@ -222,7 +223,9 @@ if RequiredScript == "lib/managers/menumanager" then
 		if LIES.settings.copsretire then
 			local task_data = self._task_data.assault
 			
-			if task_data.phase == "fade" then
+			if self._hunt_mode then
+			
+			elseif task_data.phase == "fade" then
 				self:_assign_assault_groups_to_retire()
 			elseif task_data.said_retreat then
 				self:_assign_assault_groups_to_retire()
@@ -709,6 +712,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_fixed_spawngroups = function(self, item)
 			local value = item:value()
 			LIES.settings.fixed_spawngroups = value
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_fixed_specialspawncaps = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.fixed_specialspawncaps = on
 
 			LIES:Save()
 		end

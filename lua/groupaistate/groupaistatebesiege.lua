@@ -300,14 +300,67 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._find_spawn_group_near_area = LIES._find_spawn_group_near_area
 		self._upd_assault_task = LIES._upd_assault_task
 		self._upd_recon_tasks = LIES._upd_recon_tasks
+	elseif LIES.settings.spawngroupdelays then
+		self._find_spawn_group_near_area = self._find_spawn_group_near_area_LIES
+	end
+	
+	if LIES.settings.fixed_specialspawncaps then
+		self._special_unit_types.tank_mini = true
+		self._special_unit_types.tank_medic = true
+		self._special_unit_types.tank_hw = true
+		self._special_unit_types.phalanx_minion = true
 	end
 end)
+
+function GroupAIStateBesiege:_get_special_unit_type_count(special_type)
+	if not self._special_units[special_type] then
+		return 0
+	end
+	
+	if special_type == "tank" then
+		local tanks = table.size(self._special_units[special_type])
+
+		if self._special_units["tank_mini"] then
+			tanks = tanks + table.size(self._special_units["tank_mini"])
+		end
+
+		if self._special_units["tank_medic"] then
+			tanks = tanks + table.size(self._special_units["tank_medic"])
+		end
+		
+		if self._special_units["tank_hw"] then
+			tanks = tanks + table.size(self._special_units["tank_hw"])
+		end
+
+		return tanks
+	elseif special_type == "medic" then
+		local medics = table.size(self._special_units[special_type])
+		
+		if self._special_units["tank_medic"] then
+			medics = medics + table.size(self._special_units["tank_medic"])
+		end
+		
+		return medics
+	elseif special_type == "shield" then
+		local shields = table.size(self._special_units[special_type])
+		
+		if self._special_units["phalanx_minion"] then
+			shields = shields + table.size(self._special_units["phalanx_minion"])
+		end
+		
+		return shields
+	else
+		return table.size(self._special_units[special_type])
+	end
+end
 
 Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function(self)
 	if LIES.settings.copsretire then
 		local task_data = self._task_data.assault
 		
-		if task_data.phase == "fade" then
+		if self._hunt_mode then
+		
+		elseif task_data.phase == "fade" then
 			self:_assign_assault_groups_to_retire()
 		elseif task_data.said_retreat then
 			self:_assign_assault_groups_to_retire()
@@ -508,7 +561,7 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 	end
 	
 	if LIES.settings.interruptoncontact then
-		if objective.type == "defend_area" then
+		if objective.type == "defend_area" or objective.type == "follow" then
 			objective.interrupt_on_contact = true
 		end
 	end
@@ -1143,9 +1196,19 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 	end
 end
 
-if LIES.settings.spawngroupdelays then
 
-function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
+local function make_dis_id(from, to)
+	local f = from < to and from or to
+	local t = to < from and from or to
+
+	return tostring(f) .. "-" .. tostring(t)
+end
+
+local function spawn_group_id(spawn_group)
+	return spawn_group.mission_element:id()
+end
+
+function GroupAIStateBesiege:_find_spawn_group_near_area_LIES(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
 	local all_areas = self._area_data
 	local mvec3_dis = mvector3.distance_sq
 	max_dis = max_dis and max_dis * max_dis
@@ -1267,6 +1330,4 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 	end
 
 	return self:_choose_best_group(candidate_groups, total_weight)
-end
-
 end

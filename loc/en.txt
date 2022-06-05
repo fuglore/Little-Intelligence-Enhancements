@@ -14,6 +14,9 @@
 	"menu_lies_spawngroups_fixed" : "Fixed",
 	"menu_lies_spawngroups_fixnorng" : "Fixed Low RNG",
 	
+	"menu_lies_fixed_specialspawncaps_title" : "Fixed Special Spawncap",
+	"menu_lies_fixed_specialspawncaps_desc" : "Fixes Minigun Bulldozers, Medicdozers, and Phalanx Shields not counting towards their respective spawncaps. Not accurate to Vanilla.",
+	
 	"menu_lies_copsretire_title" : "Allow Assault Groups To Retire",
 	"menu_lies_copsretire_desc" : "Allows enemy groups spawned during assault to leave the assault area when the assault is ending. Not accurate to Vanilla.",
 	

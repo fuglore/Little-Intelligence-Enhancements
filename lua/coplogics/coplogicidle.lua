@@ -35,18 +35,22 @@ function CopLogicIdle.queued_update(data)
 	if CopLogicIdle._chk_exit_non_walkable_area(data) then
 		return
 	end
-
+	
 	if CopLogicIdle._chk_relocate(data) then
 		return
 	end
-	
+
 	if not CopLogicIdle._move_back_into_field_position(data, my_data) then
 		CopLogicIdle._perform_objective_action(data, my_data, objective)
 		CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
 		CopLogicIdle._upd_pathing(data, my_data)
 		CopLogicIdle._upd_scan(data, my_data)
 		
-		if not my_data.action_started then
+		if not my_data.action_started or not my_data.action_started ~= true then
+			if not data.cool then
+				CopLogicIdle._check_needs_reload(data, my_data)
+			end
+			
 			CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
 		end
 	end
@@ -63,6 +67,67 @@ function CopLogicIdle.queued_update(data)
 
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
 end
+
+function CopLogicIdle._check_needs_reload(data, my_data)
+	if data.unit:anim_data().reload then
+		return
+	end
+	
+	local weapon, weapon_base, ammo_max, ammo
+
+	if alive(data.unit) and data.unit:inventory() then
+		weapon = data.unit:inventory():equipped_unit()
+	
+		if weapon and alive(weapon) then
+			weapon_base = weapon and weapon:base()
+			ammo_max, ammo = weapon_base:ammo_info()
+			local state = data.name
+			
+			if ammo / ammo_max >= 0.5 then
+				if my_data.shooting then
+					local new_action = {
+						body_part = 3,
+						type = "idle"
+					}
+
+					data.unit:brain():action_request(new_action)
+				end
+				
+				return
+			end
+		end
+	end
+	
+	if not ammo then
+		return
+	end
+	
+	local needs_reload = nil
+	
+	if ammo / ammo_max < 0.5 then
+		needs_reload = true
+	end
+	
+	if needs_reload then
+		local ammo_base = weapon_base and weapon_base:ammo_base()
+		
+		if ammo_base then
+			ammo_base:set_ammo_remaining_in_clip(0)
+			
+			if not my_data.shooting then
+				local shoot_action = {
+					body_part = 3,
+					type = "shoot"
+				}
+
+				if data.unit:brain():action_request(shoot_action) then
+					my_data.shooting = true
+				end
+			end
+		end
+	end
+end
+
 
 function CopLogicIdle._upd_enemy_detection(data)
 	managers.groupai:state():on_unit_detection_updated(data.unit)
@@ -254,6 +319,8 @@ function CopLogicIdle.action_complete_clbk(data, action)
 				data.objective_failed_clbk(data.unit, data.objective)
 			end
 		end
+	elseif action_type == "shoot" then
+		data.internal_data.shooting = nil
 	elseif action_type == "walk" then		
 		data.internal_data.advancing = nil
 	elseif not data.is_converted and action_type == "hurt" and data.important and action:expired() then

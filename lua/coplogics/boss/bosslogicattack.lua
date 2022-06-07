@@ -211,7 +211,7 @@ function BossLogicAttack.update(data)
 
 	BossLogicAttack._process_pathing_results(data, my_data)
 	
-	local can_keep_moving = data.char_tweak.reload_while_moving_tmp
+	local can_keep_moving = data.char_tweak.reload_while_moving_tmp or data.unit:anim_data().reload
 	
 	if not can_keep_moving then
 		local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()

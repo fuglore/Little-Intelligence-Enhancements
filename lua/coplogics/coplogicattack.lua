@@ -235,6 +235,66 @@ function CopLogicAttack.chk_should_turn(data, my_data)
 	return not my_data.turning and not my_data.has_old_action and not data.unit:movement():chk_action_forbidden("walk") and not my_data.moving_to_cover and not my_data.walking_to_cover_shoot_pos and not my_data.surprised and not my_data.advancing
 end
 
+function CopLogicAttack._check_needs_reload(data, my_data)
+	if data.unit:anim_data().reload then
+		return true
+	end
+	
+	local weapon, weapon_base, ammo_max, ammo
+
+	if alive(data.unit) and data.unit:inventory() then
+		weapon = data.unit:inventory():equipped_unit()
+	
+		if weapon and alive(weapon) then
+			weapon_base = weapon and weapon:base()
+			ammo_max, ammo = weapon_base:ammo_info()
+			local state = data.name
+			
+			if ammo / ammo_max > 0.2 then
+				if my_data.shooting then
+					local new_action = {
+						body_part = 3,
+						type = "idle"
+					}
+
+					data.unit:brain():action_request(new_action)
+				end
+				
+				return true
+			end
+		end
+	end
+	
+	if not ammo then
+		return true
+	end
+	
+	local needs_reload = nil
+	
+	if ammo <= 1 or ammo / ammo_max <= 0.2 then
+		needs_reload = true
+	end
+	
+	if needs_reload then
+		local ammo_base = weapon_base and weapon_base:ammo_base()
+		
+		if ammo_base then
+			ammo_base:set_ammo_remaining_in_clip(0)
+			
+			if not my_data.shooting then
+				local shoot_action = {
+					body_part = 3,
+					type = "shoot"
+				}
+
+				if data.unit:brain():action_request(shoot_action) then
+					my_data.shooting = true
+				end
+			end
+		end
+	end
+end
+
 function CopLogicAttack._upd_aim(data, my_data)
 	local shoot, aim, expected_pos = nil
 	local focus_enemy = data.attention_obj
@@ -408,29 +468,39 @@ function CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
 	else
-		if my_data.shooting then
-			local new_action = {
-				body_part = 3,
-				type = "idle"
-			}
-
-			data.unit:brain():action_request(new_action)
+		CopLogicAttack._check_needs_reload(data, my_data)
+		
+		if my_data.advancing then
+			local walk_action = my_data.advancing 
 			
-			my_data.shooting = nil
-		end
+			if not walk_action._expired and walk_action.common_data then --did the init get fucking called properly? yes? please start checking the walk direction
+				local walk_pos = walk_action._last_pos - walk_action.common_data.pos
+				mvec3_mul(walk_pos, 2)
+				mvec3_add(walk_pos, walk_action.common_data.pos)
+				
+				if my_data.attention_unit ~= walk_pos then
+					CopLogicBase._set_attention_on_pos(data, mvector3.copy(walk_pos))
 
+					my_data.attention_unit = mvector3.copy(walk_pos)
+				end
+			elseif my_data.attention_unit then
+				CopLogicBase._reset_attention(data)
 
-		if my_data.attention_unit then
+				my_data.attention_unit = nil
+			end
+		elseif my_data.attention_unit then
 			CopLogicBase._reset_attention(data)
 
 			my_data.attention_unit = nil
 		end
 	end
 	
-	if CopLogicAttack.chk_should_turn(data, my_data) and (focus_enemy or expected_pos) then
-		local enemy_pos = expected_pos or focus_enemy.last_verified_pos or focus_enemy.verified_pos
+	if aim or shoot then
+		if CopLogicAttack.chk_should_turn(data, my_data) and (focus_enemy or expected_pos) then
+			local enemy_pos = expected_pos or focus_enemy.last_verified_pos or focus_enemy.verified_pos
 
-		CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, enemy_pos)
+			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, enemy_pos)
+		end
 	end
 
 	CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)

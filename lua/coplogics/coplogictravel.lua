@@ -419,22 +419,29 @@ function CopLogicTravel.upd_advance(data)
 		end
 	end
 	
-	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 	
-	if my_data.cover_leave_t then
-		if not my_data.turning and not unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().reload or ammo <= 0 then
-			if my_data.cover_leave_t < t then
-				my_data.cover_leave_t = nil
-			elseif data.attention_obj and AIAttentionObject.REACT_SCARED <= data.attention_obj.reaction and (not my_data.best_cover or not my_data.best_cover[4]) and not unit:anim_data().crouch and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
-				CopLogicAttack._chk_request_action_crouch(data)
+	if not my_data.coarse_path or my_data.coarse_path_index and my_data.coarse_path_index < #my_data.coarse_path then
+		local gun = data.unit:inventory() and data.unit:inventory():equipped_unit()
+	
+		if gun and alive(gun) then
+			local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
+			
+			if my_data.cover_leave_t then
+				if not my_data.turning and not unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().reload or ammo <= 0 then
+					if my_data.cover_leave_t < t then
+						my_data.cover_leave_t = nil
+					elseif data.attention_obj and AIAttentionObject.REACT_SCARED <= data.attention_obj.reaction and (not my_data.best_cover or not my_data.best_cover[4]) and not unit:anim_data().crouch and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
+						CopLogicAttack._chk_request_action_crouch(data)
+					end
+				end
+				
+				if my_data.cover_leave_t then
+					return
+				end
+			elseif ammo <= 0 then
+				return
 			end
 		end
-		
-		if my_data.cover_leave_t then
-			return
-		end
-	elseif ammo <= 0 then
-		return
 	end
 
 	if my_data.warp_pos then

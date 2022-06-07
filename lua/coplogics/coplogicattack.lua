@@ -304,13 +304,18 @@ function CopLogicAttack._upd_aim(data, my_data)
 		
 		if not data.char_tweak.always_face_enemy then
 			if data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis then
-				local walk_to_pos = data.unit:movement():get_walk_to_pos()
+				local walk_action = my_data.advancing 
+			
+				if walk_action and not walk_action._expired and walk_action._init_called then --do this properly
+					local walk_to_pos = walk_action._last_pos - walk_action._common_data.pos
+					mvec3_mul(walk_to_pos, 2)
+					mvec3_add(walk_to_pos, walk_action._common_data.pos)
+					mvec3_set_z(walk_to_pos, 0)
 
-				if walk_to_pos then
-					mvector3.direction(temp_vec1, data.m_pos, walk_to_pos)
-					mvector3.direction(temp_vec2, data.m_pos, focus_enemy.m_pos)
+					mvec3_dir(temp_vec1, data.m_pos, walk_to_pos)
+					mvec3_dir(temp_vec2, data.m_pos, focus_enemy.m_pos:with_z(0))
 
-					local dot = mvector3.dot(temp_vec1, temp_vec2)
+					local dot = mvec3_dot(temp_vec1, temp_vec2)
 
 					if dot < 0.6 then
 						shoot = false
@@ -687,6 +692,16 @@ function CopLogicAttack._update_cover(data)
 	elseif best_cover and cover_release_dis_sq < mvector3.distance_sq(best_cover[1][1], my_pos) then
 		CopLogicAttack._set_best_cover(data, my_data, nil)
 	end
+end
+
+function CopLogicAttack._verify_cover(cover, threat_pos, min_dis, max_dis)
+	local threat_dis = mvec3_dis(cover[1], threat_pos)
+
+	if min_dis and threat_dis < min_dis or max_dis and max_dis < threat_dis then
+		return
+	end
+
+	return true
 end
 
 function CopLogicAttack._upd_combat_movement(data)

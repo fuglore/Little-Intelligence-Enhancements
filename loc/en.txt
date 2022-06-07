@@ -13,6 +13,9 @@
 	"menu_lies_spawngroups_norng" : "Vanilla Low RNG",
 	"menu_lies_spawngroups_fixed" : "Fixed",
 	"menu_lies_spawngroups_fixnorng" : "Fixed Low RNG",
+
+	"menu_lies_specialdelay_title" : "Special Enemy Reaction Delays",
+	"menu_lies_specialdelay_desc" : "Add a small delay before special enemies can execute their special attacks upon targetting a valid heister. Not accurate to Vanilla.",
 	
 	"menu_lies_fixed_specialspawncaps_title" : "Fixed Special Spawncap",
 	"menu_lies_fixed_specialspawncaps_desc" : "Fixes Minigun Bulldozers, Medicdozers, and Phalanx Shields not counting towards their respective spawncaps. Not accurate to Vanilla.",

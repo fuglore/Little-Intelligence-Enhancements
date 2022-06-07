@@ -5,11 +5,12 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V3.3",
+		version = "V3.4",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
 			enemy_aggro_level = 2,
+			specialdelay = false, --https://c.tenor.com/s9LwSLYtxlwAAAAC/bingus-bingus-combat.gif
 			fixed_spawngroups = 1,
 			fixed_specialspawncaps = false,
 			copsretire = false,
@@ -705,6 +706,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_enemy_aggro_level = function(self, item)
 			local value = item:value()
 			LIES.settings.enemy_aggro_level = value
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_specialdelay = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.specialdelay = on
 
 			LIES:Save()
 		end

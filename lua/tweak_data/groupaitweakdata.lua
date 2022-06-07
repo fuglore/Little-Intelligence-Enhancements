@@ -709,8 +709,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "mov",
 		group_min = 2,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -723,8 +723,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "rdy",
 		group_min = 2,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -737,8 +737,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "g90",
 		group_min = 2,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -751,8 +751,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "clr",
 		group_min = 2,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -765,8 +765,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "pos",
 		group_min = 2,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -779,8 +779,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "pus",
 		group_min = 0,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -793,8 +793,8 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "t01",
 		group_min = 0,
 		duration = {
-			12,
-			24
+			8,
+			16
 		},
 		interval = {
 			0.75,
@@ -807,8 +807,79 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		queue = "prm",
 		group_min = 2,
 		duration = {
-			12,
-			24
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.getcivs = {
+		radius = 700,
+		max_nr = 1,
+		queue = "civ",
+		group_min = 2,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.gatherloot = {
+		radius = 700,
+		max_nr = 1,
+		queue = "l01",
+		group_min = 2,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.movedin_civs = {
+		radius = 700,
+		max_nr = 1,
+		queue = "cr1",
+		group_min = 2,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	
+	self.enemy_chatter.drillsabotage = {
+		radius = 700,
+		max_nr = 1,
+		queue = "e01",
+		group_min = 0,
+		duration = {
+			0,
+			0
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.gearsabotage = {
+		radius = 700,
+		max_nr = 1,
+		queue = "e02",
+		group_min = 0,
+		duration = {
+			0,
+			0
 		},
 		interval = {
 			0.75,

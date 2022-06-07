@@ -57,16 +57,24 @@ function SpoocLogicAttack.update(data)
 	local my_data = data.internal_data
 
 	if my_data.spooc_attack then
-		if my_data.spooc_attack.action._beating_end_t and my_data.spooc_attack.action._beating_end_t < TimerManager:game():time() then			
-			local attention_objects = data.detected_attention_objects
+		local action_data = my_data.spooc_attack.action
+		
+		if action_data._flying_strike_data and not action_data._ext_anim.act and action_data._stroke_t and data.t - action_data._stroke_t > 1 or action_data._beating_end_t and action_data._beating_end_t < TimerManager:game():time() then
+			if action_data._flying_strike_data then
+				SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
+			elseif action_data._beating_end_t and action_data._beating_end_t + 12 < TimerManager:game():time() then
+				SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
+			else
+				local attention_objects = data.detected_attention_objects
 
-			for u_key, attention_data in pairs(attention_objects) do
-				if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
-					if not attention_data.criminal_record or not attention_data.criminal_record.status then
-						if attention_data.verified or attention_data.nearly_visible then
-							if attention_data.dis < my_data.weapon_range.close then
-								SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
-								break
+				for u_key, attention_data in pairs(attention_objects) do
+					if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
+						if not attention_data.criminal_record or not attention_data.criminal_record.status then
+							if attention_data.verified or attention_data.nearly_visible then
+								if attention_data.dis < my_data.weapon_range.close then
+									SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
+									break
+								end
 							end
 						end
 					end
@@ -109,6 +117,10 @@ function SpoocLogicAttack.update(data)
 
 	if my_data.spooc_attack then
 		return
+	elseif my_data.has_played_warning then
+		if data.spooc_attack_timeout_t and data.t > data.spooc_attack_timeout_t then
+			my_data.has_played_warning = nil
+		end
 	end
 
 	if AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
@@ -122,12 +134,52 @@ function SpoocLogicAttack.update(data)
 end
 
 function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
+	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
+
+	if not my_data.spooc_attack then	
+		if ammo <= 0 then
+			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
+		
+			if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
+				if not data.unit:anim_data().reload then
+					local new_action = {
+						body_part = 2,
+						type = "idle"
+					}
+
+					data.unit:brain():action_request(new_action)
+				
+					CopLogicAttack._cancel_cover_pathing(data, my_data)
+					CopLogicAttack._cancel_charge(data, my_data)
+				end
+			end
+			
+			return true
+		end
+	end
+
 	if not data.attention_obj or data.attention_obj.reaction < AIAttentionObject.REACT_COMBAT then
 		return
 	end
 	
 	if data.spooc_attack_timeout_t and data.t < data.spooc_attack_timeout_t then
 		return true
+	end
+	
+	local aggro_level = LIES.settings.enemy_aggro_level
+	
+	if aggro_level > 3 then
+		return
+	end
+
+	if data.is_suppressed or my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
+		return true
+	end
+
+	if aggro_level < 3 then
+		if ammo / ammo_max < 0.2 then
+			return true
+		end
 	end
 	
 	return CopLogicAttack._chk_wants_to_take_cover(data, my_data)
@@ -158,8 +210,13 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
-	elseif action_type == "act" then
+	elseif action_type == "act" then	
 		if action:expired() then
+			if my_data.reacting then
+				my_data.has_played_warning = data.t
+				my_data.reacting = nil
+			end
+		
 			SpoocLogicAttack._upd_aim(data, my_data)
 		end
 	elseif action_type == "turn" then
@@ -170,15 +227,11 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		end
 	elseif action_type == "spooc" then
 		data.spooc_attack_timeout_t = TimerManager:game():time() + math.lerp(data.char_tweak.spooc_attack_timeout[1], data.char_tweak.spooc_attack_timeout[2], math.random())
-		
-		
-		if not data.brain._next_grenade_use_t or data.brain._next_grenade_use_t < data.t then
-			if action:complete() and data.char_tweak.spooc_attack_use_smoke_chance > 0 and math.random() <= data.char_tweak.spooc_attack_use_smoke_chance then
-				managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), math.lerp(15, 30, math.random()), false)
-			end
-		end
+
+		data.brain:_chk_use_cover_grenade(unit)
 
 		my_data.spooc_attack = nil
+		my_data.has_played_warning = nil
 	elseif action_type == "dodge" then
 		local timeout = action:timeout()
 
@@ -190,6 +243,100 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 
 		if action:expired() then
 			SpoocLogicAttack._upd_aim(data, my_data)
+		end
+	end
+end
+
+function SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
+	if not my_data.spooc_attack and (not data.last_spooc_snd_play_t or data.t - data.last_spooc_snd_play_t > 6) and focus_enemy.verified_dis < 2500 and math.abs(data.m_pos.z - focus_enemy.m_pos.z) < 300 then
+		data.last_spooc_snd_play_t = data.t
+
+		data.unit:sound():play("clk_c01x_plu", nil, true)
+	end
+end
+
+function SpoocLogicAttack._upd_spooc_attack(data, my_data)
+	local focus_enemy = data.attention_obj
+
+	if focus_enemy.nav_tracker and focus_enemy.is_person and focus_enemy.criminal_record and not focus_enemy.criminal_record.status and not my_data.spooc_attack and AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction and data.spooc_attack_timeout_t < data.t and focus_enemy.verified_dis < (my_data.want_to_take_cover and 1500 or 2500) and not data.unit:movement():chk_action_forbidden("walk") and not SpoocLogicAttack._is_last_standing_criminal(focus_enemy) and not focus_enemy.unit:movement():zipline_unit() and focus_enemy.unit:movement():is_SPOOC_attack_allowed() then
+		if focus_enemy.verified and ActionSpooc.chk_can_start_spooc_sprint(data.unit, focus_enemy.unit) and not data.unit:raycast("ray", data.unit:movement():m_head_pos(), focus_enemy.m_head_pos, "slot_mask", managers.slot:get_mask("bullet_impact_targets_no_criminals"), "ignore_unit", focus_enemy.unit, "report") then
+			if my_data.attention_unit ~= focus_enemy.u_key then
+				CopLogicBase._set_attention(data, focus_enemy)
+
+				my_data.attention_unit = focus_enemy.u_key
+			end
+			
+			if LIES.settings.specialdelay then
+				SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
+			end
+			
+			if not LIES.settings.specialdelay or my_data.has_played_warning then
+				local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data)
+
+				if action then
+					my_data.spooc_attack = {
+						start_t = data.t,
+						target_u_data = focus_enemy,
+						action = action
+					}
+
+					return true
+				end
+			elseif not my_data.turning then
+				if not data.unit:movement():chk_action_forbidden("walk") then
+					local action_data = {
+						variant = "surprised",
+						body_part = 1,
+						type = "act",
+						blocks = {
+							action = -1,
+							walk = -1
+						}
+					}
+
+					my_data.reacting = data.unit:brain():action_request(action_data)
+				end
+			end
+		end
+
+		if ActionSpooc.chk_can_start_flying_strike(data.unit, focus_enemy.unit) then
+			if my_data.attention_unit ~= focus_enemy.u_key then
+				CopLogicBase._set_attention(data, focus_enemy)
+
+				my_data.attention_unit = focus_enemy.u_key
+			end
+			
+			if LIES.settings.specialdelay then
+				SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
+			end
+			
+			if not LIES.settings.specialdelay or my_data.has_played_warning then
+				local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data, true)
+
+				if action then
+					my_data.spooc_attack = {
+						start_t = data.t,
+						target_u_data = focus_enemy,
+						action = action
+					}
+
+					return true
+				end
+			elseif not my_data.turning then
+				if not data.unit:movement():chk_action_forbidden("walk") then
+					local action_data = {
+						variant = "surprised",
+						body_part = 1,
+						type = "act",
+						blocks = {
+							action = -1,
+							walk = -1
+						}
+					}
+
+					my_data.reacting = data.unit:brain():action_request(action_data)
+				end
+			end
 		end
 	end
 end

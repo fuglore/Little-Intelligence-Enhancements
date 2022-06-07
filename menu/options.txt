@@ -66,6 +66,14 @@
         },
 		{
 			"type" : "toggle",
+			"id" : "lies_specialdelay",
+			"title" : "menu_lies_specialdelay_title",
+			"description" : "menu_lies_specialdelay_desc",
+			"callback" : "callback_lies_specialdelay",
+			"value" : "specialdelay"
+		},
+		{
+			"type" : "toggle",
 			"id" : "lies_teamaihelpers",
 			"title" : "menu_lies_teamaihelpers_title",
 			"description" : "menu_lies_teamaihelpers_desc",

@@ -344,9 +344,9 @@ function GroupAIStateBesiege:_get_special_unit_type_count(special_type)
 	elseif special_type == "shield" then
 		local shields = table.size(self._special_units[special_type])
 		
-		if self._special_units["phalanx_minion"] then
-			shields = shields + table.size(self._special_units["phalanx_minion"])
-		end
+		--if self._special_units["phalanx_minion"] then
+		--	shields = shields + table.size(self._special_units["phalanx_minion"])
+		--end
 		
 		return shields
 	else
@@ -369,6 +369,18 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 		end
 	end
 end)
+
+function GroupAIStateBesiege:_upd_regroup_task()
+	local regroup_task = self._task_data.regroup
+
+	if regroup_task.active then
+		self:_assign_assault_groups_to_retire()
+
+		if regroup_task.end_t < self._t or not LIES.settings.copsretire and self._drama_data.zone == "low" then
+			self:_end_regroup_task()
+		end
+	end
+end
 
 function GroupAIStateBesiege:_queue_police_upd_task()
 	--log("a")
@@ -476,6 +488,30 @@ end
 function GroupAIStateBesiege:_voice_follow_me(group)
 	for u_key, unit_data in pairs(group.units) do
 		if unit_data.char_tweak.chatter.ready and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "follow_me") then
+			break
+		end
+	end
+end
+
+function GroupAIStateBesiege:_voice_getcivs(group)
+	for u_key, unit_data in pairs(group.units) do
+		if unit_data.char_tweak.chatter.suppress and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "getcivs") then
+			break
+		end
+	end
+end
+
+function GroupAIStateBesiege:_voice_gatherloot(group)
+	for u_key, unit_data in pairs(group.units) do
+		if unit_data.char_tweak.chatter.suppress and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "gatherloot") then
+			break
+		end
+	end
+end
+
+function GroupAIStateBesiege:_voice_movedin_civs(group)
+	for u_key, unit_data in pairs(group.units) do
+		if unit_data.char_tweak.chatter.suppress and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "movedin_civs") then
 			break
 		end
 	end
@@ -1033,6 +1069,237 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			self:_set_objective_to_enemy_group(group, new_grp_objective)
 
 			return
+		end
+	end
+end
+
+function GroupAIStateBesiege:_assign_enemy_groups_to_recon()
+	for group_id, group in pairs(self._groups) do
+		if group.has_spawned and group.objective.type == "recon_area" then
+			if group.objective.moving_out then
+				local done_moving = nil
+
+				for u_key, u_data in pairs(group.units) do
+					local objective = u_data.unit:brain():objective()
+
+					if objective then
+						if objective.grp_objective ~= group.objective then
+							-- Nothing
+						elseif not objective.in_place then
+							done_moving = false
+						elseif done_moving == nil then
+							done_moving = true
+						end
+					end
+				end
+
+				if done_moving == true then
+					if group.objective.moved_in then
+						group.visited_areas = group.visited_areas or {}
+						group.visited_areas[group.objective.area] = true
+						
+						if group.objective.area.hostages then
+							self:_voice_movedin_civs(group)
+						end
+					end
+
+					group.objective.moving_out = nil
+					group.in_place_t = self._t
+					group.objective.moving_in = nil
+
+					self:_voice_move_complete(group)
+				end
+			end
+
+			if not group.objective.moving_in then
+				self:_set_recon_objective_to_group(group)
+			end
+		end
+	end
+end
+
+function GroupAIStateBesiege:_set_recon_objective_to_group(group)
+	if not group.has_spawned then
+		return
+	end
+
+	local current_objective = group.objective
+	local target_area = current_objective.target_area or current_objective.area
+
+	if not target_area.loot and not target_area.hostages or not current_objective.moving_out and current_objective.moved_in and group.in_place_t and self._t - group.in_place_t > 15 then
+		local recon_area = nil
+		local to_search_areas = {
+			current_objective.area
+		}
+		local found_areas = {
+			[current_objective.area] = "init"
+		}
+
+		repeat
+			local search_area = table.remove(to_search_areas, 1)
+
+			if search_area.loot or search_area.hostages then
+				local occupied = nil
+
+				for test_group_id, test_group in pairs(self._groups) do
+					if test_group ~= group and (test_group.objective.target_area == search_area or test_group.objective.area == search_area) then
+						occupied = true
+
+						break
+					end
+				end
+
+				if not occupied and group.visited_areas and group.visited_areas[search_area] then
+					occupied = true
+				end
+
+				if not occupied then
+					local is_area_safe = not next(search_area.criminal.units)
+
+					if is_area_safe then
+						recon_area = search_area
+
+						break
+					else
+						recon_area = recon_area or search_area
+					end
+				end
+			end
+
+			if not next(search_area.criminal.units) then
+				for other_area_id, other_area in pairs(search_area.neighbours) do
+					if not found_areas[other_area] then
+						table.insert(to_search_areas, other_area)
+
+						found_areas[other_area] = search_area
+					end
+				end
+			end
+		until #to_search_areas == 0
+
+		if recon_area then
+			local coarse_path = {
+				{
+					recon_area.pos_nav_seg,
+					recon_area.pos
+				}
+			}
+			local last_added_area = recon_area
+
+			while found_areas[last_added_area] ~= "init" do
+				last_added_area = found_areas[last_added_area]
+
+				table.insert(coarse_path, 1, {
+					last_added_area.pos_nav_seg,
+					last_added_area.pos
+				})
+			end
+
+			local grp_objective = {
+				scan = true,
+				pose = "stand",
+				type = "recon_area",
+				stance = "hos",
+				attitude = "avoid",
+				area = current_objective.area,
+				target_area = recon_area,
+				coarse_path = coarse_path
+			}
+
+			self:_set_objective_to_enemy_group(group, grp_objective)
+
+			current_objective = group.objective
+		end
+	end
+
+	if current_objective.target_area then
+		if current_objective.moving_out and not current_objective.moving_in and current_objective.coarse_path then
+			local forwardmost_i_nav_point = self:_get_group_forwardmost_coarse_path_index(group)
+
+			if forwardmost_i_nav_point and forwardmost_i_nav_point > 1 then
+				for i = forwardmost_i_nav_point + 1, #current_objective.coarse_path do
+					local nav_point = current_objective.coarse_path[forwardmost_i_nav_point]
+
+					if not self:is_nav_seg_safe(nav_point[1]) then
+						for i = 0, #current_objective.coarse_path - forwardmost_i_nav_point do
+							table.remove(current_objective.coarse_path)
+						end
+
+						local grp_objective = {
+							attitude = "avoid",
+							scan = true,
+							pose = "stand",
+							type = "recon_area",
+							stance = "hos",
+							area = self:get_area_from_nav_seg_id(current_objective.coarse_path[#current_objective.coarse_path][1]),
+							target_area = current_objective.target_area
+						}
+
+						self:_set_objective_to_enemy_group(group, grp_objective)
+
+						return
+					end
+				end
+			end
+		end
+
+		if not current_objective.moving_out and not current_objective.area.neighbours[current_objective.target_area.id] then
+			local search_params = {
+				id = "GroupAI_recon",
+				from_seg = current_objective.area.pos_nav_seg,
+				to_seg = current_objective.target_area.pos_nav_seg,
+				access_pos = self._get_group_acces_mask(group),
+				verify_clbk = callback(self, self, "is_nav_seg_safe")
+			}
+			local coarse_path = managers.navigation:search_coarse(search_params)
+
+			if coarse_path then
+				self:_merge_coarse_path_by_area(coarse_path)
+				table.remove(coarse_path)
+
+				local grp_objective = {
+					scan = true,
+					pose = "stand",
+					type = "recon_area",
+					stance = "hos",
+					attitude = "avoid",
+					area = self:get_area_from_nav_seg_id(coarse_path[#coarse_path][1]),
+					target_area = current_objective.target_area,
+					coarse_path = coarse_path
+				}
+
+				self:_set_objective_to_enemy_group(group, grp_objective)
+			end
+		end
+
+		if not current_objective.moving_out and current_objective.area.neighbours[current_objective.target_area.id] then
+			local grp_objective = {
+				stance = "hos",
+				scan = true,
+				pose = "crouch",
+				type = "recon_area",
+				attitude = "avoid",
+				area = current_objective.target_area
+			}
+
+			self:_set_objective_to_enemy_group(group, grp_objective)
+
+			group.objective.moving_in = true
+
+			if next(current_objective.target_area.criminal.units) then
+				self:_chk_group_use_smoke_grenade(group, {
+					use_smoke = true,
+					target_areas = {
+						grp_objective.area
+					}
+				})
+			end
+			
+			if current_objective.target_area.hostages then
+				self:_voice_getcivs(group)
+			elseif current_objective.target_area.loot then
+				self:_voice_gatherloot(group)
+			end
 		end
 	end
 end

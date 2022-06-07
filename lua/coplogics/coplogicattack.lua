@@ -159,7 +159,7 @@ function CopLogicAttack.update(data)
 	
 	if AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction and not data.unit:movement():chk_action_forbidden("walk") then
 		my_data.want_to_take_cover = CopLogicAttack._chk_wants_to_take_cover(data, my_data)
-
+		
 		--log(tostring(my_data.attitude))
 
 		CopLogicAttack._update_cover(data)
@@ -188,6 +188,28 @@ function CopLogicAttack.update(data)
 end
 
 function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
+	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
+
+	if ammo <= 0 then
+		local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
+	
+		if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
+			if not data.unit:anim_data().reload then
+				local new_action = {
+					body_part = 2,
+					type = "idle"
+				}
+
+				data.unit:brain():action_request(new_action)
+			
+				CopLogicAttack._cancel_cover_pathing(data, my_data)
+				CopLogicAttack._cancel_charge(data, my_data)
+			end
+		end
+		
+		return true
+	end
+
 	if not data.attention_obj or data.attention_obj.reaction < AIAttentionObject.REACT_COMBAT then
 		return
 	end
@@ -201,10 +223,8 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	if data.is_suppressed or my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
 		return true
 	end
-	
-	if aggro_level < 3 then
-		local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 
+	if aggro_level < 3 then
 		if ammo / ammo_max < 0.2 then
 			return true
 		end
@@ -214,7 +234,6 @@ end
 function CopLogicAttack.chk_should_turn(data, my_data)
 	return not my_data.turning and not my_data.has_old_action and not data.unit:movement():chk_action_forbidden("walk") and not my_data.moving_to_cover and not my_data.walking_to_cover_shoot_pos and not my_data.surprised and not my_data.advancing
 end
-
 
 function CopLogicAttack._upd_aim(data, my_data)
 	local shoot, aim, expected_pos = nil
@@ -650,7 +669,9 @@ function CopLogicAttack._upd_combat_movement(data)
 		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
 		if in_cover then
-			if data.objective and data.objective.grp_objective and data.objective.grp_objective.charge and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6) then
+			local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
+		
+			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge then
 				if my_data.charge_path then
 					local path = my_data.charge_path
 					my_data.charge_path = nil

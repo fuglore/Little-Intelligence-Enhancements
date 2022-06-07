@@ -154,6 +154,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 	if self._last_speech then
 		if important then
 			self._last_speech:stop()
+			self:stop()
 		else
 			return
 		end

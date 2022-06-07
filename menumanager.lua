@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V3.43",
+		version = "V3.44",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -69,7 +69,7 @@ if RequiredScript == "lib/managers/menumanager" then
 	function LIES:find_cover_near_pos_1(near_pos, threat_pos, max_near_dis, min_threat_dis, allow_fwd)
 		local copied_threat_pos = threat_pos and mvec3_cpy(threat_pos) or nil
 		
-		return managers.navigation:_find_cover_through_lua(copied_threat_pos, near_pos, nil, min_threat_dis, max_near_dis)
+		return managers.navigation:_find_cover_through_lua(copied_threat_pos, near_pos, nil, min_threat_dis, nil, max_near_dis)
 	end
 	
 	function LIES:find_cover_away_from_pos(near_pos, threat_pos, nav_seg_id)

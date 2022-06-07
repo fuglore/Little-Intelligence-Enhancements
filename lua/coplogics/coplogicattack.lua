@@ -473,10 +473,10 @@ function CopLogicAttack._upd_aim(data, my_data)
 		if my_data.advancing then
 			local walk_action = my_data.advancing 
 			
-			if not walk_action._expired and walk_action.common_data then --did the init get fucking called properly? yes? please start checking the walk direction
-				local walk_pos = walk_action._last_pos - walk_action.common_data.pos
+			if not walk_action._expired and walk_action._init_called then --did the init get fucking called properly? yes? please start checking the walk direction
+				local walk_pos = walk_action._last_pos - walk_action._common_data.pos
 				mvec3_mul(walk_pos, 2)
-				mvec3_add(walk_pos, walk_action.common_data.pos)
+				mvec3_add(walk_pos, walk_action._common_data.pos)
 				
 				if my_data.attention_unit ~= walk_pos then
 					CopLogicBase._set_attention_on_pos(data, mvector3.copy(walk_pos))
@@ -738,10 +738,10 @@ function CopLogicAttack._upd_combat_movement(data)
 		my_data.charge_path = nil
 		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
-		if in_cover then
+		if in_cover or not want_to_take_cover then
 			local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
 		
-			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge then
+			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or can_charge and my_data.flank_cover and my_data.flank_cover.failed then
 				if my_data.charge_path then
 					local path = my_data.charge_path
 					my_data.charge_path = nil
@@ -760,7 +760,7 @@ function CopLogicAttack._upd_combat_movement(data)
 						my_data.charge_path_failed_t = TimerManager:game():time()
 					end
 				end
-			elseif my_data.cover_test_step <= 2 then
+			elseif in_cover and my_data.cover_test_step <= 2 then
 				local height = nil
 
 				if in_cover[4] then
@@ -1111,10 +1111,10 @@ function CopLogicAttack._pathing_complete_clbk(data)
 		my_data.charge_path = nil
 		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
-		if in_cover then
+		if in_cover or not want_to_take_cover then
 			local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
 		
-			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge then
+			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or can_charge and my_data.flank_cover and my_data.flank_cover.failed then
 				if my_data.charge_path then
 					local path = my_data.charge_path
 					my_data.charge_path = nil
@@ -1133,7 +1133,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 						my_data.charge_path_failed_t = TimerManager:game():time()
 					end
 				end
-			elseif my_data.cover_test_step <= 2 then
+			elseif in_cover and my_data.cover_test_step <= 2 then
 				local height = nil
 
 				if in_cover[4] then

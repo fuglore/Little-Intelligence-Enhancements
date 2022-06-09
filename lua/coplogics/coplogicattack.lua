@@ -306,16 +306,15 @@ function CopLogicAttack._upd_aim(data, my_data)
 			if data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis then
 				local walk_action = my_data.advancing 
 			
-				if walk_action and not walk_action._expired and walk_action._init_called then --do this properly
-					local walk_to_pos = walk_action._last_pos - walk_action._common_data.pos
-					mvec3_mul(walk_to_pos, 2)
-					mvec3_add(walk_to_pos, walk_action._common_data.pos)
-					mvec3_set_z(walk_to_pos, 0)
+				if walk_action and walk_action._init_called and walk_action._cur_vel >= 0.1 then --do this properly
+					local pos_for_dir = walk_action._footstep_pos or walk_action._last_pos
+					local walk_dir = pos_for_dir - walk_action._common_data.pos
+					walk_dir = walk_dir:with_z(0):normalized()
 
-					mvec3_dir(temp_vec1, data.m_pos, walk_to_pos)
-					mvec3_dir(temp_vec2, data.m_pos, focus_enemy.m_pos:with_z(0))
+					mvec3_dir(temp_vec2, data.m_pos, focus_enemy.m_pos)
+					mvec3_set_z(temp_vec2, 0)
 
-					local dot = mvec3_dot(temp_vec1, temp_vec2)
+					local dot = mvec3_dot(walk_dir, temp_vec2)
 
 					if dot < 0.6 then
 						shoot = false
@@ -478,11 +477,15 @@ function CopLogicAttack._upd_aim(data, my_data)
 		if my_data.advancing then
 			local walk_action = my_data.advancing 
 			
-			if not walk_action._expired and walk_action._init_called then --did the init get fucking called properly? yes? please start checking the walk direction
-				local walk_pos = walk_action._last_pos - walk_action._common_data.pos
-				mvec3_mul(walk_pos, 2)
-				mvec3_add(walk_pos, walk_action._common_data.pos)
-				
+			if not walk_action._expired and walk_action._init_called and walk_action._cur_vel >= 0.1 then --did the init get fucking called properly? yes? please start checking the walk direction
+				local walk_pos = mvector3.copy(data.unit:movement():m_head_pos())
+				local pos_for_dir = walk_action._footstep_pos or walk_action._last_pos
+				local walk_dir_pos = pos_for_dir - walk_action._common_data.pos
+				mvec3_norm(walk_dir_pos)
+				mvec3_mul(walk_dir_pos, 1)
+
+				mvec3_add(walk_pos, walk_dir_pos)
+	
 				if my_data.attention_unit ~= walk_pos then
 					CopLogicBase._set_attention_on_pos(data, mvector3.copy(walk_pos))
 

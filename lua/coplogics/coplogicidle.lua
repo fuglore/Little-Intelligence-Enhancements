@@ -1,3 +1,102 @@
+function CopLogicIdle.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+
+	local my_data = {
+		unit = data.unit
+	}
+	local is_cool = data.unit:movement():cool()
+
+	if is_cool then
+		my_data.detection = data.char_tweak.detection.ntl
+	else
+		my_data.detection = data.char_tweak.detection.idle
+	end
+
+	local old_internal_data = data.internal_data
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+
+		if old_internal_data.firing then
+			data.unit:movement():set_allow_fire(false)
+		end
+
+		if old_internal_data.shooting then
+			data.unit:brain():action_request({
+				body_part = 3,
+				type = "idle"
+			})
+		end
+
+		local lower_body_action = data.unit:movement()._active_actions[2]
+		my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
+
+		if old_internal_data.best_cover then
+			my_data.best_cover = old_internal_data.best_cover
+
+			managers.navigation:reserve_cover(my_data.best_cover[1], data.pos_rsrv_id)
+		end
+
+		if old_internal_data.nearest_cover then
+			my_data.nearest_cover = old_internal_data.nearest_cover
+
+			managers.navigation:reserve_cover(my_data.nearest_cover[1], data.pos_rsrv_id)
+		end
+	end
+
+	data.internal_data = my_data
+	local key_str = tostring(data.unit:key())
+	my_data.detection_task_key = "CopLogicIdle.update" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t)
+
+	local objective = data.objective
+	
+	if is_cool then
+		if objective then
+			if (objective.nav_seg or objective.type == "follow") and not objective.in_place then
+				debug_pause_unit(data.unit, "[CopLogicIdle.enter] wrong logic", data.unit)
+			end
+
+			my_data.scan = objective.scan
+			my_data.rubberband_rotation = objective.rubberband_rotation and data.unit:movement():m_rot():y()
+		else
+			my_data.scan = true
+		end
+	end
+
+	if my_data.scan then
+		my_data.stare_path_search_id = "stare" .. key_str
+		my_data.wall_stare_task_key = "CopLogicIdle._chk_stare_into_wall" .. key_str
+	end
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	if my_data.scan and (not objective or not objective.action) then
+		CopLogicBase.queue_task(my_data, my_data.wall_stare_task_key, CopLogicIdle._chk_stare_into_wall_1, data, data.t)
+	end
+
+	if is_cool then
+		data.unit:brain():set_attention_settings({
+			peaceful = true
+		})
+	else
+		data.unit:brain():set_attention_settings({
+			cbt = true
+		})
+	end
+
+	local usage = data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage
+	my_data.weapon_range = (data.char_tweak.weapon[usage] or {}).range
+
+	data.unit:brain():set_update_enabled_state(false)
+	CopLogicIdle._perform_objective_action(data, my_data, objective)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+end
+
 function CopLogicIdle.queued_update(data)
 	local my_data = data.internal_data
 	local delay = data.logic._upd_enemy_detection(data)
@@ -39,6 +138,8 @@ function CopLogicIdle.queued_update(data)
 	if CopLogicIdle._chk_relocate(data) then
 		return
 	end
+	
+	CopLogicTravel._update_cover(nil, data)
 
 	if not CopLogicIdle._move_back_into_field_position(data, my_data) then
 		CopLogicIdle._perform_objective_action(data, my_data, objective)
@@ -128,14 +229,20 @@ function CopLogicIdle._check_needs_reload(data, my_data)
 	end
 end
 
-
 function CopLogicIdle._upd_enemy_detection(data)
 	managers.groupai:state():on_unit_detection_updated(data.unit)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
 	local min_reaction = not data.cool and AIAttentionObject.REACT_AIM or nil 
-	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	
+	local delay = 0
+	
+	if not managers.groupai:state():whisper_mode() then
+		delay = data.important and 0.7 or 1.4
+	end
+	
 	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects)
 
 	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)

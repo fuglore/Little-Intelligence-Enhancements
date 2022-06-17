@@ -194,7 +194,7 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
 	
 		if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
-			if not data.unit:anim_data().reload then
+			if not data.unit:anim_data().reload and my_data.shooting then
 				local new_action = {
 					body_part = 2,
 					type = "idle"
@@ -251,15 +251,6 @@ function CopLogicAttack._check_needs_reload(data, my_data)
 			local state = data.name
 			
 			if ammo / ammo_max > 0.2 then
-				if my_data.shooting then
-					local new_action = {
-						body_part = 3,
-						type = "idle"
-					}
-
-					data.unit:brain():action_request(new_action)
-				end
-				
 				return true
 			end
 		end
@@ -306,7 +297,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 			if data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis then
 				local walk_action = my_data.advancing 
 			
-				if walk_action and walk_action._init_called and walk_action._cur_vel >= 0.1 then --do this properly
+				if walk_action and walk_action._init_called and walk_action._cur_vel >= 0.1 and not walk_action:stopping() then --do this properly
 					local pos_for_dir = walk_action._footstep_pos or walk_action._last_pos
 					local walk_dir = pos_for_dir - walk_action._common_data.pos
 					walk_dir = walk_dir:with_z(0):normalized()
@@ -316,7 +307,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 
 					local dot = mvec3_dot(walk_dir, temp_vec2)
 
-					if dot < 0.6 then
+					if dot < 0.5 then
 						shoot = false
 						aim = false
 					end
@@ -335,8 +326,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 		if focus_enemy.verified or focus_enemy.nearly_visible then
 			if aim == nil and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 				if AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
-					local running = my_data.advancing and not my_data.advancing:stopping() and my_data.advancing:haste() == "run"
-					
+
 					if AIAttentionObject.REACT_SHOOT == focus_enemy.reaction then
 						shoot = true
 					end
@@ -368,8 +358,10 @@ function CopLogicAttack._upd_aim(data, my_data)
 			local time_since_verification = focus_enemy.verified_t and data.t - focus_enemy.verified_t
 				
 			if time_since_verification and aim == nil then
-				if running then
-					if time_since_verification and time_since_verification < math.lerp(5, 1, math.max(0, focus_enemy.verified_dis - 500) / 600) then
+				local running = data.unit:anim_data().run
+
+				if running and not data.char_tweak.always_face_enemy then
+					if time_since_verification < math.lerp(5, 1, math.max(0, focus_enemy.verified_dis - 500) / 600) then
 						aim = true
 					end
 				elseif time_since_verification < 5 then
@@ -397,35 +389,6 @@ function CopLogicAttack._upd_aim(data, my_data)
 						else
 							shoot = true
 						end
-					end
-				end
-			else
-				--expected_pos = CopLogicAttack._get_expected_attention_position(data, my_data) disabling the generation of expected pos prevents enemies from looking at absolutely nothing mid-combat, this is sad, since this is a neat feature, but it causes too many issues
-
-				if expected_pos and mvec3_dis_sq(data.m_pos, expected_pos) > (running and 640000 or 90000) then
-					if running then
-						local watch_dir = temp_vec1
-
-						mvec3_set(watch_dir, expected_pos)
-						mvec3_sub(watch_dir, data.m_pos)
-						mvec3_set_z(watch_dir, 0)
-
-						local watch_pos_dis = mvec3_norm(watch_dir)
-						local walk_to_pos = data.unit:movement():get_walk_to_pos()
-						local walk_vec = temp_vec2
-
-						mvec3_set(walk_vec, walk_to_pos)
-						mvec3_sub(walk_vec, data.m_pos)
-						mvec3_set_z(walk_vec, 0)
-						mvec3_norm(walk_vec)
-
-						local watch_walk_dot = mvec3_dot(watch_dir, walk_vec)
-
-						if watch_walk_dot > 0.85 then
-							aim = true
-						end
-					else
-						aim = true
 					end
 				end
 			end
@@ -472,17 +435,26 @@ function CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
 	else
-		CopLogicAttack._check_needs_reload(data, my_data)
+		if not data.unit:anim_data().reload and CopLogicAttack._check_needs_reload(data, my_data) then
+			if my_data.shooting then
+				local new_action = {
+					body_part = 3,
+					type = "idle"
+				}
+
+				data.unit:brain():action_request(new_action)
+			end
+		end
 		
 		if my_data.advancing then
 			local walk_action = my_data.advancing 
 			
-			if not walk_action._expired and walk_action._init_called and walk_action._cur_vel >= 0.1 then --did the init get fucking called properly? yes? please start checking the walk direction
+			if not walk_action._expired and walk_action._init_called and walk_action._cur_vel >= 0.1 and not walk_action:stopping() then --did the init get fucking called properly? yes? please start checking the walk direction
 				local walk_pos = mvector3.copy(data.unit:movement():m_head_pos())
 				local pos_for_dir = walk_action._footstep_pos or walk_action._last_pos
 				local walk_dir_pos = pos_for_dir - walk_action._common_data.pos
 				mvec3_norm(walk_dir_pos)
-				mvec3_mul(walk_dir_pos, 1)
+				mvec3_mul(walk_dir_pos, 500)
 
 				mvec3_add(walk_pos, walk_dir_pos)
 	

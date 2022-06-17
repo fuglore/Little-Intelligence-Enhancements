@@ -41,10 +41,13 @@ Hooks:PostHook(Drill, "on_sabotage_SO_administered", "lies_drillvoiceline", func
 			end
 		end
 		
-		for u_key, u_data in pairs(best_group.units) do
-			if u_key ~= m_key then
-				if u_data.char_tweak.chatter.go_go and managers.groupai:state():chk_say_enemy_chatter(u_data.unit, u_data.m_pos, voiceline) then
-					return true
+		
+		if best_group then
+			for u_key, u_data in pairs(best_group.units) do
+				if u_key ~= m_key then
+					if u_data.char_tweak.chatter.go_go and managers.groupai:state():chk_say_enemy_chatter(u_data.unit, u_data.m_pos, voiceline) then
+						return true
+					end
 				end
 			end
 		end

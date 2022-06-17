@@ -1,6 +1,7 @@
 Hooks:PostHook(CopSound, "init", "lies_init", function(self, unit)
 	self.speaking = self.speaking_fix
 	self.say = self.say_fix
+	self._play = self._play_fixed
 end)
 
 function CopSound:stop_speaking_clbk(instance, event_type, unit, sound_source, label, identifier, position)
@@ -16,20 +17,16 @@ function CopSound:speaking_fix(t)
 	return self._last_speech
 end
 
-function CopSound:_play(sound_name, source_name, clbk)
+function CopSound:_play_fixed(sound_name, source_name, clbk)
 	local source = nil
 
 	if source_name then
 		source = Idstring(source_name)
 	end
-	
-	if not clbk then
-		clbk = self.stop_speaking_clbk
-	end
 
 	local event = nil
 
-	if clbk then
+	if clbk then --add self._unit to make the clbk work
 		event = self._unit:sound_source(source):post_event(sound_name, clbk, self._unit, "marker", "end_of_event")
 	else
 		event = self._unit:sound_source(source):post_event(sound_name)
@@ -269,8 +266,12 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 
 		self._unit:network():send("say", event_id)
 	end
+	
+	
+	--clbk specifically when speaking is used to prevent lines from overlapping
+	local clbk = self.stop_speaking_clbk
 
-	self._last_speech = self:_play(full_sound or event_id, nil, self.stop_speaking_clbk)
+	self._last_speech = self:_play(full_sound or event_id, nil, clbk)
 
 	if not self._last_speech then
 		return

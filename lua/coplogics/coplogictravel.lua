@@ -906,7 +906,7 @@ function CopLogicTravel.action_complete_clbk(data, action)
 			end
 
 			data.unit:brain():abort_detailed_pathing(my_data.advance_path_search_id)
-		else
+		elseif not my_data.starting_advance_action and data.important then
 			--log("wee")
 			CopLogicTravel.upd_advance(data)
 			
@@ -929,7 +929,7 @@ function CopLogicTravel.action_complete_clbk(data, action)
 			CopLogicAttack._upd_aim(data, my_data)
 		end
 	elseif action_type == "hurt" or action_type == "healed" then
-		if data.is_converted or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
+		if data.is_converted and action:expired() or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
 			CopLogicAttack._upd_aim(data, my_data)
 		end
 	elseif action_type == "dodge" then
@@ -1169,4 +1169,10 @@ function CopLogicTravel._chk_cover_height(data, cover, slotmask)
 	end
 
 	return high_ray
+end
+
+function CopLogicTravel.queue_update(data, my_data, delay)
+	delay = delay or 0.3
+
+	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CopLogicTravel.queued_update, data, data.t + delay, data.important and true)
 end

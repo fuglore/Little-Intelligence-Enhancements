@@ -344,9 +344,9 @@ function GroupAIStateBesiege:_get_special_unit_type_count(special_type)
 	elseif special_type == "shield" then
 		local shields = table.size(self._special_units[special_type])
 		
-		--if self._special_units["phalanx_minion"] then
-		--	shields = shields + table.size(self._special_units["phalanx_minion"])
-		--end
+		if self._special_units["phalanx_minion"] then
+			shields = shields + table.size(self._special_units["phalanx_minion"])
+		end
 		
 		return shields
 	else

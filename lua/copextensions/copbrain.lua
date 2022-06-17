@@ -229,32 +229,34 @@ end
 end
 
 Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, search_id, path)
-	if path and path ~= "failed" then
-		--local line2 = Draw:brush(Color.green:with_alpha(0.5), 3)
-		
-		if line2 and #path > 2 then
-			for i = 1, #path do
-				if path[i + 1] then
-					if path[i].z and path[i + 1].z then
-						line2:cylinder(path[i], path[i + 1], 5)
-					elseif path[i].z then
-						line2:sphere(path[i], 20)
-					elseif path[i + 1].z then
-						line2:sphere(path[i + 1], 20)
-					elseif path[i - 1] and path[i - 1].z then
-						line2:sphere(path[i - 1], 20)
+	if self._important then
+		if path and path ~= "failed" then
+			--local line2 = Draw:brush(Color.green:with_alpha(0.5), 3)
+			
+			if line2 and #path > 2 then
+				for i = 1, #path do
+					if path[i + 1] then
+						if path[i].z and path[i + 1].z then
+							line2:cylinder(path[i], path[i + 1], 5)
+						elseif path[i].z then
+							line2:sphere(path[i], 20)
+						elseif path[i + 1].z then
+							line2:sphere(path[i + 1], 20)
+						elseif path[i - 1] and path[i - 1].z then
+							line2:sphere(path[i - 1], 20)
+						end
 					end
 				end
 			end
-		end
-	
-		self._logic_data.t = self._timer:time()
-		self._logic_data.dt = self._timer:delta_time()
-
-		--enemies in logictravel and logicattack will perform their appropriate actions as soon as possible once pathing has finished
 		
-		if self._current_logic._pathing_complete_clbk then
-			self._current_logic._pathing_complete_clbk(self._logic_data)
+			self._logic_data.t = self._timer:time()
+			self._logic_data.dt = self._timer:delta_time()
+
+			--enemies in logictravel and logicattack will perform their appropriate actions as soon as possible once pathing has finished
+			
+			if self._current_logic._pathing_complete_clbk then
+				self._current_logic._pathing_complete_clbk(self._logic_data)
+			end
 		end
 	end
 end)

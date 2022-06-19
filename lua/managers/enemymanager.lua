@@ -391,18 +391,8 @@ function EnemyManager:_update_queued_tasks(t, dt)
 	local all_clbks = self._delayed_clbks
 
 	if all_clbks[1] and all_clbks[1][2] < t then
-		local clbk = all_clbks[1][3]
+		local clbk = table.remove(all_clbks, 1)[3]
 
 		clbk()
-		
-		local clbk_table = {}
-
-		for i = 2, #all_clbks do
-			local clbk = all_clbks[i]
-			
-			clbk_table[#clbk_table + 1] = clbk
-		end
-		
-		self._delayed_clbks = clbk_table
 	end
 end

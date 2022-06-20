@@ -5,18 +5,19 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V3.48",
+		version = "V4",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
 			enemy_aggro_level = 2,
-			specialdelay = false, --https://c.tenor.com/s9LwSLYtxlwAAAAC/bingus-bingus-combat.gif
+			enemy_reaction_level = 1,
 			fixed_spawngroups = 1,
 			fixed_specialspawncaps = false,
 			copsretire = false,
-			interruptoncontact = false,
-			teamaihelpers = false,
-			spawngroupdelays = false
+			interruptoncontact = true,
+			teamaihelpers = true,
+			spawngroupdelays = false,
+			hhtacs = false
 		}
 	}
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
@@ -688,11 +689,15 @@ if RequiredScript == "lib/managers/menumanager" then
 	end)
 	
 	--add the menu callbacks for when menu options are changed
-	Hooks:Add( "MenuManagerInitialize", "MenuManagerInitialize_LIES", function(menu_manager)
+	Hooks:Add( "MenuManagerInitialize", "MenuManagerInitialize_LIES", function(menu_manager)		
 		MenuCallbackHandler.callback_lies_lua_cover = function(self, item)
-			local on = item:value() == "on"
-			LIES.settings.lua_cover = on
-
+			local value = item:value()
+			LIES.settings.lua_cover = value
+			
+			if managers.navigation then
+				managers.navigation:_change_funcs()
+			end
+			
 			LIES:Save()
 		end
 		
@@ -710,9 +715,9 @@ if RequiredScript == "lib/managers/menumanager" then
 			LIES:Save()
 		end
 		
-		MenuCallbackHandler.callback_lies_specialdelay = function(self, item)
-			local on = item:value() == "on"
-			LIES.settings.specialdelay = on
+		MenuCallbackHandler.callback_lies_enemy_reaction_level = function(self, item)
+			local value = item:value()
+			LIES.settings.enemy_reaction_level = value
 
 			LIES:Save()
 		end
@@ -759,6 +764,13 @@ if RequiredScript == "lib/managers/menumanager" then
 			LIES:Save()
 		end
 		
+		MenuCallbackHandler.callback_lies_hhtacs = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.hhtacs = on
+
+			LIES:Save()
+		end
+		
 		--called when the menu is closed
 		MenuCallbackHandler.callback_lies_close = function(self)
 		end
@@ -769,6 +781,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		if type(LIES.settings.fixed_spawngroups) ~= "number" then
 			log("oh")
 			LIES.settings.fixed_spawngroups = 1
+			
+			LIES:Save()
+		end
+		
+		if type(LIES.settings.lua_cover) ~= "number" then
+			log("oh")
+			LIES.settings.lua_cover = LIES.settings.lua_cover == true and 3 or 1
 			
 			LIES:Save()
 		end

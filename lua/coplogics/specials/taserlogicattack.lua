@@ -135,7 +135,9 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 				data.unit:brain():action_request(new_action)
 			end
 			
-			if not LIES.settings.specialdelay or my_data.has_played_warning then	
+			local proceed = LIES.settings.enemy_reaction_level > 2 or my_data.has_played_warning
+			
+			if proceed then	
 				if (not my_data.tasing or my_data.tasing.target_u_data ~= focus_enemy) and not data.unit:movement():chk_action_forbidden("walk") and not focus_enemy.unit:movement():zipline_unit() then
 					if my_data.attention_unit ~= focus_enemy.u_key then
 						CopLogicBase._set_attention(data, focus_enemy)

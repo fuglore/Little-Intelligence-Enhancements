@@ -3,13 +3,8 @@ Hooks:PostHook(ElementSpawnEnemyGroup, "_finalize_values", "lies_finalize_values
 		return
 	end
 
-	if LIES.settings.fixed_spawngroups == true or LIES.settings.fixed_spawngroups < 2 then
+	if LIES.settings.fixed_spawngroups == true or LIES.settings.fixed_spawngroups < 3 then
 		return
-	end
-
-	if not tweak_data.group_ai.fixed then
-		log("LIES: Attempting fixing spawngroups.")
-		tweak_data.group_ai:_fix_enemy_spawn_groups()
 	end
 
 	if self._values.preferred_spawn_groups then

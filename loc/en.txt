@@ -1,8 +1,11 @@
-{
+	{
 	"menu_lies_title" : "Little Intelligence EnhancementS Options",
 	
 	"menu_lies_lua_cover_title" : "Take Cover Through LUA",
-	"menu_lies_lua_cover_desc" : "Improves how cops take cover from players by using custom cover-finding functions instead of the original ones. Not accurate to Vanilla. NOTE: Requires a heist restart to take effect.",
+	"menu_lies_lua_cover_desc" : "Improves how cops take cover from players by using custom cover-finding functions. *Vis-Check* is slightly heavier on performance, in exchange for letting cops take better cover.",
+	"menu_lies_cover_off" : "OFF",
+	"menu_lies_cover_basic" : "Simple",
+	"menu_lies_cover_HD" : "Vis-Check",
 	
 	"menu_lies_jokerhurts_title" : "No Joker Stagger",
 	"menu_lies_jokerhurts_desc" : "Makes Jokers unable to be staggered by enemy attacks which allows them to follow players better. Not accurate to Vanilla.",
@@ -13,9 +16,6 @@
 	"menu_lies_spawngroups_norng" : "Vanilla Low RNG",
 	"menu_lies_spawngroups_fixed" : "Fixed",
 	"menu_lies_spawngroups_fixnorng" : "Fixed Low RNG",
-
-	"menu_lies_specialdelay_title" : "Special Enemy Reaction Delays",
-	"menu_lies_specialdelay_desc" : "Add a small delay before special enemies can execute their special attacks upon targetting a valid heister. Not accurate to Vanilla.",
 	
 	"menu_lies_fixed_specialspawncaps_title" : "Fixed Special Spawncap",
 	"menu_lies_fixed_specialspawncaps_desc" : "Fixes Minigun Bulldozers, Medicdozers, and Phalanx Shields not counting towards their respective spawncaps. Not accurate to Vanilla.",
@@ -30,7 +30,16 @@
 	"menu_lies_enemy_aggro_high" : "HIGH",
 	"menu_lies_enemy_aggro_poggers" : "MOSH PIT",
 	
-	"menu_lies_teamaihelpers_title" : "Team AI QOL",
+	"menu_lies_enemy_reaction_level_title" : "Reaction Level",
+	"menu_lies_enemy_reaction_level_desc" : "Adjust how reactive you want enemies regarding shooting in Loud. *Slow* is the closest to Vanilla.",
+	"menu_lies_enemy_reaction_low" : "SLOW",
+	"menu_lies_enemy_reaction_normal" : "NORMAL",
+	"menu_lies_enemy_reaction_none" : "ULTRA-VIOLENCE",
+	
+	"menu_lies_hhtacs_title" : "Spicy Tactics",
+	"menu_lies_hhtacs_desc" : "Adds entirely new AI behaviors and new tactics, and changes things to be just a little bit harder. Extremely not accurate to Vanilla, but accurate to our hopes and dreams. NOTE: High sodium content.",
+
+	"menu_lies_teamaihelpers_title" : "Team AI Shouters",
 	"menu_lies_teamaihelpers_desc" : "Allows Team AI to help players with escorts and surrendering cops. Not accurate to Vanilla.",
 	
 	"menu_lies_interruptoncontact_title" : "Smart Engagement",

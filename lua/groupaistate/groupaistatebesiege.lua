@@ -310,7 +310,158 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._special_unit_types.tank_hw = true
 		self._special_unit_types.phalanx_minion = true
 	end
+	
+	if LIES.settings.hhtacs then
+		self._check_phalanx_damage_reduction_increase = self._check_phalanx_damage_reduction_increase_LIES
+		self.phalanx_damage_reduction_disable = self.phalanx_damage_reduction_disable_LIES
+	end
 end)
+
+function GroupAIStateBesiege:_check_phalanx_damage_reduction_increase_LIES()
+	local law1team = self:_get_law1_team()
+	local damage_reduction_max = tweak_data.group_ai.phalanx.vip.damage_reduction.max
+	local damage_reduction = law1team.damage_reduction
+	
+	if damage_reduction then
+		if damage_reduction < damage_reduction_max then
+			local now = TimerManager:game():time()
+			local increase_intervall = tweak_data.group_ai.phalanx.vip.damage_reduction.increase_intervall
+			local last_increase = self._phalanx_damage_reduction_last_increase
+
+			if now > last_increase + increase_intervall then
+				last_increase = now
+				local dmg_reduct = math.min(damage_reduction_max, damage_reduction + tweak_data.group_ai.phalanx.vip.damage_reduction.increase)
+
+				self:set_phalanx_damage_reduction_buff(dmg_reduct)
+
+				self._phalanx_damage_reduction_last_increase = last_increase
+
+				if alive(self:phalanx_vip()) then
+					self:phalanx_vip():sound():say("cpw_a05", true, true)
+				end
+			end
+		end
+
+		if self._phalanx_spawn_group.set_to_phalanx_group_obj then
+			if not self._phalanx_center_pos_old then
+				self._phalanx_center_pos_old = mvector3.copy(self._phalanx_center_pos)
+			end
+		
+			local group = self._phalanx_spawn_group
+
+			if group.objective.moving_out then
+				local done_moving = nil
+				
+				if not done_moving then
+					for u_key, u_data in pairs(group.units) do
+						local objective = u_data.unit:brain():objective()
+
+						if objective then
+							if objective.grp_objective ~= group.objective then
+								-- Nothing
+							elseif not objective.in_place then
+								done_moving = false
+							elseif done_moving == nil then
+								done_moving = true
+							end
+						end
+					end
+				end
+
+				if done_moving == true then
+					group.objective.moving_out = nil
+					group.objective.repositioned_shields = nil
+					group.in_place_t = self._t
+				end
+			end
+			
+			if not group.objective.moving_out then
+				self:_set_objective_to_phalanx_group_LIES(group)
+			end
+		end
+	end
+end
+
+function GroupAIStateBesiege:phalanx_damage_reduction_disable_LIES()
+	self:set_phalanx_damage_reduction_buff(-1)
+
+	self._phalanx_damage_reduction_last_increase = nil
+	self._phalanx_center_pos = mvector3.copy(self._phalanx_center_pos_old)
+end
+
+function GroupAIStateBesiege:_set_objective_to_phalanx_group_LIES(group)
+	if group.in_place_t and self._t - group.in_place_t < 20 then
+		if not group.objective.repositioned_shields then
+			CopLogicPhalanxMinion:chk_should_reposition()
+			group.objective.repositioned_shields = true
+		end
+		
+		return
+	end
+
+	if self._task_data.assault and self._task_data.assault.target_areas[1] then
+		group.has_set_target = self.get_nav_seg_id_from_area(self._task_data.assault.target_areas[1])
+
+		if group.has_set_target then
+			local m_nav_seg = group.objective.nav_seg
+			local target_seg = group.has_set_target
+			
+			local params = {
+				from_seg = m_nav_seg,
+				to_seg = target_seg,
+				access = {
+					"walk"
+				},
+				id = "GroupAI_LIESPHALANX",
+				access_pos = "shield"
+			}
+
+			local path = managers.navigation:search_coarse(params)
+				
+			if path then
+				local next_seg_i = 2		
+				local next_seg = path[next_seg_i][1]
+				local area = self:get_area_from_nav_seg_id(next_seg)
+				self._phalanx_center_pos = mvector3.copy(area.pos)
+				
+				local grp_objective = {
+					type = "create_phalanx",
+					area = area,
+					nav_seg = next_seg,
+					pos = self._phalanx_center_pos,
+					haste = "walk"
+				}
+
+				self:_set_objective_to_enemy_group(group, grp_objective)
+				
+				self:_verify_group_objective(group)
+				
+				for u_key, u_data in pairs(group.units) do
+					local brain = u_data.unit:brain()
+					local current_objective = brain:objective()
+
+					if (not current_objective or current_objective.is_default or current_objective.grp_objective and current_objective.grp_objective ~= group.objective and not current_objective.grp_objective.no_retry) and (not group.objective.follow_unit or alive(group.objective.follow_unit)) then
+						local objective = self._create_objective_from_group_objective(group.objective, u_data.unit)
+
+						if objective and brain:is_available_for_assignment(objective) then
+							self:set_enemy_assigned(objective.area or group.objective.area, u_key)
+
+							if objective.element then
+								objective.element:clbk_objective_administered(u_data.unit)
+							end
+
+							u_data.unit:brain():set_objective(objective)
+						end
+					end
+				end
+				
+				CopLogicPhalanxMinion._reposition_phalanx(nil)
+			end
+			
+			
+		end
+	end
+end
 
 function GroupAIStateBesiege:_get_special_unit_type_count(special_type)
 	if not self._special_units[special_type] then
@@ -420,10 +571,13 @@ end
 function GroupAIStateBesiege:_upd_hostage_task()
 	self._hostage_upd_key = nil
 	local hos_data = self._hostage_data
-	local first_entry = hos_data[1]
+	local first_entry = self._hostage_data[1]
+	
+	if first_entry then
+		first_entry.clbk()
+	end
 
-	table.remove(hos_data, 1)
-	first_entry.clbk()
+	table.remove(self._hostage_data, 1)
 
 	if not self._hostage_upd_key and #hos_data > 0 then
 		self._hostage_upd_key = "GroupAIStateBesiege:_upd_hostage_task"
@@ -624,6 +778,29 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 	return objective
 end
 
+function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
+	if not alive(unit) or not unit:movement() then
+		return 4
+	end
+
+	local u_key = unit:key()
+	local pos = unit:movement():m_pos()
+	local nearby = 0
+	local mvec3_dis = mvector3.distance_sq
+	
+	for c_key, c_data in pairs(self._char_criminals) do
+		if c_key ~= u_key then
+			if not c_data.status or c_data.status == "electrified" then
+				if mvec3_dis(pos, c_data.m_pos) < 2250000 then
+					nearby = nearby + 1
+				end
+			end
+		end
+	end
+	
+	return nearby
+end
+
 function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	if not group.has_spawned then
 		return
@@ -649,7 +826,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				current_objective.tactic = nil
 			elseif current_objective.tactic == "deathguard" then
 				for u_key, u_data in pairs(self._char_criminals) do
-					if u_data.status and current_objective.follow_unit == u_data.unit then
+					if u_data.status and u_data.status ~= "electrified" and current_objective.follow_unit:key() == u_key then
 						local crim_nav_seg = u_data.tracker:nav_segment()
 
 						if current_objective.area.nav_segs[crim_nav_seg] then
@@ -661,18 +838,38 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						current_objective.tactic = nil
 					end
 				end
+			elseif current_objective.tactic == "flank" then
+				if alive(current_objective.follow_unit) then
+					for u_key, u_data in pairs(self._char_criminals) do
+						if current_objective.follow_unit:key() == u_key then
+							if not u_data.status or u_data.status == "electrified" then
+								local players_nearby = self:_chk_crimin_proximity_to_unit(u_data.unit)
+								
+								if players_nearby > 0 then
+									current_objective.tactic = nil
+								else
+									return
+								end
+							else
+								current_objective.tactic = nil
+							end
+						end
+					end
+				else
+					current_objective.tactic = nil
+				end
 			end
 		end
 		
-		if not current_objective.moving_in and not current_objective.tactic then
+		if not current_objective.tactic then
 			for i_tactic, tactic_name in ipairs(group_leader_u_data.tactics) do
 				if tactic_name == "deathguard" and not phase_is_anticipation then
 					local closest_crim_u_data, closest_crim_dis_sq = nil
 
 					for u_key, u_data in pairs(self._char_criminals) do
-						if u_data.status then
+						if u_data.status and u_data.status ~= "electrified" then
 							local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(u_data.m_pos, group.units)
-
+						
 							if closest_u_dis_sq and (not closest_crim_dis_sq or closest_u_dis_sq < closest_crim_dis_sq) then
 								closest_crim_u_data = u_data
 								closest_crim_dis_sq = closest_u_dis_sq
@@ -680,7 +877,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						end
 					end
 
-					if closest_crim_u_data then
+					if closest_crim_u_data and closest_crim_dis_sq < 640000 then
 						local search_params = {
 							id = "GroupAI_deathguard",
 							from_tracker = group_leader_u_data.unit:movement():nav_tracker(),
@@ -704,6 +901,54 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 							self:_set_objective_to_enemy_group(group, grp_objective)
 							self:_voice_deathguard_start(group)
+
+							return
+						end
+					end
+				elseif LIES.settings.hhtacs and tactic_name == "flank" then
+					local closest_crim_u_data, closest_crim_dis_sq = nil
+					local crim_dis_sq_chk = not closest_crim_dis_sq or closest_crim_dis_sq > closest_u_dis_sq
+					
+					for u_key, u_data in pairs(self._char_criminals) do
+						if u_data.unit then
+							if not u_data.status or u_data.status == "electrified" then
+								local players_nearby = self:_chk_crimin_proximity_to_unit(u_data.unit)
+
+								if players_nearby and players_nearby <= 0 then
+									local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(u_data.m_pos, group.units)
+									
+									if closest_u_dis_sq and crim_dis_sq_chk then
+										closest_crim_u_data = u_data
+										closest_crim_dis_sq = closest_u_dis_sq
+									end
+								end
+							end
+						end
+					end
+					
+					if closest_crim_u_data then
+						local search_params = {
+							id = "GroupAI_hunter",
+							from_tracker = group_leader_u_data.unit:movement():nav_tracker(),
+							to_tracker = closest_crim_u_data.tracker,
+							access_pos = self._get_group_acces_mask(group)
+						}
+						local coarse_path = managers.navigation:search_coarse(search_params)
+					
+						if coarse_path then
+							local grp_objective = {
+								distance = 800,
+								type = "assault_area",
+								attitude = "engage",
+								tactic = "flank",
+								moving_in = true,
+								follow_unit = closest_crim_u_data.unit,
+								area = self:get_area_from_nav_seg_id(coarse_path[#coarse_path][1]),
+								coarse_path = coarse_path
+							}
+							group.is_chasing = true
+
+							self:_set_objective_to_enemy_group(group, grp_objective)
 
 							return
 						end

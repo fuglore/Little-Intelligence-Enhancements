@@ -395,13 +395,6 @@ function BossLogicAttack._upd_aim(data, my_data)
 		end
 
 		BossLogicAttack._chk_use_throwable(data, my_data, focus, expected_pos)
-
-		if data.logic.chk_should_turn(data, my_data) then
-			local focus_pos = nil
-			focus_pos = (focus_visible or focus.nearly_visible) and focus.m_pos or expected_pos or focus.last_verified_pos or focus.verified_pos
-
-			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, focus_pos)
-		end
 	end
 
 	if aim or shoot then
@@ -431,6 +424,13 @@ function BossLogicAttack._upd_aim(data, my_data)
 				my_data.shooting = true
 			end
 		end
+		
+		if data.logic.chk_should_turn(data, my_data) then
+			local focus_pos = nil
+			focus_pos = (focus_visible or focus.nearly_visible) and focus.m_pos or expected_pos or focus.last_verified_pos or focus.verified_pos
+
+			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, focus_pos)
+		end
 	else
 		if my_data.shooting and not data.unit:anim_data().reload then
 			local new_action = {
@@ -447,6 +447,259 @@ function BossLogicAttack._upd_aim(data, my_data)
 			my_data.attention_unit = nil
 		end
 	end
-
+	
+	if LIES.settings.enemy_reaction_level < 3 then
+		if focus.verified_t and data.t - focus.verified_t > 2 then
+			focus.acquire_t = data.t
+		end
+	
+		local react_t = 0.7 / LIES.settings.enemy_reaction_level
+	
+		if shoot then
+			if data.t - focus.acquire_t < react_t then
+				aim = true
+				shoot = nil
+			end
+		end
+	end
+	
 	CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
+end
+
+function BossLogicAttack._upd_combat_movement(data, my_data)
+	if BossLogicAttack.no_movement then
+		return
+	end
+
+	local t = data.t
+	local focus_enemy = data.attention_obj
+	local enemy_visible = focus_enemy.verified
+	local action_taken = data.logic.action_taken(data, my_data)
+	local chase = nil
+
+	if not action_taken then
+		if not my_data.chase_path_failed_t or t - my_data.chase_path_failed_t > 1 then
+			if my_data.chase_path then
+				local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
+				local run_dist = enemy_visible and 800 or 400
+				local speed = enemy_dis < run_dist and "walk" or "run"
+
+				BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
+			elseif not my_data.chase_path_search_id and focus_enemy.nav_tracker then
+				if data.unit:anim_data().reload then
+					if focus_enemy.verified and focus_enemy.aimed_at and focus_enemy.dis < 800 and CopLogicAttack._can_move(data) then
+						local from_pos = mvec3_cpy(data.m_pos)
+						local threat_tracker = focus_enemy.nav_tracker
+						local threat_head_pos = focus_enemy.m_head_pos
+						local max_walk_dis = 800
+						local vis_required = engage
+						local retreat_to = CopLogicAttack._find_retreat_position(from_pos, focus_enemy.m_pos, threat_head_pos, threat_tracker, max_walk_dis, nil)
+
+						if retreat_to then
+							my_data.chase_path = {
+								mvec3_cpy(from_pos),
+								retreat_to
+							}
+
+							BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, "run")
+						end
+					end
+				else
+					local height_diff = math_abs(data.m_pos.z - focus_enemy.m_pos.z)
+
+					if height_diff < 300 then
+						chase = true
+					else
+						local engage = my_data.attitude == "engage"
+
+						if enemy_visible then
+							if focus_enemy.dis > 1000 or engage and focus_enemy.dis > 500 then
+								chase = true
+							end
+						elseif focus_enemy.verified_dis > 1000 or engage and focus_enemy.verified_dis > 500 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 2 then
+							chase = true
+						end
+					end
+
+					if chase then
+						my_data.chase_pos = nil
+						local chase_pos = focus_enemy.nav_tracker:field_position()
+						local pos_on_wall = CopLogicTravel._get_pos_on_wall(chase_pos, 300, nil, nil)
+
+						if mvec3_not_equal(chase_pos, pos_on_wall) then
+							my_data.chase_pos = pos_on_wall
+						end
+
+						if my_data.chase_pos then
+							local my_pos = data.unit:movement():nav_tracker():field_position()
+							local unobstructed_line = nil
+
+							if math_abs(my_pos.z - my_data.chase_pos.z) < 40 then
+								local ray_params = {
+									allow_entry = false,
+									pos_from = my_pos,
+									pos_to = my_data.chase_pos
+								}
+
+								if not managers.navigation:raycast(ray_params) then
+									unobstructed_line = true
+								end
+							end
+
+							if unobstructed_line then
+								my_data.chase_path = {
+									mvec3_cpy(my_pos),
+									my_data.chase_pos
+								}
+								local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
+								local run_dist = enemy_visible and 800 or 400
+								local speed = enemy_dis < run_dist and "walk" or "run"
+
+								BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
+							else
+								my_data.chase_path_search_id = tostring(data.unit:key()) .. "chase"
+								my_data.pathing_to_chase_pos = true
+
+								data.brain:add_pos_rsrv("path", {
+									radius = 60,
+									position = mvec3_cpy(my_data.chase_pos)
+								})
+								data.brain:search_for_path(my_data.chase_path_search_id, my_data.chase_pos)
+							end
+						else
+							my_data.chase_path_failed_t = t
+						end
+					end
+				end
+			end
+		end
+	elseif my_data.walking_to_chase_pos and not my_data.use_flank_pos_when_chasing then
+		local current_haste = my_data.advancing and my_data.advancing:haste()
+
+		if current_haste then
+			local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
+			local run_dist = enemy_visible and 700 or 300
+			local change_speed = nil
+
+			if current_haste == "run" then
+				if enemy_dis < run_dist then
+					change_speed = "walk"
+				else
+					change_speed = false
+				end
+			else
+				change_speed = run_dist <= enemy_dis and "run"
+			end
+
+			if change_speed then
+				local my_pos = data.unit:movement():nav_tracker():field_position()
+				local moving_to_pos = my_data.walking_to_chase_pos:get_walk_to_pos()
+				local unobstructed_line = nil
+
+				if math_abs(my_pos.z - moving_to_pos.z) < 40 then
+					local ray_params = {
+						allow_entry = false,
+						pos_from = my_pos,
+						pos_to = moving_to_pos
+					}
+
+					if not managers.navigation:raycast(ray_params) then
+						unobstructed_line = true
+					end
+				end
+
+				if unobstructed_line then
+					moving_to_pos = mvec3_cpy(moving_to_pos)
+
+					BossLogicAttack._cancel_chase_attempt(data, my_data)
+
+					my_data.chase_path = {
+						mvec3_cpy(my_pos),
+						moving_to_pos
+					}
+
+					BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, change_speed)
+				end
+			end
+		end
+	end
+end
+
+function BossLogicAttack._chk_use_throwable(data, my_data, focus)
+	local throwable = data.char_tweak.throwable
+
+	if not throwable then
+		return
+	end
+
+	if not focus.criminal_record or focus.is_deployable then
+		return
+	end
+
+	if not focus.last_verified_pos then
+		return
+	end
+
+	if data.used_throwable_t and data.t < data.used_throwable_t then
+		return
+	end
+
+	local time_since_verification = focus.verified_t
+
+	if not time_since_verification then
+		return
+	end
+
+	time_since_verification = data.t - time_since_verification
+
+	if time_since_verification > 5 then
+		return
+	end
+
+	local mov_ext = data.unit:movement()
+
+	if mov_ext:chk_action_forbidden("action") then
+		return
+	end
+
+	local head_pos = mov_ext:m_head_pos()
+	local throw_dis = focus.verified_dis
+	local distance_check = throwable ~= "molotov" and 600 or 400
+
+
+	if throw_dis < distance_check then
+		return
+	end
+
+	if throw_dis > 2000 then
+		return
+	end
+
+	local throw_from = head_pos + mov_ext:m_head_rot():y() * 50
+	local last_seen_pos = focus.last_verified_pos
+	local slotmask = managers.slot:get_mask("world_geometry")
+	local obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "sphere_cast_radius", 15, "slot_mask", slotmask, "report")
+
+	if obstructed then
+		return
+	end
+
+	local throw_dir = Vector3()
+
+	mvec3_lerp(throw_dir, throw_from, last_seen_pos, 0.3)
+	mvec3_sub(throw_dir, throw_from)
+
+	local dis_lerp = math_clamp((throw_dis - 1000) / 1000, 0, 1)
+	local compensation = math_lerp(0, 300, dis_lerp)
+
+	mvec3_set_z(throw_dir, throw_dir.z + compensation)
+	mvec3_norm(throw_dir)
+
+	data.used_throwable_t = data.t + 10
+
+	if throwable ~= "launcher_frag" and mov_ext:play_redirect("throw_grenade") then
+		managers.network:session():send_to_peers_synched("play_distance_interact_redirect", data.unit, "throw_grenade")
+	end
+
+	ProjectileBase.throw_projectile_npc(throwable, throw_from, throw_dir, data.unit)
 end

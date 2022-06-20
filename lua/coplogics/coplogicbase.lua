@@ -187,6 +187,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 	local my_tracker = data.unit:movement():nav_tracker()
 	--local chk_vis_func = my_tracker.check_visibility
 	local is_detection_persistent = managers.groupai:state():is_detection_persistent()
+	local is_weapons_hot = managers.groupai:state():enemy_weapons_hot()
 	local delay = 2
 	local player_importance_wgt = data.unit:in_slot(managers.slot:get_mask("enemies")) and {}
 
@@ -219,7 +220,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 		end
 
 		if dis_multiplier < 1 then
-			if settings.notice_requires_FOV then
+			if not is_weapons_hot and settings.notice_requires_FOV then
 				my_head_fwd = my_head_fwd or data.unit:movement():m_head_rot():z()
 				local angle = mvector3.angle(my_head_fwd, tmp_vec1)
 

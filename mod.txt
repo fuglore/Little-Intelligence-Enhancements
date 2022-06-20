@@ -13,6 +13,10 @@
 			"script_path" : "menunodegui.lua"
 		},
 		{
+			"hook_id": "lib/tweak_data/weapontweakdata",
+			"script_path": "lua/tweak_data/weapontweakdata.lua"
+		},
+		{
 			"hook_id": "lib/tweak_data/charactertweakdata",
 			"script_path": "lua/tweak_data/charactertweakdata.lua"
 		},
@@ -37,6 +41,10 @@
 			"script_path": "lua/props/drill.lua"
 		},
 		{
+			"hook_id": "lib/managers/groupaimanager",
+			"script_path": "lua/groupaistate/groupaimanager.lua"
+		},
+		{
 			"hook_id": "lib/managers/mission/elementspawnenemygroup",
 			"script_path": "lua/managers/mapelements/elementspawnenemygroup.lua"
 		},
@@ -47,6 +55,14 @@
 		{
 			"hook_id": "lib/managers/group_ai_states/groupaistatebesiege",
 			"script_path": "lua/groupaistate/groupaistatebesiege.lua"
+		},
+		{
+			"hook_id": "lib/units/enemies/cop/copdamage",
+			"script_path": "lua/copextensions/copdamage.lua"
+		},
+		{
+			"hook_id": "lib/units/enemies/cop/copbase",
+			"script_path": "lua/copextensions/copbase.lua"
 		},
 		{
 			"hook_id": "lib/units/enemies/cop/copmovement",
@@ -83,6 +99,14 @@
 		{
 			"hook_id": "lib/units/enemies/cop/logics/coplogicsniper",
 			"script_path": "lua/coplogics/coplogicsniper.lua"
+		},
+		{
+			"hook_id": "lib/units/enemies/cop/logics/coplogicphalanxminion",
+			"script_path": "lua/coplogics/coplogicphalanxminion.lua"
+		},
+		{
+			"hook_id": "lib/units/enemies/cop/logics/coplogicphalanxvip",
+			"script_path": "lua/coplogics/coplogicphalanxvip.lua"
 		},
 		{
 			"hook_id": "lib/units/enemies/tank/logics/tankcoplogicattack",

@@ -107,6 +107,16 @@ function TeamAILogicTravel._upd_enemy_detection(data)
 			return
 		end
 	end
+	
+	if data.objective then
+		if data.objective.type == "revive" or data.objective.called and (not new_prio_slot or new_prio_slot > 3) then
+			my_data.low_value_att = true
+		else
+			my_data.low_value_att = nil
+		end
+	else
+		my_data.low_value_att = nil
+	end
 
 	CopLogicAttack._upd_aim(data, my_data)
 

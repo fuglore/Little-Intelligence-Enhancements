@@ -5,11 +5,16 @@
 	"back_callback" : "callback_lies_close",
 	"items" : [
 		{
-			"type" : "toggle",
+			"type" : "multiple_choice",
 			"id" : "lies_lua_cover",
 			"title" : "menu_lies_lua_cover_title",
 			"description" : "menu_lies_lua_cover_desc",
 			"callback" : "callback_lies_lua_cover",
+			"items" : [
+                "menu_lies_cover_off",
+				"menu_lies_cover_basic",
+                "menu_lies_cover_HD"
+            ],
 			"value" : "lua_cover"
 		},
 		{
@@ -26,7 +31,7 @@
 			"title" : "menu_lies_fixed_spawngroups_title",
 			"description" : "menu_lies_fixed_spawngroups_desc",
 			"callback" : "callback_lies_fixed_spawngroups",
-			 "items" : [
+			"items" : [
                 "menu_lies_spawngroups_off",
 				"menu_lies_spawngroups_norng",
                 "menu_lies_spawngroups_fixed",
@@ -51,6 +56,14 @@
 			"value" : "copsretire"
 		},
 		{
+			"type" : "toggle",
+			"id" : "lies_hhtacs",
+			"title" : "menu_lies_hhtacs_title",
+			"description" : "menu_lies_hhtacs_desc",
+			"callback" : "callback_lies_hhtacs",
+			"value" : "hhtacs"
+		},
+		{
             "type" : "multiple_choice",
             "id" : "lies_enemy_aggro_level",
             "title" : "menu_lies_enemy_aggro_level_title",
@@ -65,13 +78,18 @@
             "value" : "enemy_aggro_level"
         },
 		{
-			"type" : "toggle",
-			"id" : "lies_specialdelay",
-			"title" : "menu_lies_specialdelay_title",
-			"description" : "menu_lies_specialdelay_desc",
-			"callback" : "callback_lies_specialdelay",
-			"value" : "specialdelay"
-		},
+            "type" : "multiple_choice",
+            "id" : "lies_enemy_reaction_level",
+            "title" : "menu_lies_enemy_reaction_level_title",
+            "description" : "menu_lies_enemy_reaction_level_desc",
+            "callback" : "callback_lies_enemy_reaction_level",
+            "items" : [
+                "menu_lies_enemy_reaction_low",
+                "menu_lies_enemy_reaction_normal",
+                "menu_lies_enemy_reaction_none"
+            ],
+            "value" : "enemy_reaction_level"
+        },
 		{
 			"type" : "toggle",
 			"id" : "lies_teamaihelpers",

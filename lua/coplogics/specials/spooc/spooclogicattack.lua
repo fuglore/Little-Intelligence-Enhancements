@@ -266,11 +266,11 @@ function SpoocLogicAttack._upd_spooc_attack(data, my_data)
 				my_data.attention_unit = focus_enemy.u_key
 			end
 			
-			if LIES.settings.specialdelay then
+			if LIES.settings.enemy_reaction_level < 3 then
 				SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
 			end
 			
-			if not LIES.settings.specialdelay or my_data.has_played_warning then
+			if LIES.settings.enemy_reaction_level > 2 or my_data.has_played_warning then
 				local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data)
 
 				if action then
@@ -306,11 +306,11 @@ function SpoocLogicAttack._upd_spooc_attack(data, my_data)
 				my_data.attention_unit = focus_enemy.u_key
 			end
 			
-			if LIES.settings.specialdelay then
+			if LIES.settings.enemy_reaction_level < 3 then
 				SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
 			end
 			
-			if not LIES.settings.specialdelay or my_data.has_played_warning then
+			if LIES.settings.enemy_reaction_level > 2 or my_data.has_played_warning then
 				local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data, true)
 
 				if action then

@@ -157,7 +157,11 @@ function CopLogicSniper._upd_aim(data, my_data)
 			action_taken = true
 		end
 	end
-
+	
+	if my_data.firing and focus_enemy then
+		BossLogicAttack._chk_use_throwable(data, my_data, focus_enemy)
+	end
+	
 	if aim or shoot then
 		if focus_enemy.verified then
 			if my_data.attention_unit ~= focus_enemy.unit:key() then

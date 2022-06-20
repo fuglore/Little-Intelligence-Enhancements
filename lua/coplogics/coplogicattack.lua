@@ -451,7 +451,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
 	else
-		if not data.unit:anim_data().reload and CopLogicAttack._check_needs_reload(data, my_data) then
+		if data.unit:movement():chk_action_forbidden("action") or not data.unit:anim_data().reload and CopLogicAttack._check_needs_reload(data, my_data) then
 			if my_data.shooting then
 				local new_action = {
 					body_part = 3,

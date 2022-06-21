@@ -115,6 +115,21 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 	end
 	
+	if not data.cool and data.unit:base()._tweak_table == "marshal_marksman" and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and (objective.type == "defend_area" or objective.type == "assault_area") then --this is unit is fucking ballin, its almost like i know what im doing
+		local weapon = data.unit:inventory():equipped_unit()
+		local usage = weapon and weapon:base():weapon_tweak_data().usage
+		local range_entry = usage and (data.char_tweak.weapon[usage] or {}).range or {}
+		local engage_range = range_entry.optimal or 2000
+
+		if attention.verified then
+			engage_range = engage_range * 1.2
+		end
+
+		if attention.dis < engage_range then
+			return true, true
+		end
+	end
+	
 	if objective.interrupt_on_contact then
 		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and attention.verified_t and data.t - attention.verified_t <= 15 then
 			local z_diff = math.abs(attention.m_pos.z - data.m_pos.z)

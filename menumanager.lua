@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V4",
+		version = "V4.1",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -429,6 +429,8 @@ if RequiredScript == "lib/managers/menumanager" then
 				if next(self._spawning_groups) then
 					-- Nothing
 				else
+					self:_check_spawn_timed_groups(primary_target_area, task_data)
+				
 					local spawn_group, spawn_group_type = self:_find_spawn_group_near_area(primary_target_area, self._tweak_data.assault.groups, nil, nil, nil, "assault")
 
 					if spawn_group then

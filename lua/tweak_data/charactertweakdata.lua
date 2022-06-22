@@ -13,10 +13,12 @@ function CharacterTweakData:fix_no_supress()
 	
 	if self.old_hoxton_mission then
 		self.old_hoxton_mission.no_suppressed_reaction = true
+		self.old_hoxton_mission.buddy = true
 	end
 	
 	if self.spa_vip then
 		self.spa_vip.no_suppressed_reaction = true
+		self.spa_vip.buddy = true
 	end
 end
 

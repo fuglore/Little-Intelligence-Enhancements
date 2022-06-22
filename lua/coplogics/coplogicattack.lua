@@ -766,7 +766,7 @@ function CopLogicAttack._upd_combat_movement(data)
 		my_data.charge_path = nil
 		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
-		if in_cover or not want_to_take_cover then
+		if in_cover then
 			local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
 		
 			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or can_charge and my_data.flank_cover and my_data.flank_cover.failed then
@@ -1356,7 +1356,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 		my_data.charge_path = nil
 		action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "run")
 	elseif not enemy_visible_soft or not my_data.stay_out_time or aggro_level > 1 and not enemy_visible or aggro_level > 2 then
-		if in_cover or not want_to_take_cover then
+		if in_cover then
 			local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
 		
 			if can_charge and aggro_level > 1 and my_data.attitude == "engage" and (not data.tactics or not data.tactics.ranged_fire) or can_charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or can_charge and my_data.flank_cover and my_data.flank_cover.failed then

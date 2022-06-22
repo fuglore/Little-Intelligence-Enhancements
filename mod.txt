@@ -152,5 +152,9 @@
 			"hook_id": "lib/units/civilians/logics/civilianlogicescort",
 			"script_path": "lua/civlogics/civilianlogicescort.lua"
 		},
+		{
+			"hook_id": "lib/units/civilians/logics/civilianlogicsurrender",
+			"script_path": "lua/civlogics/civilianlogicsurrender.lua"
+		},
 	]
 }

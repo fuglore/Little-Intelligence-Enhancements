@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V4.1",
+		version = "V4.2",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -507,7 +507,7 @@ if RequiredScript == "lib/managers/menumanager" then
 									local nxt = path[i][2]
 
 									if current and nxt then
-										dis = dis + mvector3.distance(current, nxt)
+										dis = dis + mvec3_dis(current, nxt)
 									end
 
 									current = nxt
@@ -574,7 +574,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		local total_weight = 0
 		local candidate_groups = {}
 		self._debug_weights = {}
-		local dis_limit = 5000
+		local dis_limit = max_dis and max_dis or 5000 * 5000
 
 		for i, dis in pairs(valid_spawn_group_distances) do
 			local my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit)) * 5

@@ -39,9 +39,15 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 
 	data.internal_data = my_data
 	local key_str = tostring(data.key)
-	my_data.upd_task_key = "CopLogicTravel.queued_update" .. key_str
-
-	CopLogicTravel.queue_update(data, my_data)
+	
+	if not data.is_converted and not data.char_tweak.buddy then
+		my_data.upd_task_key = "CopLogicTravel.queued_update" .. key_str
+		CopLogicTravel.queue_update(data, my_data)
+	else
+		my_data.criminal = true
+		my_data.detection_task_key = "CopLogicTravel.queued_detection_update" .. key_str
+		CopLogicTravel.queue_detection_update(data, my_data)
+	end
 
 	--my_data.cover_update_task_key = "CopLogicTravel._update_cover" .. key_str
 
@@ -184,9 +190,40 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 	end
 	
 	my_data.path_safely = my_data.attitude == "avoid" and data.team.foes[tweak_data.levels:get_default_team_ID("player")]
-	my_data.path_ahead = data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.is_converted or data.objective.grp_objective and data.objective.grp_objective.type == "retire"
+	my_data.path_ahead = data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player") or my_data.criminal or data.objective.grp_objective and data.objective.grp_objective.type == "retire"
+	
+	if my_data.upd_task_key then
+		data.unit:brain():set_update_enabled_state(false)
+	else
+		data.unit:brain():set_update_enabled_state(true)
+	end
+end
 
-	data.unit:brain():set_update_enabled_state(false)
+function CopLogicTravel.update(data)
+	data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	my_data.close_to_criminal = nil
+
+	CopLogicTravel.upd_advance(data)
+end
+
+function CopLogicTravel.queue_detection_update(data, my_data, delay)
+	if not delay then
+		delay = 0
+	end
+	
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicTravel.queued_detection_update, data, data.t + delay, data.important and true)
+end
+
+function CopLogicTravel.queued_detection_update(data)
+	local my_data = data.internal_data
+	local delay = CopLogicTravel._upd_enemy_detection(data)
+	
+	if my_data ~= data.internal_data then
+		return
+	end
+	
+	CopLogicTravel.queue_detection_update(data, my_data, delay)
 end
 
 function CopLogicTravel._update_cover(ignore_this, data)
@@ -808,8 +845,8 @@ function CopLogicTravel.get_pathing_prio(data)
 		end
 	end
 
-	if prio or data.is_converted or data.unit:in_slot(16) then
-		if data.is_converted or data.unit:in_slot(16) then
+	if prio or data.is_converted or data.internal_data and data.internal_data.criminal or data.unit:in_slot(16) then
+		if data.is_converted or data.internal_data and data.internal_data.criminal or data.unit:in_slot(16) then
 			prio = prio or 0
 
 			prio = prio + 3
@@ -930,7 +967,7 @@ function CopLogicTravel.action_complete_clbk(data, action)
 		end
 	elseif action_type == "hurt" or action_type == "healed" then
 		if action:expired() then
-			if data.is_converted or not CopLogicBase.chk_start_action_dodge(data, "hit") then
+			if my_data.criminal or not CopLogicBase.chk_start_action_dodge(data, "hit") then
 				CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
@@ -968,7 +1005,7 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 		return
 	end
 	
-	if data.is_converted or data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
+	if my_data.criminal or data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 		local follow_unit = objective.follow_unit
 		local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
 		local my_areas = managers.groupai:state():get_areas_from_nav_seg_id(my_nav_seg_id)

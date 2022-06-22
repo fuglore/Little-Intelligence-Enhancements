@@ -545,10 +545,6 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						target_priority_slot = 5
 					end
 
-					if old_enemy then
-						target_priority_slot = target_priority_slot - 3
-					end
-
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
 				elseif free_status then
 					target_priority_slot = 7

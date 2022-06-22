@@ -7,6 +7,16 @@ Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
 	CopBrain._logic_variants.drug_lord_boss = CopBrain._logic_variants.tank
 end)
 
+Hooks:PostHook(CopBrain, "post_init", "lies_post", function(self)
+	if self._logic_data.char_tweak.buddy then
+		local level = Global.level_data and Global.level_data.level_id
+		
+		if tweak_data.levels[level].follow_by_default then
+			self._logic_data.check_crim_jobless = true
+		end
+	end
+end)
+
 Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", function(self, mastermind_criminal)
 	local char_tweaks = deep_clone(self._unit:base()._char_tweak)
 	
@@ -49,11 +59,10 @@ function CopBrain:on_suppressed(state)
 	end
 end
 
-
 function CopBrain:set_objective(new_objective, params)
 	local old_objective = self._logic_data.objective
 	
-	if new_objective and self._logic_data.buddypalchum then
+	if new_objective and self._logic_data.char_tweak.buddy then
 		local level = Global.level_data and Global.level_data.level_id
 
 		if new_objective.element then
@@ -229,34 +238,32 @@ end
 end
 
 Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, search_id, path)
-	if self._important then
-		if path and path ~= "failed" then
-			--local line2 = Draw:brush(Color.green:with_alpha(0.5), 3)
-			
-			if line2 and #path > 2 then
-				for i = 1, #path do
-					if path[i + 1] then
-						if path[i].z and path[i + 1].z then
-							line2:cylinder(path[i], path[i + 1], 5)
-						elseif path[i].z then
-							line2:sphere(path[i], 20)
-						elseif path[i + 1].z then
-							line2:sphere(path[i + 1], 20)
-						elseif path[i - 1] and path[i - 1].z then
-							line2:sphere(path[i - 1], 20)
-						end
+	if path and path ~= "failed" then
+		--local line2 = Draw:brush(Color.green:with_alpha(0.5), 3)
+		
+		if line2 and #path > 2 then
+			for i = 1, #path do
+				if path[i + 1] then
+					if path[i].z and path[i + 1].z then
+						line2:cylinder(path[i], path[i + 1], 5)
+					elseif path[i].z then
+						line2:sphere(path[i], 20)
+					elseif path[i + 1].z then
+						line2:sphere(path[i + 1], 20)
+					elseif path[i - 1] and path[i - 1].z then
+						line2:sphere(path[i - 1], 20)
 					end
 				end
 			end
-		
-			self._logic_data.t = self._timer:time()
-			self._logic_data.dt = self._timer:delta_time()
+		end
+	
+		self._logic_data.t = self._timer:time()
+		self._logic_data.dt = self._timer:delta_time()
 
-			--enemies in logictravel and logicattack will perform their appropriate actions as soon as possible once pathing has finished
-			
-			if self._current_logic._pathing_complete_clbk then
-				self._current_logic._pathing_complete_clbk(self._logic_data)
-			end
+		--enemies in logictravel and logicattack will perform their appropriate actions as soon as possible once pathing has finished
+		
+		if self._current_logic._pathing_complete_clbk then
+			self._current_logic._pathing_complete_clbk(self._logic_data)
 		end
 	end
 end)

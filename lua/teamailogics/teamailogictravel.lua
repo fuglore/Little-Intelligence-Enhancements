@@ -109,8 +109,13 @@ function TeamAILogicTravel._upd_enemy_detection(data)
 	end
 	
 	if data.objective then
-		if data.objective.type == "revive" or data.objective.called and (not new_prio_slot or new_prio_slot > 3) then
-			my_data.low_value_att = true
+		local objective = data.objective
+		local objective_is_revive = objective.type == "revive"
+	
+		if objective_is_revive or my_data.called or objective.type == "follow" and mvector3.distance_sq(objective.follow_unit:movement():m_pos(), data.m_pos) > 490000 then
+			if objective_is_revive or not new_prio_slot or new_prio_slot > 1 then
+				my_data.low_value_att = true
+			end
 		else
 			my_data.low_value_att = nil
 		end

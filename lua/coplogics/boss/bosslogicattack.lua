@@ -703,3 +703,41 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 
 	ProjectileBase.throw_projectile_npc(throwable, throw_from, throw_dir, data.unit)
 end
+
+function BossLogicAttack._upd_enemy_detection(data, is_synchronous)
+	managers.groupai:state():on_unit_detection_updated(data.unit)
+
+	data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	local min_reaction = AI_REACT_AIM
+	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects, nil)
+	local old_att_obj = data.attention_obj
+
+	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
+	data.logic._chk_exit_attack_logic(data, new_reaction)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	if not new_attention and old_att_obj then
+		BossLogicAttack._cancel_chase_attempt(data, my_data)
+
+		my_data.att_chase_chk = nil
+	end
+
+	CopLogicBase._chk_call_the_police(data)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	BossLogicAttack._upd_aim(data, my_data)
+
+	if not is_synchronous then
+		CopLogicBase.queue_task(my_data, my_data.detection_task_key, BossLogicAttack._upd_enemy_detection, data, data.t + delay, true)
+	end
+
+	CopLogicBase._report_detections(data.detected_attention_objects)
+end

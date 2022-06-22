@@ -301,7 +301,7 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._upd_assault_task = LIES._upd_assault_task
 		self._upd_recon_tasks = LIES._upd_recon_tasks
 	elseif LIES.settings.spawngroupdelays then
-		self._find_spawn_group_near_area = self._find_spawn_group_near_area_LIES
+		self._find_spawn_group_near_area = self._find_spawn_group_near_area_LIESspawngroupdelays
 	end
 	
 	if LIES.settings.fixed_specialspawncaps then
@@ -801,6 +801,27 @@ function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
 	return nearby
 end
 
+function GroupAIStateBesiege:_chk_group_engaging_area(group)
+	local engaging_area = nil
+
+	for u_key, u_data in pairs(group.units) do 
+		if u_data.unit and alive(u_data.unit) then
+			local brain = u_data.unit:brain()
+			local objective = brain:objective()
+			
+			if brain._current_logic_name == "attack" and objective and objective.type == "free" then
+				local logic_data = brain._logic_data
+				
+				if logic_data.attention_obj and AIAttentionObject.REACT_COMBAT <= logic_data.attention_obj.reaction then
+					local nav_seg = managers.navigation:get_nav_seg_from_pos(u_data.unit:movement():m_pos())
+					
+					return nav_seg
+				end
+			end
+		end
+	end
+end
+
 function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	if not group.has_spawned then
 		return
@@ -892,7 +913,6 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 								type = "assault_area",
 								attitude = "engage",
 								tactic = "deathguard",
-								moving_in = true,
 								follow_unit = closest_crim_u_data.unit,
 								area = self:get_area_from_nav_seg_id(coarse_path[#coarse_path][1]),
 								coarse_path = coarse_path
@@ -941,7 +961,6 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 								type = "assault_area",
 								attitude = "engage",
 								tactic = "flank",
-								moving_in = true,
 								follow_unit = closest_crim_u_data.unit,
 								area = self:get_area_from_nav_seg_id(coarse_path[#coarse_path][1]),
 								coarse_path = coarse_path
@@ -974,6 +993,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	if obstructed_area then
 		if current_objective.moving_out and phase_is_anticipation then
 			pull_back = true
+		elseif tactics_map and tactics_map.ranged_fire then
+			pull_back = true
 		elseif charge and not current_objective.charge then
 			if aggression_level > 3 then
 				hard_charge = true
@@ -992,9 +1013,13 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			open_fire = true
 		end
 	else
-		local obstructed_path_index = self:_chk_coarse_path_obstructed(group)
-
-		if obstructed_path_index then
+		local engage_nav = not phase_is_anticipation and tactics_map and tactics_map.ranged_fire and self:_chk_group_engaging_area(group)
+		local obstructed_path_index = not engage_nav and self:_chk_coarse_path_obstructed(group)
+		
+		if engage_nav then
+			objective_area = self:get_area_from_nav_seg_id(engage_nav)
+			open_fire = true
+		elseif obstructed_path_index then
 			if aggression_level > 3 and current_objective.attitude == "engage" then
 				objective_area = self:get_area_from_nav_seg_id(group.objective.coarse_path[math.max(obstructed_path_index, 1)][1])
 				push = true
@@ -1720,7 +1745,7 @@ local function spawn_group_id(spawn_group)
 	return spawn_group.mission_element:id()
 end
 
-function GroupAIStateBesiege:_find_spawn_group_near_area_LIES(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
+function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
 	local all_areas = self._area_data
 	local mvec3_dis = mvector3.distance_sq
 	max_dis = max_dis and max_dis * max_dis
@@ -1762,7 +1787,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIES(target_area, allow
 								local nxt = path[i][2]
 
 								if current and nxt then
-									dis = dis + mvector3.distance(current, nxt)
+									dis = dis + mvec3_dis(current, nxt)
 								end
 
 								current = nxt
@@ -1823,7 +1848,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIES(target_area, allow
 	local total_weight = 0
 	local candidate_groups = {}
 	self._debug_weights = {}
-	local dis_limit = 5000
+	local dis_limit = max_dis and max_dis or 5000 * 5000
 
 	for i, dis in pairs(valid_spawn_group_distances) do
 		local my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit)) * 5

@@ -1299,12 +1299,14 @@ function GroupAITweakData:_LIES_setup()
 			access = access_type_all
 		}
 		
-		self.unit_categories.tank_refless = self.unit_categories.FBI_tank
+		self.unit_categories.tank_refless = clone(self.unit_categories.FBI_tank)
 		self.unit_categories.tank_refless.special_type = nil
 		
-		self.unit_categories.spooc_refless = self.unit_categories.spooc
+		self.unit_categories.spooc_refless = clone(self.unit_categories.spooc)
 		self.unit_categories.spooc_refless.special_type = nil
 		
+		self.unit_categories.taser_refless = clone(self.unit_categories.CS_tazer)
+		self.unit_categories.taser_refless.special_type = nil
 		
 		local level_id =  Global.game_settings and Global.game_settings.level_id
 		
@@ -1603,7 +1605,7 @@ function GroupAITweakData:_LIES_setup()
 					}
 				}
 			
-				self.enemy_spawn_groups.CS_swat_tac = {
+				self.enemy_spawn_groups.CS_swat_taser_tac = {
 					spawn_cooldown = 30,
 					max_nr_simultaneous_groups = 2,
 					initial_spawn_delay = 60,
@@ -1613,7 +1615,7 @@ function GroupAITweakData:_LIES_setup()
 					},
 					spawn = {
 						{
-							respawn_cooldown = 10,
+							respawn_cooldown = 15,
 							amount_min = 1,
 							rank = 1,
 							freq = 1,
@@ -1621,7 +1623,7 @@ function GroupAITweakData:_LIES_setup()
 							tactics = self._tactics.swat_rifle_flank
 						},
 						{
-							respawn_cooldown = 10,
+							respawn_cooldown = 15,
 							amount_min = 1,
 							rank = 1,
 							freq = 1,
@@ -1629,12 +1631,12 @@ function GroupAITweakData:_LIES_setup()
 							tactics = self._tactics.swat_shotgun_flank
 						},
 						{
-							respawn_cooldown = 10,
+							respawn_cooldown = 30,
 							amount_min = 1,
 							rank = 2,
 							freq = 1,
-							unit = "CS_heavy_M4",
-							tactics = self._tactics.swat_rifle_flank
+							unit = "taser_refless",
+							tactics = self._tactics.swat_shotgun_flank
 						}
 					},
 					spawn_point_chk_ref = table.list_to_set({
@@ -1643,12 +1645,12 @@ function GroupAITweakData:_LIES_setup()
 					})
 				}
 				
-				self.besiege.assault.groups.CS_swat_tac = {
+				self.besiege.assault.groups.CS_swat_taser_tac = {
 					0,
 					0,
 					0
 				}
-				self.besiege.recon.groups.CS_swat_tac = {
+				self.besiege.recon.groups.CS_swat_taser_tac = {
 					0,
 					0,
 					0

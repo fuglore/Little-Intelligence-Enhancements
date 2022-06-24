@@ -448,7 +448,7 @@ function BossLogicAttack._upd_aim(data, my_data)
 		end
 	end
 	
-	if LIES.settings.enemy_reaction_level < 3 then
+	if focus and LIES.settings.enemy_reaction_level < 3 then
 		if focus.verified_t and data.t - focus.verified_t > 2 then
 			focus.acquire_t = data.t
 		end

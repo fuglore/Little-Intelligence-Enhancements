@@ -151,7 +151,7 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_2/ene_murkywater_bulldozer_2")
 				},
 				federales = {
-					Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_saiga/ene_swat_dozer_policia_federale_saiga")
+					Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_r870/ene_swat_dozer_policia_federale_r870")
 				}
 			}
 		elseif difficulty_index == 5 then
@@ -195,7 +195,7 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/pd2_dlc_hvh/characters/ene_bulldozer_hvh_3/ene_bulldozer_hvh_3")
 				},
 				murkywater = {
-					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_1/ene_murkywater_bulldozer_1"),
+					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_4/ene_murkywater_bulldozer_4"),
 					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_2/ene_murkywater_bulldozer_2"),
 					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_3/ene_murkywater_bulldozer_3")
 				},
@@ -1150,6 +1150,12 @@ function GroupAITweakData:_LIES_setup()
 			walk = true
 		}
 		
+		local actually_finished_factions = {
+			america = true,
+			zombie = true,
+			russia = true
+		}
+		
 		self.unit_categories.FBI_office = {
 			unit_types = {
 				america = {
@@ -1240,9 +1246,9 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/payday2/characters/ene_fbi_3/ene_fbi_3")
 				},
 				russia = {
-					Idstring("units/payday2/characters/ene_fbi_1/ene_fbi_1"),
-					Idstring("units/payday2/characters/ene_fbi_2/ene_fbi_2"),
-					Idstring("units/payday2/characters/ene_fbi_3/ene_fbi_3")
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_asval_smg/ene_akan_cs_cop_asval_smg"),
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_r870/ene_akan_cs_cop_r870"),
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_ak47_ass/ene_akan_cs_cop_ak47_ass")
 				},
 				zombie = {
 					Idstring("units/pd2_dlc_hvh/characters/ene_fbi_hvh_1/ene_fbi_hvh_1"),
@@ -1272,10 +1278,10 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/payday2/characters/ene_cop_4/ene_cop_4")
 				},
 				russia = {
-					Idstring("units/payday2/characters/ene_cop_1/ene_cop_1"),
-					Idstring("units/payday2/characters/ene_cop_2/ene_cop_2"),
-					Idstring("units/payday2/characters/ene_cop_3/ene_cop_3"),
-					Idstring("units/payday2/characters/ene_cop_4/ene_cop_4")
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_asval_smg/ene_akan_cs_cop_asval_smg"),
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_r870/ene_akan_cs_cop_r870"),
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_akmsu_smg/ene_akan_cs_cop_akmsu_smg"),
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_cs_cop_ak47_ass/ene_akan_cs_cop_ak47_ass")
 				},
 				zombie = {
 					Idstring("units/pd2_dlc_hvh/characters/ene_cop_hvh_1/ene_cop_hvh_1"),
@@ -1302,11 +1308,124 @@ function GroupAITweakData:_LIES_setup()
 		self.unit_categories.tank_refless = clone(self.unit_categories.FBI_tank)
 		self.unit_categories.tank_refless.special_type = nil
 		
+		if difficulty_index < 5 then
+			self.unit_categories.tank_diff_specific = {
+				unit_types = {
+					america = {
+						Idstring("units/payday2/characters/ene_bulldozer_1/ene_bulldozer_1")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_tank_r870/ene_akan_fbi_tank_r870")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_bulldozer_hvh_1/ene_bulldozer_hvh_1")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_2/ene_murkywater_bulldozer_2")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_r870/ene_swat_dozer_policia_federale_r870")
+					}
+				},
+				access = access_type_all
+			}
+		elseif difficulty_index < 6 then
+			self.unit_categories.tank_diff_specific = {
+				unit_types = {
+					america = {
+						Idstring("units/payday2/characters/ene_bulldozer_2/ene_bulldozer_2")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_tank_saiga/ene_akan_fbi_tank_saiga")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_bulldozer_hvh_2/ene_bulldozer_hvh_2")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_3/ene_murkywater_bulldozer_3")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_saiga/ene_swat_dozer_policia_federale_saiga")
+					}
+				},
+				access = access_type_all
+			}
+		elseif difficulty_index < 7 then
+			self.unit_categories.tank_diff_specific = {
+				unit_types = {
+					america = {
+						Idstring("units/payday2/characters/ene_bulldozer_3/ene_bulldozer_3")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_tank_rpk_lmg/ene_akan_fbi_tank_rpk_lmg")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_bulldozer_hvh_3/ene_bulldozer_hvh_3")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_4/ene_murkywater_bulldozer_4")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_m249/ene_swat_dozer_policia_federale_m249")
+					}
+				},
+				access = access_type_all
+			}
+		elseif difficulty_index < 8 then
+			self.unit_categories.tank_diff_specific = {
+				unit_types = {
+					america = {
+						Idstring("units/pd2_dlc_drm/characters/ene_bulldozer_minigun_classic/ene_bulldozer_minigun_classic")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_drm/characters/ene_bulldozer_minigun_classic/ene_bulldozer_minigun_classic")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_drm/characters/ene_bulldozer_minigun_classic/ene_bulldozer_minigun_classic")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_1/ene_murkywater_bulldozer_1")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_minigun/ene_swat_dozer_policia_federale_minigun")
+					}
+				},
+				access = access_type_all
+			}
+		else
+			self.unit_categories.tank_diff_specific = {
+				unit_types = {
+					america = {
+						Idstring("units/pd2_dlc_drm/characters/ene_bulldozer_medic/ene_bulldozer_medic")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_drm/characters/ene_bulldozer_medic/ene_bulldozer_medic")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_drm/characters/ene_bulldozer_medic/ene_bulldozer_medic")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_medic/ene_murkywater_bulldozer_medic")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_medic_policia_federale/ene_swat_dozer_medic_policia_federale")
+					}
+				},
+				access = access_type_all
+			}
+		end
+		
 		self.unit_categories.spooc_refless = clone(self.unit_categories.spooc)
 		self.unit_categories.spooc_refless.special_type = nil
 		
 		self.unit_categories.taser_refless = clone(self.unit_categories.CS_tazer)
 		self.unit_categories.taser_refless.special_type = nil
+		
+		self.unit_categories.medic_m4_refless = clone(self.unit_categories.medic_M4)
+		self.unit_categories.medic_m4_refless.special_type = nil
+		
+		self.unit_categories.medic_shot_refless = clone(self.unit_categories.medic_R870)
+		self.unit_categories.medic_shot_refless.special_type = nil
 		
 		local level_id =  Global.game_settings and Global.game_settings.level_id
 		
@@ -1338,24 +1457,25 @@ function GroupAITweakData:_LIES_setup()
 			if difficulty_index > 5 then
 				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
 				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
+				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 60
 			end
 		elseif level_id == "firestarter_1" or level_id == "firestarter_2" or level_id == "firestarter_3" or level_id == "hox_3" then
-			self.enemy_spawn_groups.FBI_agents = {
+			self.enemy_spawn_groups.CS_cops = {
 				spawn_cooldown = 30,
-				max_nr_simultaneous_groups = 3,
+				max_nr_simultaneous_groups = 2,
 				initial_spawn_delay = 90,
 				amount = {
 					2,
-					2
+					4
 				},
 				spawn = {
 					{
-						respawn_cooldown = 10,
+						respawn_cooldown = 20,
 						amount_min = 2,
 						rank = 1,
 						freq = 1,
-						unit = "FBI_suit_C45_M4",
-						tactics = self._tactics.swat_rifle
+						unit = "CS_fbi_all",
+						tactics = self._tactics.swat_rifle_flank
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -1364,16 +1484,58 @@ function GroupAITweakData:_LIES_setup()
 				})
 			}
 			
-			self.besiege.assault.groups.FBI_agents = {
+			self.besiege.assault.groups.CS_cops = {
 				0,
 				0,
 				0
 			}
-			self.besiege.recon.groups.FBI_agents = {
+			self.besiege.recon.groups.CS_cops = {
 				0,
 				0,
 				0
 			}
+				
+			if difficulty_index > 5 then
+				if self.enemy_spawn_groups.CS_cops then
+					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
+					self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
+				end
+			
+				self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
+					spawn_cooldown = 120,
+					max_nr_simultaneous_groups = 1,
+					initial_spawn_delay = 60,
+					amount = {
+						4,
+						4
+					},
+					spawn = {
+						{
+							respawn_cooldown = 30,
+							amount_min = 4,
+							rank = 1,
+							freq = 1,
+							unit = "spooc_refless",
+							tactics = self._tactics.spooc
+						}
+					},
+					spawn_point_chk_ref = table.list_to_set({
+						"FBI_spoocs",
+						"single_spooc"
+					})
+				}
+				
+				self.besiege.assault.groups.spoocs_145 = {
+					0,
+					0,
+					0
+				}
+				self.besiege.recon.groups.spoocs_145 = {
+					0,
+					0,
+					0
+				}
+			end
 		elseif level_id == "hox_2" then
 			self.enemy_spawn_groups.FBI_office_agents = {
 				spawn_cooldown = 60,
@@ -1410,6 +1572,63 @@ function GroupAITweakData:_LIES_setup()
 				0,
 				0
 			}
+			
+			if difficulty_index > 5 then
+				self.enemy_spawn_groups.FBI_office_agents.spawn_cooldown = 45
+				self.enemy_spawn_groups.FBI_office_agents.initial_spawn_delay = 60
+				self.enemy_spawn_groups.FBI_office_agents.spawn[1].respawn_cooldown = 15
+				
+				self.enemy_spawn_groups.CS_swat_taser_tac = {
+					spawn_cooldown = 30,
+					max_nr_simultaneous_groups = 2,
+					initial_spawn_delay = 60,
+					amount = {
+						2,
+						4
+					},
+					spawn = {
+						{
+							respawn_cooldown = 15,
+							amount_min = 1,
+							rank = 1,
+							freq = 1,
+							unit = "CS_swat_MP5",
+							tactics = self._tactics.swat_rifle_flank
+						},
+						{
+							respawn_cooldown = 15,
+							amount_min = 1,
+							rank = 1,
+							freq = 1,
+							unit = "CS_swat_R870",
+							tactics = self._tactics.swat_shotgun_flank
+						},
+						{
+							respawn_cooldown = 30,
+							amount_min = 1,
+							rank = 2,
+							freq = 1,
+							unit = "taser_refless",
+							tactics = self._tactics.swat_shotgun_flank
+						}
+					},
+					spawn_point_chk_ref = table.list_to_set({
+						"tac_tazer_charge",
+						"tac_tazer_flanking"
+					})
+				}
+				
+				self.besiege.assault.groups.CS_swat_taser_tac = {
+					0,
+					0,
+					0
+				}
+				self.besiege.recon.groups.CS_swat_taser_tac = {
+					0,
+					0,
+					0
+				}
+			end
 		elseif level_id == "dinner" or level_id == "shoutout_raid" then
 			self.enemy_spawn_groups.Murkies = {
 				spawn_cooldown = 60,
@@ -1448,20 +1667,40 @@ function GroupAITweakData:_LIES_setup()
 			}
 			
 			if difficulty_index > 5 then
-				self.enemy_spawn_groups.Tank_OVK145 = {
+				self.enemy_spawn_groups.Murkies.initial_spawn_delay = 60
+				self.enemy_spawn_groups.Murkies.spawn_cooldown = 45
+			
+			
+				self.enemy_spawn_groups.FBI_tank_and_backup = {
 					spawn_cooldown = 60,
 					max_nr_simultaneous_groups = 1,
-					initial_spawn_delay = 90,
+					initial_spawn_delay = 60,
 					amount = {
-						1,
-						1
+						2,
+						2
 					},
 					spawn = {
 						{
+							respawn_cooldown = 60,
 							amount_min = 1,
-							rank = 1,
+							amount_max = 1,
+							rank = 2,
 							freq = 1,
-							unit = "tank_refless", --I AIN'T HEARING NO GODDAMN BELL.
+							unit = "tank_diff_specific",
+							tactics = self._tactics.tank_rush
+						},
+						{
+							respawn_cooldown = 15,
+							rank = 1,
+							freq = 0.5,
+							unit = "medic_shot_refless",
+							tactics = self._tactics.tank_rush
+						},
+						{
+							respawn_cooldown = 15,
+							rank = 1,
+							freq = 0.5,
+							unit = "medic_m4_refless",
 							tactics = self._tactics.tank_rush
 						}
 					},
@@ -1470,12 +1709,12 @@ function GroupAITweakData:_LIES_setup()
 					})
 				}
 				
-				self.besiege.assault.groups.Tank_OVK145 = {
+				self.besiege.assault.groups.FBI_tank_and_backup = {
 					0,
 					0,
 					0
 				}
-				self.besiege.recon.groups.Tank_OVK145 = {
+				self.besiege.recon.groups.FBI_tank_and_backup = {
 					0,
 					0,
 					0
@@ -1518,10 +1757,10 @@ function GroupAITweakData:_LIES_setup()
 			}
 		
 			if difficulty_index > 5 then
-				self.enemy_spawn_groups.FBI_infil.initial_spawn_delay = 45
+				self.enemy_spawn_groups.FBI_infil.initial_spawn_delay = 60
 				
 				self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
-					spawn_cooldown = 240,
+					spawn_cooldown = 120,
 					max_nr_simultaneous_groups = 1,
 					initial_spawn_delay = 60,
 					amount = {
@@ -1555,88 +1794,27 @@ function GroupAITweakData:_LIES_setup()
 					0
 				}
 			end
-		elseif level_id == "branchbank" or level_id == "jewelry_store" or level_id == "ukrainian_job" or level_id == "four_stores" or level_id == "alex_1" or level_id == "rat" or level_id == "gallery" or level_id == "mallcrasher" then
-			self.enemy_spawn_groups.CS_cops = {
-				spawn_cooldown = 30,
-				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
-				amount = {
-					2,
-					4
-				},
-				spawn = {
-					{
-						respawn_cooldown = 10,
-						amount_min = 2,
-						rank = 1,
-						freq = 1,
-						unit = "CS_cop_all",
-						tactics = self._tactics.swat_rifle_flank
-					}
-				},
-				spawn_point_chk_ref = table.list_to_set({
-					"tac_swat_rifle_flank",
-					"tac_swat_rifle"
-				})
-			}
+		else
+			local faction = tweak_data.levels:get_ai_group_type()
 			
-			self.besiege.assault.groups.CS_cops = {
-				0,
-				0,
-				0
-			}
-			self.besiege.recon.groups.CS_cops = {
-				0,
-				0,
-				0
-			}
-		
-			if difficulty_index > 5 then
-				self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
-				self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
-				self.enemy_spawn_groups.CS_cops.spawn = {
-					{
-						respawn_cooldown = 10,
-						amount_min = 2,
-						rank = 1,
-						freq = 1,
-						unit = "CS_fbi_all",
-						tactics = self._tactics.swat_rifle_flank
-					}
-				}
 			
-				self.enemy_spawn_groups.CS_swat_taser_tac = {
+			if actually_finished_factions[faction] then
+				self.enemy_spawn_groups.CS_cops = {
 					spawn_cooldown = 30,
 					max_nr_simultaneous_groups = 2,
-					initial_spawn_delay = 60,
+					initial_spawn_delay = 90,
 					amount = {
 						2,
 						4
 					},
 					spawn = {
 						{
-							respawn_cooldown = 15,
-							amount_min = 1,
+							respawn_cooldown = 20,
+							amount_min = 2,
 							rank = 1,
 							freq = 1,
-							unit = "CS_swat_MP5",
+							unit = "CS_cop_all",
 							tactics = self._tactics.swat_rifle_flank
-						},
-						{
-							respawn_cooldown = 15,
-							amount_min = 1,
-							rank = 1,
-							freq = 1,
-							unit = "CS_swat_R870",
-							tactics = self._tactics.swat_shotgun_flank
-						},
-						{
-							respawn_cooldown = 30,
-							amount_min = 1,
-							rank = 2,
-							freq = 1,
-							unit = "taser_refless",
-							tactics = self._tactics.swat_shotgun_flank
 						}
 					},
 					spawn_point_chk_ref = table.list_to_set({
@@ -1645,17 +1823,173 @@ function GroupAITweakData:_LIES_setup()
 					})
 				}
 				
-				self.besiege.assault.groups.CS_swat_taser_tac = {
+				self.besiege.assault.groups.CS_cops = {
 					0,
 					0,
 					0
 				}
-				self.besiege.recon.groups.CS_swat_taser_tac = {
+				self.besiege.recon.groups.CS_cops = {
 					0,
 					0,
 					0
 				}
+			end
+		
+			if difficulty_index > 5 then
+				if self.enemy_spawn_groups.CS_cops then
+					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
+					self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
+					self.enemy_spawn_groups.CS_cops.spawn = {
+						{
+							respawn_cooldown = 10,
+							amount_min = 2,
+							rank = 1,
+							freq = 1,
+							unit = "CS_fbi_all",
+							tactics = self._tactics.swat_rifle_flank
+						}
+					}
+				end
 				
+				
+				local group = math.random(1, 3)
+				
+				if group == 1 then
+					self.enemy_spawn_groups.FBI_tank_and_backup = {
+						spawn_cooldown = 60,
+						max_nr_simultaneous_groups = 1,
+						initial_spawn_delay = 60,
+						amount = {
+							2,
+							2
+						},
+						spawn = {
+							{
+								respawn_cooldown = 60,
+								amount_min = 1,
+								amount_max = 1,
+								rank = 2,
+								freq = 1,
+								unit = "tank_diff_specific",
+								tactics = self._tactics.tank_rush
+							},
+							{
+								respawn_cooldown = 15,
+								rank = 1,
+								freq = 0.5,
+								unit = "medic_shot_refless",
+								tactics = self._tactics.tank_rush
+							},
+							{
+								respawn_cooldown = 15,
+								rank = 1,
+								freq = 0.5,
+								unit = "medic_m4_refless",
+								tactics = self._tactics.tank_rush
+							}
+						},
+						spawn_point_chk_ref = table.list_to_set({
+							"tac_bull_rush"
+						})
+					}
+					
+					self.besiege.assault.groups.FBI_tank_and_backup = {
+						0,
+						0,
+						0
+					}
+					self.besiege.recon.groups.FBI_tank_and_backup = {
+						0,
+						0,
+						0
+					}
+				elseif group == 2 then
+					self.enemy_spawn_groups.CS_swat_taser_tac = {
+						spawn_cooldown = 30,
+						max_nr_simultaneous_groups = 2,
+						initial_spawn_delay = 60,
+						amount = {
+							2,
+							4
+						},
+						spawn = {
+							{
+								respawn_cooldown = 15,
+								amount_min = 1,
+								rank = 1,
+								freq = 1,
+								unit = "CS_swat_MP5",
+								tactics = self._tactics.swat_rifle_flank
+							},
+							{
+								respawn_cooldown = 15,
+								amount_min = 1,
+								rank = 1,
+								freq = 1,
+								unit = "CS_swat_R870",
+								tactics = self._tactics.swat_shotgun_flank
+							},
+							{
+								respawn_cooldown = 30,
+								amount_min = 1,
+								rank = 2,
+								freq = 1,
+								unit = "taser_refless",
+								tactics = self._tactics.swat_shotgun_flank
+							}
+						},
+						spawn_point_chk_ref = table.list_to_set({
+							"tac_tazer_charge",
+							"tac_tazer_flanking"
+						})
+					}
+					
+					self.besiege.assault.groups.CS_swat_taser_tac = {
+						0,
+						0,
+						0
+					}
+					self.besiege.recon.groups.CS_swat_taser_tac = {
+						0,
+						0,
+						0
+					}
+				else
+					self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
+						spawn_cooldown = 120,
+						max_nr_simultaneous_groups = 1,
+						initial_spawn_delay = 60,
+						amount = {
+							4,
+							4
+						},
+						spawn = {
+							{
+								respawn_cooldown = 30,
+								amount_min = 4,
+								rank = 1,
+								freq = 1,
+								unit = "spooc_refless",
+								tactics = self._tactics.spooc
+							}
+						},
+						spawn_point_chk_ref = table.list_to_set({
+							"FBI_spoocs",
+							"single_spooc"
+						})
+					}
+					
+					self.besiege.assault.groups.spoocs_145 = {
+						0,
+						0,
+						0
+					}
+					self.besiege.recon.groups.spoocs_145 = {
+						0,
+						0,
+						0
+					}
+				end
 			end
 		end
 	end

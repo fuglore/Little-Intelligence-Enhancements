@@ -497,9 +497,9 @@ function CopLogicAttack._upd_aim(data, my_data)
 		CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, enemy_pos)
 	end
 	
-	if focus_enemy then
+	if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
 		if LIES.settings.enemy_reaction_level < 3 and focus_enemy.acquire_t and not data.unit:in_slot(16) then
-			if focus_enemy.verified_t and data.t - focus_enemy.verified_t > 2 then
+			if not focus_enemy.verified_t or data.t - focus_enemy.verified_t > 2 then
 				focus_enemy.acquire_t = data.t
 			end
 		

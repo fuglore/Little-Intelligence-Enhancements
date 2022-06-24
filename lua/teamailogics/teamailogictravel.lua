@@ -38,8 +38,8 @@ function TeamAILogicTravel.enter(data, new_logic_name, enter_params)
 	my_data.path_ahead = data.team.id == tweak_data.levels:get_default_team_ID("player")
 
 	if data.objective then
+		my_data.called = data.objective.called and true
 		data.objective.called = false
-		my_data.called = true
 
 		if data.objective.follow_unit then
 			my_data.cover_wait_t = {

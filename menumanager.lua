@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V4.22",
+		version = "V4.3",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -798,11 +798,12 @@ if RequiredScript == "lib/managers/menumanager" then
 		--create menus
 		MenuHelper:LoadFromJsonFile(LIES.options_path, LIES, LIES.settings)
 		
-		if not Global.checked_for_updates_lies then
-			log("LIES: Checking for update data.")
-			LIES:check_for_updates()
-			Global.checked_for_updates_lies = true
+		if not BeardLib then
+			if not Global.checked_for_updates_lies then
+				log("LIES: Checking for update data.")
+				LIES:check_for_updates()
+				Global.checked_for_updates_lies = true
+			end
 		end
-		
 	end)
 end

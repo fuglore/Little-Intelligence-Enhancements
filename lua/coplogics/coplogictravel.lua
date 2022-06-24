@@ -373,9 +373,12 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 	end
 
 	local my_dis = mvector3.distance_sq(my_objective.area.pos, data.m_pos)
-
-	if my_dis > 4000000 then
-		return true
+	
+	
+	if not LIES.settings.hhtacs then
+		if my_dis > 4000000 then
+			return true
+		end
 	end
 
 	my_dis = my_dis * 1.15 * 1.15
@@ -719,14 +722,15 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		local dest_area = managers.groupai:state():get_area_from_nav_seg_id(dest_nav_seg_id)
 		local follow_pos = follow_tracker:field_position()
 		local threat_pos = nil
+		local follow_dis = data.internal_data.called and 450 or 700
 
 		if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
 			threat_pos = data.attention_obj.nav_tracker:field_position()
 		end
 
-		local cover = managers.navigation:find_cover_in_nav_seg_3(dest_area.nav_segs, nil, follow_pos, threat_pos)
+		local cover = managers.navigation:find_cover_in_nav_seg_3(dest_area.nav_segs, follow_dis, follow_pos, threat_pos)
 		
-		if cover and mvector3.distance_sq(cover[1], follow_pos) <= (objective.called and 202500 or 490000) then
+		if cover and mvector3.distance_sq(cover[1], follow_pos) <= (data.internal_data.called and 202500 or 490000) then
 			local cover_entry = {
 				cover
 			}
@@ -737,11 +741,11 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		else
 			local max_dist = nil
 
-			if objective.called then
+			if data.internal_data.called then
 				max_dist = 450
 			end
 
-			local to_pos = CopLogicTravel._get_pos_on_wall(dest_area.pos, max_dist)
+			local to_pos = CopLogicTravel._get_pos_on_wall(follow_pos, max_dist)
 			occupation = {
 				type = "defend",
 				pos = to_pos

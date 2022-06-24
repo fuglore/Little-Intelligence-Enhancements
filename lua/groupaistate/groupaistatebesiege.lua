@@ -1013,7 +1013,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			open_fire = true
 		end
 	else
-		local engage_nav = not phase_is_anticipation and tactics_map and tactics_map.ranged_fire and self:_chk_group_engaging_area(group)
+		local engage_nav = not phase_is_anticipation and tactics_map and tactics_map.provide_support and self:_chk_group_engaging_area(group)
 		local obstructed_path_index = not engage_nav and self:_chk_coarse_path_obstructed(group)
 		
 		if engage_nav then

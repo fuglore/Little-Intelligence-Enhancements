@@ -448,17 +448,19 @@ function BossLogicAttack._upd_aim(data, my_data)
 		end
 	end
 	
-	if focus and LIES.settings.enemy_reaction_level < 3 then
-		if focus.verified_t and data.t - focus.verified_t > 2 then
-			focus.acquire_t = data.t
-		end
-	
-		local react_t = 0.7 / LIES.settings.enemy_reaction_level
-	
-		if shoot then
-			if data.t - focus.acquire_t < react_t then
-				aim = true
-				shoot = nil
+	if reaction and AI_REACT_COMBAT <= reaction then
+		if LIES.settings.enemy_reaction_level < 3 and focus.acquire_t and not data.unit:in_slot(16) then
+			if not focus.verified_t or data.t - focus.verified_t > 2 then
+				focus.acquire_t = data.t
+			end
+		
+			local react_t = 0.7 / LIES.settings.enemy_reaction_level
+		
+			if shoot then
+				if data.t - focus.acquire_t < react_t then
+					aim = true
+					shoot = nil
+				end
 			end
 		end
 	end

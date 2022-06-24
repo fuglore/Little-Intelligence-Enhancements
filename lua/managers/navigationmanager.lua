@@ -243,8 +243,8 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 					threat_dist = v3_dis_sq(cover[1], threat_pos)
 				end
 				
-				if threat_dist and min_dis < threat_dist then
-					if optimal_threat_dis then
+				if not threat_dist or min_dis < threat_dist then
+					if threat_dist and optimal_threat_dis then
 						cover_dis = cover_dis - optimal_threat_dis
 					end
 					
@@ -284,6 +284,8 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 	local v3_dis_sq = mvec3_dis_sq
 	local world_g = World
 	min_dis = min_dis and min_dis * min_dis or 0
+
+	max_near_dis = max_near_dis and max_near_dis * max_near_dis
 	local nav_segs
 	
 	if type(nav_seg_id) == "table" then
@@ -333,7 +335,7 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 					threat_dist = v3_dis_sq(cover[1], threat_pos)
 				end
 				
-				if threat_dist and min_dis < threat_dist then
+				if not threat_dist or min_dis < threat_dist then
 					if not max_near_dis or cover_dis < max_near_dis then
 						if not best_dist or cover_dis < best_dist then
 							if self._quad_field:is_position_unreserved({radius = 40, position = cover[1], filter = rsrv_filter}) then

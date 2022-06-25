@@ -682,7 +682,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 				radius = objective.radius
 			}
 		else
-			local near_pos = objective.follow_unit and objective.follow_unit:movement():nav_tracker():field_position() or data.internal_data.coarse_path[#data.internal_data.coarse_path][2]
+			local near_pos = objective.follow_unit and objective.follow_unit:movement():nav_tracker():field_position() or data.internal_data.coarse_path[#data.internal_data.coarse_path][2] or managers.navigation._nav_segments[objective.nav_seg].pos
 			local cover = CopLogicTravel._find_cover(data, objective.nav_seg, near_pos)
 
 			if cover then

@@ -32,7 +32,7 @@ function TeamAILogicAssault.update(data)
 
 		if action_taken then
 			-- Nothing
-		elseif want_to_take_cover then
+		else
 			move_to_cover = true
 		end
 
@@ -86,8 +86,17 @@ function TeamAILogicAssault._upd_enemy_detection(data, is_synchronous)
 
 	TeamAILogicBase._set_attention_obj(data, new_attention, new_reaction)
 	
-	if not data.attention_obj or not data.attention_obj.verified_t or data.attention_obj.verified_t > 7 then
-		TeamAILogicAssault._chk_exit_attack_logic(data, new_reaction)
+	local chk_exit_logic = true
+	
+	if new_attention and (new_attention.nearly_visible or new_attention.verified) and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.dis < 2000 then
+		data.last_engage_t = data.t
+		chk_exit_logic = nil
+	end
+
+	if chk_exit_logic then
+		if not data.last_engage_t or data.t - data.last_engage_t > 7 then
+			TeamAILogicAssault._chk_exit_attack_logic(data, new_reaction)
+		end
 	end
 
 	if my_data ~= data.internal_data then

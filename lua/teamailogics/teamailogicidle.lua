@@ -281,6 +281,10 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 	local new_attention, new_prio_slot, new_reaction = TeamAILogicIdle._get_priority_attention(data, data.detected_attention_objects, nil)
 
 	TeamAILogicBase._set_attention_obj(data, new_attention, new_reaction)
+	
+	if new_attention and (new_attention.nearly_visible or new_attention.verified) and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.dis < 2000 then
+		data.last_engage_t = data.t
+	end
 
 	if new_reaction and AIAttentionObject.REACT_SCARED <= new_reaction then
 		local objective = data.objective

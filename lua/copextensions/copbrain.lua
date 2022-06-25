@@ -263,6 +263,8 @@ Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, s
 		--enemies in logictravel and logicattack will perform their appropriate actions as soon as possible once pathing has finished
 		
 		if self._current_logic._pathing_complete_clbk then
+			managers.groupai:state():on_unit_pathing_complete(self._unit)
+		
 			self._current_logic._pathing_complete_clbk(self._logic_data)
 		end
 	end

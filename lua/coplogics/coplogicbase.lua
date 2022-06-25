@@ -357,7 +357,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 				local attention_pos = attention_info.handler:get_detection_m_pos()
 
 				if _angle_and_dis_chk(attention_info.handler, settings, attention_pos) then
-					local vis_ray = World:raycast("ray", my_pos, attention_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision")
+					local vis_ray = is_detection_persistent and nil or World:raycast("ray", my_pos, attention_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision")
 
 					if not vis_ray or vis_ray.unit:key() == u_key then
 						acquired = true

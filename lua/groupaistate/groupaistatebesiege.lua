@@ -211,10 +211,19 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 			mvector3.step(mid_pos2, my_head_pos, e_pos, 300)
 			mvector3.lerp(mid_pos1, my_head_pos, mid_pos2, t % 0.5)
 			mvector3.step(mid_pos2, mid_pos1, e_pos, 50)
-			focus_enemy_pen:line(mid_pos1, mid_pos2)
+			
+			if l_data.attention_obj.reaction and l_data.attention_obj.reaction < AIAttentionObject.REACT_AIM then
+				draw_data.pen_group:line(mid_pos1, mid_pos2)
+			else
+				focus_enemy_pen:line(mid_pos1, mid_pos2)
+			end
 
 			if l_data.attention_obj.unit:base() and l_data.attention_obj.unit:base().is_local_player then
-				focus_player_brush:sphere(my_head_pos, 20)
+				if l_data.attention_obj.reaction and l_data.attention_obj.reaction < AIAttentionObject.REACT_AIM then
+					draw_data.brush_guard:sphere(my_head_pos, 20)
+				else
+					focus_player_brush:sphere(my_head_pos, 20)
+				end
 			end
 		end
 	end
@@ -722,6 +731,7 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.pose = "stand"
 		objective.scan = true
 		objective.interrupt_dis = 200
+		objective.no_arrest = true
 	elseif grp_objective.type == "assault_area" then
 		objective.type = "defend_area"
 
@@ -730,7 +740,9 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 			objective.follow_unit = grp_objective.follow_unit
 			objective.distance = grp_objective.distance
 		end
-
+		
+		
+		objective.no_arrest = true
 		objective.stance = "hos"
 		objective.pose = "stand"
 		objective.scan = true
@@ -743,6 +755,8 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.interrupt_suppression = nil
 		objective.attitude = "avoid"
 		objective.path_ahead = true
+		
+		objective.no_arrest = true
 	elseif grp_objective.type == "hunt" then
 		objective.type = "hunt"
 		objective.stance = "hos"
@@ -761,6 +775,13 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 	objective.area = grp_objective.area
 	objective.nav_seg = grp_objective.nav_seg or objective.area.pos_nav_seg
 	objective.attitude = grp_objective.attitude or objective.attitude
+	
+	if not objective.no_arrest then
+		if objective.attitude == "engage" then
+			objective.no_arrest = true
+		end
+	end
+	
 	objective.interrupt_dis = grp_objective.interrupt_dis or objective.interrupt_dis
 	objective.interrupt_health = grp_objective.interrupt_health or objective.interrupt_health
 	objective.interrupt_suppression = grp_objective.interrupt_suppression or objective.interrupt_suppression
@@ -1001,7 +1022,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			else
 				push = true
 			end
-		elseif current_objective.open_fire and not current_objective.pushed and (not tactics_map or not tactics_map.ranged_fire) then
+		elseif current_objective.open_fire and (not tactics_map or not tactics_map.ranged_fire) then
 			local t_in_place = aggression_level > 2 and 7 or aggression_level > 1 and 15
 		
 			if t_in_place and group.in_place_t and self._t - group.in_place_t > t_in_place then
@@ -1118,7 +1139,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			type = "assault_area",
 			stance = "hos",
 			open_fire = true,
-			charge = aggression_level > 3,
+			charge = tactics_map and tactics_map.charge and aggression_level > 2 or aggression_level > 3,
 			tactic = current_objective.tactic,
 			area = obstructed_area or current_objective.area,
 			coarse_path = {
@@ -1255,13 +1276,31 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				if aggression_level > 2 then
 					can_push = true
 				elseif aggression_level > 1 then
-					can_push = charge or group.is_chasing
+					can_push = charge or group.is_chasing 
+				end
+				
+				if not can_push then
+					can_push = self._drama_data.amount <= tweak_data.drama.low
 				end
 			end
 			
 			if not push or can_push then 
 				if push then --only play the charge voicelines if actually charging
 					self:_voice_charge_start(group)
+					
+					if assault_path then
+						local c_to_chase, c_pos
+						
+						for c_key, c_data in pairs(assault_area.criminal.units) do
+							c_pos = c_data.unit:movement():m_pos()		
+							
+							break
+						end
+						
+						if c_pos then
+							assault_path[#assault_path][2] = c_pos
+						end
+					end
 				end
 				
 				local attitude = "avoid"
@@ -1597,37 +1636,7 @@ function GroupAIStateBesiege:_chk_group_area_presence(group, area_to_chk)
 	return group_in_area
 end
 
-function GroupAIStateBesiege:_set_objective_to_enemy_group(group, grp_objective)
-	group.objective = grp_objective
 
-	if grp_objective.area then
-		--if a group is already in the objective area, they shouldn't need to check for being in place later
-		if grp_objective.type == "retire" or not self:_chk_group_area_presence(group, grp_objective.area) then
-			grp_objective.moving_out = true
-		elseif not group.in_place then
-			group.in_place = true
-			group.in_place_t = self._t
-			grp_objective.moving_out = nil
-			
-			if group.objective.moved_in then
-				group.visited_areas = group.visited_areas or {}
-				group.visited_areas[group.objective.area] = true
-			end
-		end
-
-		if not grp_objective.nav_seg and grp_objective.coarse_path then
-			grp_objective.nav_seg = grp_objective.coarse_path[#grp_objective.coarse_path][1]
-		end
-	end
-
-	grp_objective.assigned_t = self._t
-
-	if self._AI_draw_data and self._AI_draw_data.group_id_texts[group.id] then
-		self._AI_draw_data.panel:remove(self._AI_draw_data.group_id_texts[group.id])
-
-		self._AI_draw_data.group_id_texts[group.id] = nil
-	end
-end
 
 --if a detonate_pos gets set, the function doesn't complete because shooter_u_data doesn't get set, this fixes that
 --this also fixes enemies not announcing flash grenades but being able to announce smokes 

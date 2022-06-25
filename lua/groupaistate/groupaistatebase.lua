@@ -81,6 +81,14 @@ function GroupAIStateBase:set_importance_weight(u_key, wgt_report)
 	end
 end
 
+function GroupAIStateBase:on_unit_pathing_complete(unit)
+	if self._draw_enabled then
+		local draw_pos = unit:movement():m_pos()
+
+		self._AI_draw_data.brush_guard:cone(draw_pos + math.UP * 82.5, draw_pos, 60)
+	end
+end
+
 function GroupAIStateBase:on_objective_failed(unit, objective)
 	if not unit:brain() then
 		debug_pause_unit(unit, "[GroupAIStateBase:on_objective_failed] error in extension order", unit)
@@ -108,6 +116,7 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 				is_default = true,
 				scan = true,
 				type = "free",
+				no_arrest = objective.no_arrest,
 				attitude = objective.attitude,
 				grp_objective = objective.grp_objective
 			}

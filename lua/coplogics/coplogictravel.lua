@@ -189,8 +189,8 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 		}
 	end
 	
-	my_data.path_safely = my_data.attitude == "avoid" and data.team.foes[tweak_data.levels:get_default_team_ID("player")]
-	my_data.path_ahead = data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player") or my_data.criminal or data.objective.grp_objective and data.objective.grp_objective.type == "retire"
+	my_data.path_safely = not data.cool and my_data.attitude == "avoid" and data.team.foes[tweak_data.levels:get_default_team_ID("player")]
+	my_data.path_ahead = data.cool or data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player") or my_data.criminal or data.objective.grp_objective and data.objective.grp_objective.type == "retire"
 	
 	if my_data.upd_task_key then
 		data.unit:brain():set_update_enabled_state(false)
@@ -460,11 +460,31 @@ function CopLogicTravel.upd_advance(data)
 	end
 	
 	if not data.cool then
+		if my_data.cover_leave_t then
+			if my_data.cover_leave_t > t then
+				if data.attention_obj and AIAttentionObject.REACT_SCARED <= data.attention_obj.reaction and (not my_data.best_cover or not my_data.best_cover[4]) and not unit:anim_data().crouch and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
+					CopLogicAttack._chk_request_action_crouch(data)
+				end	
+			else
+				my_data.cover_leave_t = nil
+			end
+		end
+		
 		if not my_data.coarse_path or my_data.coarse_path_index and my_data.coarse_path_index < #my_data.coarse_path then
 			if not CopLogicAttack._check_needs_reload(data, my_data) then
 				return
 			end
 		end
+		
+		if my_data.cover_leave_t then
+			return
+		end
+	end
+	
+	CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
+	
+	if my_data ~= data.internal_data then
+		return
 	end
 
 	if my_data.warp_pos then
@@ -490,12 +510,6 @@ function CopLogicTravel.upd_advance(data)
 		
 			if not data.cool and not data.unit:in_slot(16) then
 				CopLogicTravel._chk_say_clear(data)
-			end
-
-			CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
-
-			if my_data ~= data.internal_data then
-				return
 			end
 	
 			--[[if my_data.advance_path and my_data.advancing and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
@@ -525,12 +539,6 @@ function CopLogicTravel.upd_advance(data)
 		if not my_data.processing_advance_path and not my_data.processing_coarse_path then
 			if was_processing_advance_path then
 				if my_data.advance_path and not my_data.advancing then
-					CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
-
-					if my_data ~= data.internal_data then
-						return
-					end
-
 					CopLogicTravel._chk_begin_advance(data, my_data)
 
 					if my_data.advancing and my_data.path_ahead then
@@ -595,7 +603,7 @@ function CopLogicTravel._upd_enemy_detection(data)
 
 	local my_data = data.internal_data
 	--this prevents units from looking at broken glass or other dumb things while in loud, and saves performance a decent bit
-	local min_reaction = not data.cool and AIAttentionObject.REACT_AIM or nil 
+	local min_reaction = not data.cool and AIAttentionObject.REACT_AIM
 	CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
 	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects, nil)
 	local old_att_obj = data.attention_obj
@@ -674,7 +682,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 				radius = objective.radius
 			}
 		else
-			local near_pos = objective.follow_unit and objective.follow_unit:movement():nav_tracker():field_position()
+			local near_pos = objective.follow_unit and objective.follow_unit:movement():nav_tracker():field_position() or data.internal_data.coarse_path[#data.internal_data.coarse_path][2]
 			local cover = CopLogicTravel._find_cover(data, objective.nav_seg, near_pos)
 
 			if cover then
@@ -688,7 +696,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 					radius = objective.radius
 				}
 			else
-				near_pos = CopLogicTravel._get_pos_on_wall(managers.navigation._nav_segments[objective.nav_seg].pos, 700)
+				near_pos = CopLogicTravel._get_pos_on_wall(near_pos, 700)
 				occupation = {
 					type = "defend",
 					seg = objective.nav_seg,
@@ -961,18 +969,30 @@ function CopLogicTravel.action_complete_clbk(data, action)
 		data.internal_data.turning = nil
 
 		if action:expired() then
-			CopLogicAttack._upd_aim(data, my_data)
+			CopLogicTravel.upd_advance(data)
+			
+			if not data.cool then
+				CopLogicAttack._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "shoot" then
 		data.internal_data.shooting = nil
 	elseif action_type == "heal" then
 		if action:expired() then
-			CopLogicAttack._upd_aim(data, my_data)
+			CopLogicTravel.upd_advance(data)
+			
+			if not data.cool then
+				CopLogicAttack._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "hurt" or action_type == "healed" then
 		if action:expired() then
 			if my_data.criminal or not CopLogicBase.chk_start_action_dodge(data, "hit") then
-				CopLogicAttack._upd_aim(data, my_data)
+				CopLogicTravel.upd_advance(data)
+			
+				if not data.cool then
+					CopLogicAttack._upd_aim(data, my_data)
+				end
 			end
 		end
 	elseif action_type == "dodge" then
@@ -992,6 +1012,16 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				if my_data == data.internal_data then
 					debug_pause_unit(data.unit, "[CopLogicTravel.action_complete_clbk] exiting without discarding objective", data.unit, inspect(data.objective))
 					CopLogicBase._exit(data.unit, wanted_state)
+				end
+			end
+		end
+		
+		if my_data == data.internal_data then
+			if action:expired() then
+				CopLogicTravel.upd_advance(data)
+			
+				if not data.cool then
+					CopLogicAttack._upd_aim(data, my_data)
 				end
 			end
 		end
@@ -1124,7 +1154,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 		end
 
 		if not to_pos then
-			to_pos = managers.navigation:find_random_position_in_segment(objective.nav_seg)
+			to_pos = coarse_path[nav_index][2] or managers.navigation:find_random_position_in_segment(objective.nav_seg)
 			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
 			wants_reservation = true
 		end
@@ -1148,7 +1178,8 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 			}
 			to_pos = cover[1]
 		else
-			to_pos = CopLogicTravel._get_pos_on_wall(area.pos)
+			to_pos = coarse_path[nav_index][2] or area.pos
+			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
 			wants_reservation = true
 		end
 	end

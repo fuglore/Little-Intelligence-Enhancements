@@ -242,7 +242,7 @@ function CopLogicIdle._upd_enemy_detection(data)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
-	local min_reaction = not data.cool and AIAttentionObject.REACT_AIM or nil 
+	local min_reaction = not data.cool and AIAttentionObject.REACT_SCARED
 	CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
 	
 	local delay = 0
@@ -307,7 +307,7 @@ function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, st
 	local visible = attention_data.verified
 
 	if record.status == "dead" then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)	
 	elseif record.status == "disabled" then
 		if LIES.settings.hhtacs then
 			if data.tactics and data.tactics.murder then
@@ -350,8 +350,15 @@ function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, st
 end
 
 function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_func)
-	reaction_func = reaction_func or CopLogicIdle._chk_reaction_to_attention_object
 	local best_target, best_target_priority_slot, best_target_priority, best_target_reaction = nil
+	
+	if data.is_converted or data.char_tweak.buddy then
+		best_target, best_target_priority_slot, best_target_reaction = TeamAILogicIdle._get_priority_attention(data, attention_objects, reaction_func)
+		
+		return best_target, best_target_priority_slot, best_target_reaction
+	end
+
+	reaction_func = reaction_func or CopLogicIdle._chk_reaction_to_attention_object
 	local forced_attention_data = managers.groupai:state():force_attention_data(data.unit)
 
 	if forced_attention_data then
@@ -385,6 +392,8 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 
 	local near_threshold = data.internal_data.weapon_range.optimal
 	local too_close_threshold = data.internal_data.weapon_range.close
+	local tactics_harass = data.tactics and data.tactics.harass
+	local tactics_dg = data.tactics and data.tactics.deathguard
 
 	for u_key, attention_data in pairs(attention_objects) do
 		local att_unit = attention_data.unit
@@ -490,18 +499,6 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					end
 				end
 
-				if old_enemy then
-					weight_mul = (weight_mul or 1) * 1.5
-				end
-
-				if reaction == AI_REACT_SPECIAL_ATTACK then
-					if attention_data.is_human_player then
-						weight_mul = (weight_mul or 1) * 1.25
-					else
-						weight_mul = (weight_mul or 1) * 1.1
-					end
-				end
-
 				if weight_mul and weight_mul ~= 1 then
 					weight_mul = 1 / weight_mul
 					alert_dt = alert_dt and alert_dt * weight_mul
@@ -509,32 +506,29 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					distance = distance * weight_mul
 				end
 
-				local visible = attention_data.verified or attention_data.nearly_visible
+				local assault_reaction = reaction == AIAttentionObject.REACT_SPECIAL_ATTACK
+				local visible = attention_data.verified
+				local near = distance < near_threshold
+				local too_near = distance < too_close_threshold and math.abs(attention_data.m_pos.z - data.m_pos.z) < 250
+				local free_status = status == nil
 				local has_alerted = alert_dt < 3.5
 				local has_damaged = dmg_dt < 5
-				local target_priority = distance
-				local is_sentry = attention_data.is_deployable
-
-				if attention_data.is_local_player then
-					local iparams = att_unit:movement():current_state()._interact_params
-
-					if iparams and managers.criminals:character_name_by_unit(iparams.object) ~= nil then
-						reviving = true
-					end
-				else
-					reviving = att_unit:anim_data() and att_unit:anim_data().revive
-				end
+				local reviving = nil
 
 				local target_priority = distance
 				local target_priority_slot = 0
 
-				if visible then
+				if visible then	
 					if distance < 500 then
 						target_priority_slot = 2
 					elseif distance < 1500 then
 						target_priority_slot = 4
 					else
 						target_priority_slot = 6
+					end
+					
+					if assault_reaction then
+						target_priority_slot = target_priority_slot - 1
 					end
 
 					if has_damaged then
@@ -545,9 +539,25 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						target_priority_slot = 5
 					end
 
+					if old_enemy then
+						target_priority_slot = target_priority_slot - 3
+					end
+
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
-				elseif free_status then
+				else
 					target_priority_slot = 7
+					
+					if not has_damaged then
+						target_priority_slot = target_priority_slot + 1
+					end
+					
+					if not has_alerted then
+						target_priority_slot = target_priority_slot + 1
+					end
+					
+					if not free_status then
+						target_priority_slot = target_priority_slot + 1
+					end
 				end
 
 				if reaction < AIAttentionObject.REACT_COMBAT then

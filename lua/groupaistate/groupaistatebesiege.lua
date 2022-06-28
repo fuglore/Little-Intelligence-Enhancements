@@ -357,6 +357,10 @@ function GroupAIStateBesiege:_check_phalanx_damage_reduction_increase_LIES()
 			end
 		
 			local group = self._phalanx_spawn_group
+			
+			if not group then
+				return
+			end
 
 			if group.objective.moving_out then
 				local done_moving = nil

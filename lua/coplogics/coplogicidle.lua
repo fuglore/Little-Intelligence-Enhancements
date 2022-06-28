@@ -906,7 +906,7 @@ function CopLogicIdle.on_alert(data, alert_data)
 			end
 		end
 	elseif was_cool and (alert_type == "footstep" or alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" or alert_type == "vo_cbt" or alert_type == "vo_intimidate" or alert_type == "vo_distress") then
-		local attention_obj = alert_unit and alert_unit:brain() and alert_unit:brain()._logic_data.attention_obj
+		local attention_obj = alert_unit and alert_unit:brain() and alert_unit:brain()._logic_data and alert_unit:brain()._logic_data.attention_obj
 
 		if attention_obj then
 			local att_obj_data, is_new = CopLogicBase.identify_attention_obj_instant(data, attention_obj.u_key)

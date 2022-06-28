@@ -166,6 +166,10 @@ function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 		return true
 	end
 	
+	if data.attention_obj.dis >= 1500 then
+		return
+	end
+	
 	local aggro_level = LIES.settings.enemy_aggro_level
 	
 	if aggro_level > 3 then
@@ -299,7 +303,7 @@ function SpoocLogicAttack._upd_spooc_attack(data, my_data)
 			end
 		end
 
-		if ActionSpooc.chk_can_start_flying_strike(data.unit, focus_enemy.unit) then
+		if math.abs(data.m_pos.z - focus_enemy.m_pos.z) < 400 and ActionSpooc.chk_can_start_flying_strike(data.unit, focus_enemy.unit) then
 			if my_data.attention_unit ~= focus_enemy.u_key then
 				CopLogicBase._set_attention(data, focus_enemy)
 

@@ -89,6 +89,14 @@ function GroupAIStateBase:on_unit_pathing_complete(unit)
 	end
 end
 
+function GroupAIStateBase:on_unit_pathing_failed(unit)
+	if self._draw_enabled then
+		local draw_pos = unit:movement():m_pos()
+
+		self._AI_draw_data.brush_act:cone(draw_pos + math.UP * 82.5, draw_pos, 60)
+	end
+end
+
 function GroupAIStateBase:on_objective_failed(unit, objective)
 	if not unit:brain() then
 		debug_pause_unit(unit, "[GroupAIStateBase:on_objective_failed] error in extension order", unit)

@@ -32,6 +32,8 @@ function GroupAITweakData:_LIES_setup()
 		if tweak_data.weapon then
 			tweak_data.weapon:_setup_hhtacs()
 		end
+		
+		self:_setup_hhtacs_task_data(difficulty_index)
 	
 		self._tactics.spooc = {
 			"flank",
@@ -133,6 +135,19 @@ function GroupAITweakData:_LIES_setup()
 		
 		--chad wuz here
 	end
+	
+	
+	--allow enemies assigned to group ai to...actually participate to group ai
+	self.besiege.assault.groups.custom = {
+		0,
+		0,
+		0
+	}
+	self.besiege.recon.groups.custom = {
+		0,
+		0,
+		0
+	}
 	
 	--spawngroup setups for spicy tacs
 	if LIES.settings.hhtacs then
@@ -1238,6 +1253,32 @@ function GroupAITweakData:_LIES_setup()
 			access = access_type_all
 		}
 		
+		self.unit_categories.ranc_rangers = {
+			unit_types = {
+				america = {
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_01/ene_male_ranc_ranger_01"),
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_02/ene_male_ranc_ranger_02")
+				},
+				russia = {
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_01/ene_male_ranc_ranger_01"),
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_02/ene_male_ranc_ranger_02")
+				},
+				zombie = {
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_01/ene_male_ranc_ranger_01"),
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_02/ene_male_ranc_ranger_02")
+				},
+				murkywater = {
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_01/ene_male_ranc_ranger_01"),
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_02/ene_male_ranc_ranger_02")
+				},
+				federales = {
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_01/ene_male_ranc_ranger_01"),
+					Idstring("units/pd2_dlc_ranc/characters/ene_male_ranc_ranger_02/ene_male_ranc_ranger_02")
+				}
+			},
+			access = access_type_all
+		}
+		
 		self.unit_categories.CS_fbi_all = {
 			unit_types = {
 				america = {
@@ -1426,10 +1467,46 @@ function GroupAITweakData:_LIES_setup()
 		
 		self.unit_categories.medic_shot_refless = clone(self.unit_categories.medic_R870)
 		self.unit_categories.medic_shot_refless.special_type = nil
-		
+
 		local level_id =  Global.game_settings and Global.game_settings.level_id
 		
 		if level_id == "ranc" then
+			self.enemy_spawn_groups.Cowboys = {
+				spawn_cooldown = 30,
+				max_nr_simultaneous_groups = 2,
+				initial_spawn_delay = 90,
+				amount = {
+					2,
+					3
+				},
+				spawn = {
+					{
+						respawn_cooldown = 20,
+						amount_min = 2,
+						access = "swat",
+						rank = 1,
+						freq = 1,
+						unit = "ranc_rangers",
+						tactics = self._tactics.swat_rifle_flank
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+			
+			self.besiege.assault.groups.Cowboys = {
+				0,
+				0,
+				0
+			}
+			self.besiege.recon.groups.Cowboys = {
+				0,
+				0,
+				0
+			}
+		
 			self.enemy_spawn_groups.marshal_squad = {
 				spawn_cooldown = 60,
 				max_nr_simultaneous_groups = 1,
@@ -1455,9 +1532,14 @@ function GroupAITweakData:_LIES_setup()
 			}
 			
 			if difficulty_index > 5 then
+				if self.enemy_spawn_groups.Cowboys then
+					self.enemy_spawn_groups.Cowboys.initial_spawn_delay = 10
+					self.enemy_spawn_groups.Cowboys.max_nr_simultaneous_groups = 3
+				end
+			
 				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
 				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
-				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 60
+				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 20
 			end
 		elseif level_id == "firestarter_1" or level_id == "firestarter_2" or level_id == "firestarter_3" or level_id == "hox_3" then
 			self.enemy_spawn_groups.CS_cops = {
@@ -1794,7 +1876,7 @@ function GroupAITweakData:_LIES_setup()
 					0
 				}
 			end
-		else
+		elseif not managers.skirmish:is_skirmish() then
 			local faction = tweak_data.levels:get_ai_group_type()
 			
 			
@@ -2001,6 +2083,62 @@ function GroupAITweakData:_LIES_setup()
 			log("LIES: Spawngroups already fixed by another mod.")
 			self._LIES_fix = true
 		else
+			if difficulty_index < 6 then
+				self.unit_categories.FBI_heavy_R870.unit_types = {
+					america = {
+						Idstring("units/payday2/characters/ene_fbi_heavy_r870/ene_fbi_heavy_r870")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_heavy_r870/ene_akan_fbi_heavy_r870")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_fbi_heavy_hvh_r870/ene_fbi_heavy_hvh_r870")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_heavy_shotgun/ene_murkywater_heavy_shotgun")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
+					}
+				}
+			elseif difficulty_index < 8 then
+				self.unit_categories.FBI_heavy_R870.unit_types = {
+					america = {
+						Idstring("units/payday2/characters/ene_city_heavy_r870/ene_city_heavy_r870")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_heavy_r870/ene_akan_fbi_heavy_r870")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_fbi_heavy_hvh_r870/ene_fbi_heavy_hvh_r870")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_heavy_shotgun/ene_murkywater_heavy_shotgun") --6$ srimp special
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
+					}
+				}
+			else
+				self.unit_categories.FBI_heavy_R870.unit_types = {
+					america = {
+						Idstring("units/pd2_dlc_gitgud/characters/ene_zeal_swat_heavy/ene_zeal_swat_heavy")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_heavy_r870/ene_akan_fbi_heavy_r870")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_fbi_heavy_hvh_r870/ene_fbi_heavy_hvh_r870")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_heavy/ene_murkywater_heavy")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
+					}
+				}
+			end
+		
 			if difficulty_index < 6 then
 				self.unit_categories.FBI_swat_R870.unit_types = {
 					america = {
@@ -2688,6 +2826,133 @@ function GroupAITweakData:_LIES_setup()
 			
 			self._LIES_fix = true
 		end
+	end
+	
+	self.safehouse = deep_clone(self.besiege)
+end
+
+function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
+	if difficulty_index <= 2 then
+		self.besiege.recurring_group_SO = {
+			recurring_cloaker_spawn = {
+				retire_delay = 30,
+				interval = {
+					180,
+					300
+				}
+			},
+			recurring_spawn_1 = {
+				interval = {
+					30,
+					60
+				}
+			}
+		}
+	elseif difficulty_index == 3 then
+		self.besiege.recurring_group_SO = {
+			recurring_cloaker_spawn = {
+				retire_delay = 30,
+				interval = {
+					60,
+					120
+				}
+			},
+			recurring_spawn_1 = {
+				interval = {
+					30,
+					60
+				}
+			}
+		}
+	elseif difficulty_index == 4 then
+		self.besiege.recurring_group_SO = {
+			recurring_cloaker_spawn = {
+				retire_delay = 30,
+				interval = {
+					45,
+					60
+				}
+			},
+			recurring_spawn_1 = {
+				interval = {
+					30,
+					60
+				}
+			}
+		}
+	elseif difficulty_index == 5 then
+		self.besiege.recurring_group_SO = {
+			recurring_cloaker_spawn = {
+				retire_delay = 30,
+				interval = {
+					20,
+					40
+				}
+			},
+			recurring_spawn_1 = {
+				interval = {
+					30,
+					45
+				}
+			}
+		}
+	else
+		self.besiege.recurring_group_SO = {
+			recurring_cloaker_spawn = {
+				retire_delay = 60,
+				interval = {
+					15,
+					30
+				}
+			},
+			recurring_spawn_1 = {
+				interval = {
+					20,
+					40
+				}
+			}
+		}
+	end
+	
+	if difficulty_index < 6 then
+		self.smoke_grenade_lifetime = 7.5
+	elseif difficulty_index < 8 then
+		self.smoke_grenade_lifetime = 12
+	else
+		self.smoke_grenade_lifetime = 16
+	end
+	
+	if difficulty_index < 6 then
+		self.smoke_and_flash_grenade_timeout = {
+			15,
+			20
+		}
+	else
+		self.smoke_and_flash_grenade_timeout = {
+			10,
+			17.5
+		}
+	end
+	
+	--the only positive of being in hh tacs mode, assault breaks...actually give you a break
+	self.besiege.assault.delay = { 
+		60,
+		45,
+		30
+	}
+	
+	self.phalanx.move_interval = 20
+	
+	if difficulty_index > 6 then
+		self.phalanx.move_interval = 15
+		self.phalanx.check_spawn_intervall = 60
+		
+		self.phalanx.vip.damage_reduction = {
+			max = 0.75,
+			start = 0.25,
+			increase_intervall = 5,
+			increase = 0.02
+		}
 	end
 end
 

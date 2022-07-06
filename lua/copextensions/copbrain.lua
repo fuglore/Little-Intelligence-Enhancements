@@ -17,6 +17,15 @@ Hooks:PostHook(CopBrain, "post_init", "lies_post", function(self)
 	end
 end)
 
+
+Hooks:PostHook(CopBrain, "set_spawn_entry", "lies_accessentry", function(self, spawn_entry, tactics_map)
+	if spawn_entry.access then
+		self._SO_access = managers.navigation:convert_access_flag(spawn_entry.access)
+		self._logic_data.SO_access = self._SO_access
+		self._logic_data.SO_access_str = spawn_entry.access
+	end
+end)
+
 Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", function(self, mastermind_criminal)
 	local char_tweaks = deep_clone(self._unit:base()._char_tweak)
 	
@@ -267,6 +276,8 @@ Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, s
 		
 			self._current_logic._pathing_complete_clbk(self._logic_data)
 		end
+	else
+		managers.groupai:state():on_unit_pathing_failed(self._unit)
 	end
 end)
 

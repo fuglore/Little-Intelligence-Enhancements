@@ -131,29 +131,31 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	end
 	
 	if objective.interrupt_on_contact then
-		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and attention.verified_t and data.t - attention.verified_t <= 15 then
-			local z_diff = math.abs(attention.m_pos.z - data.m_pos.z)
-			local enemy_dis = attention.dis * (1 - strictness)
-			
+		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction then
 			local aggro_level = LIES.settings.enemy_aggro_level
-			local interrupt_dis = nil
 			
-			if aggro_level > 2 then
-				interrupt_dis = my_data.weapon_range and my_data.weapon_range.close or 1000
-			else
-				interrupt_dis = my_data.weapon_range and my_data.weapon_range.optimal or 2000
-			end
-			
-			interrupt_dis = interrupt_dis * (1 - strictness)
-			
-			if objective.grp_objective and objective.grp_objective.push then
-				interrupt_dis = interrupt_dis * 0.5
-			end
-			
-			interrupt_dis = math.lerp(interrupt_dis, 0, z_diff / 400)
+			if aggro_level < 2 and my_data.attitude == "engage" or attention.verified_t and data.t - attention.verified_t <= 15 then
+				local z_diff = math.abs(attention.m_pos.z - data.m_pos.z)
+				local enemy_dis = attention.dis * (1 - strictness)
+				local interrupt_dis = nil
+				
+				if aggro_level > 2 then
+					interrupt_dis = my_data.weapon_range and my_data.weapon_range.close or 1000
+				else
+					interrupt_dis = my_data.weapon_range and my_data.weapon_range.optimal or 2000
+				end
+				
+				interrupt_dis = interrupt_dis * (1 - strictness)
+				
+				if z_diff > 250 then
+					z_diff = z_diff - 250
+					
+					interrupt_dis = math.lerp(interrupt_dis, interrupt_dis * 0.25, z_diff / 250)
+				end
 
-			if enemy_dis < interrupt_dis then
-				return true, true
+				if enemy_dis < interrupt_dis then
+					return true, true
+				end
 			end
 		end
 	end

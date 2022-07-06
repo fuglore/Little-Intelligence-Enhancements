@@ -195,22 +195,28 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 
 	if action_type == "walk" then
 		my_data.advancing = nil
+		my_data.in_cover = nil
+		
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+		CopLogicAttack._cancel_charge(data, my_data)
 
 		if my_data.surprised then
 			my_data.surprised = false
 		elseif my_data.moving_to_cover then
 			if action:expired() then
 				my_data.in_cover = my_data.moving_to_cover
-
-				CopLogicAttack._set_nearest_cover(my_data, my_data.in_cover)
-
 				my_data.cover_enter_t = data.t
-				my_data.cover_sideways_chk = nil
+				my_data.cover_test_step = 1
 			end
 
 			my_data.moving_to_cover = nil
 		elseif my_data.walking_to_cover_shoot_pos then
 			my_data.walking_to_cover_shoot_pos = nil
+		end
+		
+		if action:expired() then
+			data.logic._upd_aim(data, my_data) --on finishing a walk action, enemies will try to turn to attention at the end of it
+			data.logic._upd_combat_movement(data)
 		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil

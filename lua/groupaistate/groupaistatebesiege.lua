@@ -323,8 +323,84 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 	if LIES.settings.hhtacs then
 		self._check_phalanx_damage_reduction_increase = self._check_phalanx_damage_reduction_increase_LIES
 		self.phalanx_damage_reduction_disable = self.phalanx_damage_reduction_disable_LIES
+		self._check_spawn_phalanx = self._check_spawn_phalanx_LIES
 	end
 end)
+
+function GroupAIStateBesiege:assign_enemy_to_group_ai(unit, team_id)
+	local u_tracker = unit:movement():nav_tracker()
+	local seg = u_tracker:nav_segment()
+	local area = self:get_area_from_nav_seg_id(seg)
+	local current_unit_type = tweak_data.levels:get_ai_group_type()
+	local u_name = unit:name()
+
+	local group_desc = {
+		size = 1,
+		type = "custom"
+	}
+	local group = self:_create_group(group_desc)
+	group.team = self._teams[team_id]
+	local grp_objective = nil
+	local objective = unit:brain():objective()
+	local grp_obj_type = self._task_data.assault.active and "assault_area" or "recon_area"
+
+	if objective then
+		grp_objective = {
+			type = grp_obj_type,
+			area = objective.area or objective.nav_seg and self:get_area_from_nav_seg_id(objective.nav_seg) or area
+		}
+		objective.grp_objective = grp_objective
+	else
+		grp_objective = {
+			type = grp_obj_type,
+			area = area
+		}
+	end
+
+	grp_objective.moving_out = false
+	group.objective = grp_objective
+	group.has_spawned = true
+
+	self:_add_group_member(group, unit:key())
+	self:set_enemy_assigned(area, unit:key())
+end
+
+function GroupAIStateBesiege:_check_spawn_phalanx_LIES()
+	if self._phalanx_center_pos and self._task_data and self._task_data.assault.active and not self._phalanx_spawn_group and (self._task_data.assault.phase == "build" or self._task_data.assault.phase == "sustain") then
+		local now = TimerManager:game():time()
+		local respawn_delay = tweak_data.group_ai.phalanx.spawn_chance.respawn_delay
+
+		if not self._phalanx_despawn_time or now >= self._phalanx_despawn_time + respawn_delay then
+			local spawn_chance_start = tweak_data.group_ai.phalanx.spawn_chance.start
+			self._phalanx_current_spawn_chance = self._phalanx_current_spawn_chance or spawn_chance_start
+			self._phalanx_last_spawn_check = self._phalanx_last_spawn_check or now
+			self._phalanx_last_chance_increase = self._phalanx_last_chance_increase or now
+			local spawn_chance_increase = tweak_data.group_ai.phalanx.spawn_chance.increase
+			local spawn_chance_max = tweak_data.group_ai.phalanx.spawn_chance.max
+
+			if self._phalanx_current_spawn_chance < spawn_chance_max and spawn_chance_increase > 0 then
+				local chance_increase_intervall = tweak_data.group_ai.phalanx.chance_increase_intervall
+
+				if now >= self._phalanx_last_chance_increase + chance_increase_intervall then
+					self._phalanx_last_chance_increase = now
+					self._phalanx_current_spawn_chance = math.min(spawn_chance_max, self._phalanx_current_spawn_chance + spawn_chance_increase)
+				end
+			end
+
+			if self._phalanx_current_spawn_chance > 0 then
+				local check_spawn_intervall = tweak_data.group_ai.phalanx.check_spawn_intervall
+
+				if now >= self._phalanx_last_spawn_check + check_spawn_intervall then
+					self._phalanx_last_spawn_check = now
+
+					if math.random() <= self._phalanx_current_spawn_chance then
+						self:_spawn_phalanx()
+					end
+				end
+			end
+		end
+	end
+end
 
 function GroupAIStateBesiege:_check_phalanx_damage_reduction_increase_LIES()
 	local law1team = self:_get_law1_team()
@@ -403,7 +479,9 @@ function GroupAIStateBesiege:phalanx_damage_reduction_disable_LIES()
 end
 
 function GroupAIStateBesiege:_set_objective_to_phalanx_group_LIES(group)
-	if group.in_place_t and self._t - group.in_place_t < 20 then
+	local aggression_level = LIES.settings.enemy_aggro_level
+
+	if group.in_place_t and self._t - group.in_place_t < tweak_data.group_ai.phalanx.move_interval then
 		if not group.objective.repositioned_shields then
 			CopLogicPhalanxMinion:chk_should_reposition()
 			group.objective.repositioned_shields = true
@@ -1307,11 +1385,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					end
 				end
 				
-				local attitude = "avoid"
+				local attitude = phase_is_anticipation and "avoid" or "engage"
 				
 				if push then
-					attitude = "engage"
-				elseif not phase_is_anticipation and aggression_level > 1 then
 					attitude = "engage"
 				end
 

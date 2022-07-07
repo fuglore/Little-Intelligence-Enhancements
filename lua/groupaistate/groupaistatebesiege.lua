@@ -426,17 +426,17 @@ function GroupAIStateBesiege:_check_phalanx_damage_reduction_increase_LIES()
 				end
 			end
 		end
+		
+		local group = self._phalanx_spawn_group
+		
+		if not group then
+			return
+		end
 
-		if self._phalanx_spawn_group.set_to_phalanx_group_obj then
+		if group.set_to_phalanx_group_obj then
 			if not self._phalanx_center_pos_old then
 				self._phalanx_center_pos_old = mvector3.copy(self._phalanx_center_pos)
-			end
-		
-			local group = self._phalanx_spawn_group
-			
-			if not group then
-				return
-			end
+			end	
 
 			if group.objective.moving_out then
 				local done_moving = nil

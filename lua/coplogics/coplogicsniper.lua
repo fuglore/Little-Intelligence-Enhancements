@@ -158,6 +158,10 @@ function CopLogicSniper._upd_aim(data, my_data)
 		end
 	end
 	
+	if focus_enemy then
+		CopLogicAttack._chk_enrage(data, focus_enemy)
+	end
+	
 	if my_data.firing and focus_enemy then
 		BossLogicAttack._chk_use_throwable(data, my_data, focus_enemy)
 	end

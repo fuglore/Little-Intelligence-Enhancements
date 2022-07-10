@@ -393,7 +393,8 @@ function BossLogicAttack._upd_aim(data, my_data)
 		if not aim and data.char_tweak.always_face_enemy and AI_REACT_COMBAT <= reaction and (expected_pos or focus.last_verified_pos) then
 			aim = true
 		end
-
+		
+		CopLogicAttack._chk_enrage(data, focus)
 		BossLogicAttack._chk_use_throwable(data, my_data, focus, expected_pos)
 	end
 

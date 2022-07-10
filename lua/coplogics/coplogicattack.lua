@@ -459,6 +459,8 @@ function CopLogicAttack._upd_aim(data, my_data)
 				end
 			end
 		end
+
+		CopLogicAttack._chk_enrage(data, focus_enemy)
 	end
 
 	if not aim and data.char_tweak.always_face_enemy and focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
@@ -581,6 +583,97 @@ function CopLogicAttack._upd_aim(data, my_data)
 	end
 
 	CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
+end
+
+function CopLogicAttack._chk_enrage(data, focus_enemy)
+	if not data.char_tweak or not data.char_tweak.enrages then
+		return
+	end
+	
+	local enrage_data = data.enrage_data or {
+		enrage_meter = 0,
+		last_chk_t = data.t - 0.2,
+		enraged = false,
+		enrage_max = 5 + math.random(0, 5)
+	}
+	
+	local dt = data.t - enrage_data.last_chk_t
+
+	local increase = nil
+	
+	if focus_enemy then
+		if AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction and focus_enemy.dis < 1000 then
+			if focus_enemy.verified or focus_enemy.verified_t and data.t - focus_enemy.verified_t < 2 then
+				increase = true
+			end
+		end
+	end
+	
+	if increase and not enrage_data.enraged then
+		enrage_data.enrage_meter = enrage_data.enrage_meter + dt
+		
+		if enrage_data.enrage_meter >= enrage_data.enrage_max then
+			enrage_data.enraged = true
+			enrage_data.enrage_buff_id = data.unit:base():add_buff("base_damage", 1)
+			
+			if not data.internal_data.turning then
+				if not data.unit:movement():chk_action_forbidden("walk") then
+					local action_data = {
+						variant = "surprised",
+						body_part = 1,
+						type = "act",
+						blocks = {
+							action = -1,
+							walk = -1
+						}
+					}
+
+					data.unit:brain():action_request(action_data)
+					
+				end
+			end
+			
+			data.unit:sound():play("tire_blow", nil, true)
+			data.unit:sound():play("window_small_shatter", nil, true)
+			
+			if enrage_data.played_warning then
+				data.unit:sound():play("slot_machine_win", nil, true)
+				enrage_data.played_warning = nil
+			end
+			
+			enrage_data.enrage_meter = 5
+		elseif not enrage_data.played_warning and enrage_data.enrage_meter > enrage_data.enrage_max * 0.75 then
+			data.unit:sound():play("slot_machine_rolling_loop", nil, true)
+
+			enrage_data.played_warning = true
+		end
+	else
+		enrage_data.enrage_meter = enrage_data.enrage_meter - dt
+		
+		if enrage_data.enrage_meter <= 0 then
+			if enrage_data.enraged then
+				enrage_data.enrage_max = 5 + math.random(0, 5)
+			end
+			
+			enrage_data.enrage_meter = 0
+			enrage_data.enraged = false
+			
+			if enrage_data.enrage_buff_id then
+				data.unit:base():remove_buff_by_id("base_damage", enrage_data.enrage_buff_id)
+				
+				enrage_data.enrage_buff_id = nil
+			end
+		end
+		
+		if enrage_data.played_warning then
+			data.unit:sound():play("slot_machine_loose", nil, true)
+			enrage_data.played_warning = nil
+		end
+	end
+	
+	enrage_data.last_chk_t = data.t
+	
+	data.enrage_data = data.enrage_data or enrage_data
 end
 
 function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)

@@ -30,6 +30,8 @@ function CharacterTweakData:setup_hhtacs()
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	
 	if difficulty_index > 5 then
+		self.tank.enrages = true
+	
 		self.heavy_swat.dodge = self.presets.dodge.athletic
 		self.fbi_heavy_swat.dodge = self.presets.dodge.athletic
 		

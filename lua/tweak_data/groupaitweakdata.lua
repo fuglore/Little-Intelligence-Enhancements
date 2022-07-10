@@ -7,6 +7,23 @@ function GroupAITweakData:_LIES_setup()
 		log("LIES: Another mod has already changed spawn groups and tactics. Ignoring tweakdata setup.")
 		
 		self._LIES_fix = true
+
+		if LIES.settings.hhtacs then
+			local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
+			local difficulty_index = tweak_data:difficulty_to_index(difficulty)
+		
+			log("LIES: Hyper Taktikz enabled while another mod is. Things may not work as intended...")
+			
+			if tweak_data.character then
+				tweak_data.character:setup_hhtacs()
+			end
+			
+			if tweak_data.weapon then
+				tweak_data.weapon:_setup_hhtacs()
+			end
+			
+			self:_setup_hhtacs_task_data(difficulty_index)
+		end
 		
 		return
 	end

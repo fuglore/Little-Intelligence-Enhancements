@@ -363,7 +363,12 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 					if not vis_ray or vis_ray.unit:key() == u_key then
 						acquired = true
-						detected_obj[u_key] = CopLogicBase._create_detected_attention_object_data(data.t, data.unit, u_key, attention_info, settings)
+						
+						if is_weapons_hot then 
+							detected_obj[u_key] = CopLogicBase.identify_attention_obj_instant(data, u_key)
+						else
+							detected_obj[u_key] = CopLogicBase._create_detected_attention_object_data(data.t, data.unit, u_key, attention_info, settings)
+						end
 					end
 				end
 

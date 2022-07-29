@@ -499,6 +499,7 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 						local retreat_to = CopLogicAttack._find_retreat_position(from_pos, focus_enemy.m_pos, threat_head_pos, threat_tracker, max_walk_dis, nil)
 
 						if retreat_to then
+							retreat_to = managers.navigation:pad_out_position(retreat_to, 4, data.char_tweak.wall_fwd_offset)
 							my_data.chase_path = {
 								mvec3_cpy(from_pos),
 								retreat_to
@@ -530,6 +531,7 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 						local pos_on_wall = CopLogicTravel._get_pos_on_wall(chase_pos, 300, nil, nil)
 
 						if mvec3_not_equal(chase_pos, pos_on_wall) then
+							pos_on_wall = managers.navigation:pad_out_position(pos_on_wall, 4, data.char_tweak.wall_fwd_offset)
 							my_data.chase_pos = pos_on_wall
 						end
 

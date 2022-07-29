@@ -72,7 +72,7 @@ function TeamAILogicAssault._upd_enemy_detection(data, is_synchronous)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
-	local max_reaction, min_reaction = nil
+	local max_reaction, min_reaction
 
 	if data.cool then
 		max_reaction = AIAttentionObject.REACT_SURPRISED

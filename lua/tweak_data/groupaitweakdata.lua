@@ -3,7 +3,7 @@ function GroupAITweakData:_LIES_setup()
 		return
 	end
 
-	if self.enemy_spawn_groups["tac_swat_shotgun_rush"] and not self._LIES_fix then
+	if self.enemy_spawn_groups["tac_swat_shotgun_rush"] and not self._LIES_fix or not self.unit_categories["medic_M4"] and not self._LIES_fix then
 		log("LIES: Another mod has already changed spawn groups and tactics. Ignoring tweakdata setup.")
 		
 		self._LIES_fix = true
@@ -1728,7 +1728,7 @@ function GroupAITweakData:_LIES_setup()
 					0
 				}
 			end
-		elseif level_id == "dinner" or level_id == "shoutout_raid" then
+		elseif level_id == "dinner" then
 			self.enemy_spawn_groups.Murkies = {
 				spawn_cooldown = 60,
 				max_nr_simultaneous_groups = 3,

@@ -371,6 +371,7 @@ function ShieldLogicAttack.queued_update(data)
 				if do_move then
 					my_data.pathing_to_optimal_pos = true
 					my_data.optimal_path_search_id = tostring(unit:key()) .. "optimal"
+					to_pos = managers.navigation:pad_out_position(to_pos, 4, data.char_tweak.wall_fwd_offset)
 					local reservation = managers.navigation:reserve_pos(nil, nil, to_pos, callback(ShieldLogicAttack, ShieldLogicAttack, "_reserve_pos_step_clbk", {
 						unit_pos = data.m_pos
 					}), 70, data.pos_rsrv_id)

@@ -163,6 +163,8 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 				move_type = ":" .. "open_fire"
 			elseif group.objective.moving_out then
 				move_type = ":" .. "moving_out"
+			elseif group.in_place_t then
+				move_type = ":" .. "in_place" .. ":" .. tostring(self._t - group.in_place_t)
 			end
 			
 			text = text .. move_type
@@ -1157,7 +1159,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					if group.is_chasing or not tactics_map or not tactics_map.ranged_fire or self._t - group.in_place_t > 7 then
 						push = true
 					end
-				elseif group.is_chasing or not tactics_map or not tactics_map.ranged_fire or self._t - group.in_place_t > 15 then
+				elseif group.is_chasing or not tactics_map or not tactics_map.ranged_fire and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 15 then
 					push = true
 				end
 			elseif phase_is_anticipation and current_objective.open_fire then
@@ -1223,11 +1225,11 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			open_fire = true,
 			charge = tactics_map and tactics_map.charge and aggression_level > 2 or aggression_level > 3,
 			tactic = current_objective.tactic,
-			area = obstructed_area or current_objective.area,
+			area = obstructed_area or objective_area,
 			coarse_path = {
 				{
 					objective_area.pos_nav_seg,
-					mvector3.copy(current_objective.area.pos)
+					mvector3.copy(objective_area.pos)
 				}
 			}
 		}
@@ -1352,7 +1354,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			end
 			
 			--if a group is chasing/charging then they should be able to enter the area even without a grenade, or, if there's other cops assigned to the area.
-			local can_push = used_grenade
+			local can_push = used_grenade or self._task_data.assault.use_smoke_timer > self._t
 			
 			if not can_push then
 				if aggression_level > 2 then

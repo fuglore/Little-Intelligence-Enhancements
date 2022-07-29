@@ -140,18 +140,9 @@ function CopBrain:search_for_path(search_id, to_pos, prio, access_neg, nav_segs)
 		nav_segs = nav_segs
 	}
 	
-	if not Iter and LIES:_path_is_straight_line(self._unit:movement():nav_tracker():field_position(), to_pos, self._logic_data) then
-		local path = {
-			mvector3.copy(self._unit:movement():nav_tracker():field_position()),
-			mvector3.copy(to_pos)
-		}
-	
-		self:clbk_pathing_results(search_id, path)
-	else
-		self._logic_data.active_searches[search_id] = true
+	self._logic_data.active_searches[search_id] = true
+	managers.navigation:search_pos_to_pos(params)
 
-		managers.navigation:search_pos_to_pos(params)
-	end
 
 	return true
 end
@@ -172,18 +163,8 @@ function CopBrain:search_for_path_from_pos(search_id, from_pos, to_pos, prio, ac
 		nav_segs = nav_segs
 	}
 	
-	if not Iter and LIES:_path_is_straight_line(from_pos, to_pos, self._logic_data) then
-		local path = {
-			mvector3.copy(from_pos),
-			mvector3.copy(to_pos)
-		}
-	
-		self:clbk_pathing_results(search_id, path)
-	else
-		self._logic_data.active_searches[search_id] = true
-
-		managers.navigation:search_pos_to_pos(params)
-	end
+	self._logic_data.active_searches[search_id] = true
+	managers.navigation:search_pos_to_pos(params)
 
 	return true
 end
@@ -204,17 +185,13 @@ function CopBrain:search_for_path_to_cover(search_id, cover, offset_pos, access_
 		access_neg = access_neg
 	}
 	
-	if not Iter and LIES:_path_is_straight_line(params.tracker_from:field_position(), params.tracker_to:field_position(), self._logic_data) then
-		local path = {
-			mvector3.copy(params.tracker_from:field_position()),
-			mvector3.copy(params.tracker_to:field_position())
-		}
-	
-		self:clbk_pathing_results(search_id, path)
-	else
-		self._logic_data.active_searches[search_id] = true
-		managers.navigation:search_pos_to_pos(params)
+	if offset_pos then
+		params.pos_to = mvector3.copy(offset_pos)
+		params.tracker_to = nil
 	end
+	
+	self._logic_data.active_searches[search_id] = true
+	managers.navigation:search_pos_to_pos(params)
 
 	return true
 end
@@ -305,4 +282,20 @@ function CopBrain:_chk_use_cover_grenade(unit)
 			self._next_grenade_use_t = t + duration
 		end
 	end
+end
+
+function CopBrain:action_complete_clbk(action)
+	self._unit:movement():upd_m_head_pos()
+
+	local stand_rsrv = self:get_pos_rsrv("stand")
+
+	if not stand_rsrv or mvector3.distance_sq(stand_rsrv.position, self._unit:movement():m_pos()) > 400 then
+		self:add_pos_rsrv("stand", {
+			radius = 30,
+			position = mvector3.copy(self._unit:movement():m_pos())
+		})
+	end
+
+
+	self._current_logic.action_complete_clbk(self._logic_data, action)
 end

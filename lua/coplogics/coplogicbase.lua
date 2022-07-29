@@ -115,7 +115,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 	end
 	
-	if not data.cool and data.unit:base()._tweak_table == "marshal_marksman" and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and (objective.type == "defend_area" or objective.type == "assault_area") then --this is unit is fucking ballin, its almost like i know what im doing
+	if not data.cool and (data.unit:base()._tweak_table == "marshal_marksman" or data.unit:base()._tweak_table == "heavy_swat_sniper") and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and (objective.type == "defend_area" or objective.type == "assault_area") then --this is unit is fucking ballin, its almost like i know what im doing
 		local weapon = data.unit:inventory():equipped_unit()
 		local usage = weapon and weapon:base():weapon_tweak_data().usage
 		local range_entry = usage and (data.char_tweak.weapon[usage] or {}).range or {}
@@ -134,7 +134,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction then
 			local aggro_level = LIES.settings.enemy_aggro_level
 			
-			if aggro_level < 2 and my_data.attitude == "engage" or attention.verified_t and data.t - attention.verified_t <= 15 then
+			if attention.verified_t and data.t - attention.verified_t <= 15 then
 				local z_diff = math.abs(attention.m_pos.z - data.m_pos.z)
 				local enemy_dis = attention.dis * (1 - strictness)
 				local interrupt_dis = nil
@@ -197,7 +197,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 	local detected_obj = data.detected_attention_objects
 	local my_data = data.internal_data
 	local my_key = data.key
-	local my_pos = data.unit:movement():m_head_pos()
+	local my_pos = data.m_pos:with_z(data.unit:movement():m_head_pos().z)
 	local my_access = data.SO_access
 	local all_attention_objects = managers.groupai:state():get_AI_attention_objects_by_filter(data.SO_access_str, data.team)
 	local my_head_fwd = nil
@@ -528,7 +528,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 							CopLogicBase._destroy_detected_attention_object_data(data, attention_info)
 						else
 							delay = math.min(0.2, delay)
-							attention_info.verified_pos = mvector3.copy(attention_info.criminal_record.pos)
+							attention_info.verified_pos = attention_info.criminal_record.pos:with_z(attention_pos.z)
 							attention_info.verified_dis = dis
 
 							if data.logic._chk_nearly_visible_chk_needed(data, attention_info, u_key) and attention_info.dis < 2000 then

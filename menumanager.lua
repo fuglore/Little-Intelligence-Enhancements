@@ -79,7 +79,10 @@ if RequiredScript == "lib/managers/menumanager" then
 		return managers.navigation:_find_cover_in_seg_through_lua(copied_threat_pos, near_pos, nav_seg_id)
 	end
 	
-	function LIES:_path_is_straight_line(pos_from, pos_to, u_data)	
+	--Until nav-meshes get good enough to not send enemies through walls randomly if I do this, this is gonna stay disabled.
+	function LIES:_path_is_straight_line(pos_from, pos_to, u_data)
+		do return end
+	
 		local ray_params = {
 			allow_entry = false,
 			pos_from = pos_from,

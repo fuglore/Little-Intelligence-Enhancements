@@ -65,7 +65,6 @@ function TaserLogicAttack.queued_update(data)
 	CopLogicBase._report_detections(data.detected_attention_objects)
 end
 
-
 function TaserLogicAttack._chk_wants_to_take_cover(data, my_data)
 	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 

@@ -697,6 +697,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 				}
 			else
 				near_pos = CopLogicTravel._get_pos_on_wall(near_pos, 700)
+				near_pos = managers.navigation:pad_out_position(near_pos, 4, data.char_tweak.wall_fwd_offset)
 				occupation = {
 					type = "defend",
 					seg = objective.nav_seg,
@@ -754,6 +755,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 			end
 
 			local to_pos = CopLogicTravel._get_pos_on_wall(follow_pos, max_dist)
+			to_pos = managers.navigation:pad_out_position(to_pos, 4, data.char_tweak.wall_fwd_offset)
 			occupation = {
 				type = "defend",
 				pos = to_pos
@@ -1060,6 +1062,28 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 			data.logic.on_new_objective(data)
 			
 			return
+		else
+			local obj_nav_seg = my_data.coarse_path[#my_data.coarse_path][1]
+			local obj_areas = managers.groupai:state():get_areas_from_nav_seg_id(obj_nav_seg)
+			local dontcheckdis, dis
+			
+			for _, area in ipairs(obj_areas) do
+				if area.nav_segs[follow_unit_nav_seg_id] then
+					dontcheckdis = true
+					
+					break
+				end
+			end
+			
+			if not dontcheckdis and #obj_areas > 0 then
+				if mvector3.distance_sq(obj_areas[1].pos, follow_unit:movement():nav_tracker():field_position()) > 1000000 or math.abs(obj_areas[1].pos.z - follow_unit:movement():nav_tracker():field_position().z) > 250 then
+					objective.in_place = nil
+					
+					data.logic.on_new_objective(data)
+			
+					return
+				end
+			end
 		end
 	else
 		local follow_unit = data.objective.follow_unit
@@ -1126,9 +1150,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 				if new_occupation.cover then
 					to_pos = new_occupation.cover[1][1]
 
-					if data.char_tweak.wall_fwd_offset then
-						to_pos = CopLogicTravel.apply_wall_offset_to_cover(data, my_data, new_occupation.cover[1], data.char_tweak.wall_fwd_offset)
-					end
+					to_pos = managers.navigation:pad_out_position(to_pos, 4, data.char_tweak.wall_fwd_offset)
 
 					local new_cover = new_occupation.cover
 
@@ -1156,6 +1178,7 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 		if not to_pos then
 			to_pos = coarse_path[nav_index][2] or managers.navigation:find_random_position_in_segment(objective.nav_seg)
 			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
+			to_pos = managers.navigation:pad_out_position(to_pos, 4, data.char_tweak.wall_fwd_offset)
 			wants_reservation = true
 		end
 	else
@@ -1182,6 +1205,8 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
 			wants_reservation = true
 		end
+		
+		to_pos = managers.navigation:pad_out_position(to_pos, 4, data.char_tweak.wall_fwd_offset)
 	end
 
 	if not reservation and wants_reservation then
@@ -1249,4 +1274,77 @@ function CopLogicTravel.queue_update(data, my_data, delay)
 	delay = delay or 0.3
 
 	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CopLogicTravel.queued_update, data, data.t + delay, data.important and true)
+end
+
+function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_recurse)
+	local nav_manager = managers.navigation
+	local nr_rays = 9
+	local ray_dis = max_dist or 1000
+	local step = 360 / nr_rays
+	local offset = step_offset or math.random(360)
+	local step_rot = Rotation(step)
+	local offset_rot = Rotation(offset)
+	local offset_vec = Vector3(ray_dis, 0, 0)
+
+	mvector3.rotate_with(offset_vec, offset_rot)
+
+	local to_pos = mvector3.copy(from_pos)
+
+	mvector3.add(to_pos, offset_vec)
+
+	local from_tracker = nav_manager:create_nav_tracker(from_pos)
+	local ray_params = {
+		allow_entry = false,
+		trace = true,
+		tracker_from = from_tracker,
+		pos_to = to_pos
+	}
+	local rsrv_desc = {
+		false,
+		60
+	}
+	local fail_position = nil
+
+	repeat
+		to_pos = mvector3.copy(from_pos)
+
+		mvector3.add(to_pos, offset_vec)
+
+		ray_params.pos_to = to_pos
+		local ray_res = nav_manager:raycast(ray_params)
+
+		if ray_res then
+			rsrv_desc.position = ray_params.trace[1]
+			local is_free = nav_manager:is_pos_free(rsrv_desc)
+
+			if is_free then
+				managers.navigation:destroy_nav_tracker(from_tracker)
+
+				return ray_params.trace[1]
+			end
+		elseif not fail_position then
+			rsrv_desc.position = ray_params.trace[1]
+			local is_free = nav_manager:is_pos_free(rsrv_desc)
+
+			if is_free then
+				fail_position = to_pos
+			end
+		end
+
+		mvector3.rotate_with(offset_vec, step_rot)
+
+		nr_rays = nr_rays - 1
+	until nr_rays == 0
+
+	managers.navigation:destroy_nav_tracker(from_tracker)
+
+	if fail_position then
+		return fail_position
+	end
+
+	if not is_recurse then
+		return CopLogicTravel._get_pos_on_wall(from_pos, ray_dis * 0.5, offset + step * 0.5, true)
+	end
+
+	return from_pos
 end

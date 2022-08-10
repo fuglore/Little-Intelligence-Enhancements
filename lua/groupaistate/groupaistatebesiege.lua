@@ -1256,10 +1256,14 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 					if assault_from_area ~= "init" then
 						local cop_units = assault_from_area.police.units
-
-						for u_key, u_data in pairs(cop_units) do
-							if u_data.group and u_data.group ~= group and u_data.group.objective.type == "assault_area" then
+						
+						--i had messed this up before, the flank is decided *here* by making the decision to not use the first area they find as the assault area to use
+						--i was previously making units declare they were flanking audibly when they were not, i'm a dum-dum
+						
+						for u_key, u_data in pairs(cop_units) do 
+							if u_data.group and u_data.group ~= group and u_data.group.objective.type == "assault_area" and (not u_data.tactics or not u_data.tactics.flank) then
 								assault_from_here = false
+								flank = true
 
 								if not alternate_assault_area or math.random() < 0.5 then
 									local search_params = {
@@ -1293,7 +1297,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						from_seg = current_objective.area.pos_nav_seg,
 						to_seg = search_area.pos_nav_seg,
 						access_pos = self._get_group_acces_mask(group),
-						verify_clbk = callback(self, self, "is_nav_seg_safe")
+						verify_clbk = not push and callback(self, self, "is_nav_seg_safe")
 					}
 					assault_path = managers.navigation:search_coarse(search_params)
 
@@ -1315,7 +1319,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		until #to_search_areas == 0
 
 		if not assault_area and alternate_assault_area then
-			flank = true
+			flank = nil
 			assault_area = alternate_assault_area
 			found_areas[assault_area] = alternate_assault_area_from
 			assault_path = alternate_assault_path

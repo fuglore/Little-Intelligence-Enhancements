@@ -38,7 +38,12 @@ function CopLogicAttack.enter(data, new_logic_name, enter_params)
 
 	CopLogicIdle._chk_has_old_action(data, my_data)
 
-	my_data.attitude = data.objective and data.objective.attitude or "avoid"
+	if data.unit:base():has_tag("medic") then
+		my_data.attitude = "avoid"
+	else
+		my_data.attitude = objective and objective.attitude or "avoid"
+	end
+
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
 	
 	if not my_data.weapon_range then
@@ -579,11 +584,8 @@ function CopLogicAttack._upd_aim(data, my_data)
 		
 			local react_t = 0.7 / LIES.settings.enemy_reaction_level
 		
-			if shoot then
-				if data.t - focus_enemy.acquire_t < react_t then
-					aim = true
-					shoot = nil
-				end
+			if data.t - focus_enemy.acquire_t < react_t then
+				shoot = nil
 			end
 		end
 	end

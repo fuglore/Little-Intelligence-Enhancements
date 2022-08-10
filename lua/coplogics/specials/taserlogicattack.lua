@@ -38,9 +38,38 @@ function TaserLogicAttack.queued_update(data)
 	local action_taken = my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data.acting or my_data.tasing
 
 	if my_data.tasing then
-		action_taken = action_taken or CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, focus_enemy.m_pos)
+		if data.logic.chk_should_turn(data, my_data) then
+			local enemy_pos = focus_enemy.m_pos
+
+			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, enemy_pos)
+		end
+
+		local aim = true
+		local shoot = true
 		
-		delay = 0.5 + delay * 1.5 
+		if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
+			if LIES.settings.enemy_reaction_level < 3 and focus_enemy.acquire_t and not data.unit:in_slot(16) then
+				if not focus_enemy.verified_t or data.t - focus_enemy.verified_t > 2 then
+					focus_enemy.acquire_t = data.t
+				end
+			
+				local react_t = 1.4
+			
+				if shoot then
+					local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
+					local focus_enemy_dis = focus_enemy.dis
+					local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.25, 1)
+					react_t = react_t * lerp
+
+					if data.t - focus_enemy.acquire_t < react_t then
+						aim = true
+						shoot = nil
+					end
+				end
+			end
+		end
+
+		CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 	
 		CopLogicBase.queue_task(my_data, my_data.update_task_key, TaserLogicAttack.queued_update, data, data.t + delay, data.important)
 		CopLogicBase._report_detections(data.detected_attention_objects)
@@ -134,7 +163,7 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 				data.unit:brain():action_request(new_action)
 			end
 			
-			local proceed = LIES.settings.enemy_reaction_level > 2 or my_data.has_played_warning
+			local proceed = true
 			
 			if proceed then	
 				if (not my_data.tasing or my_data.tasing.target_u_data ~= focus_enemy) and not data.unit:movement():chk_action_forbidden("walk") and not focus_enemy.unit:movement():zipline_unit() then
@@ -156,10 +185,36 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 							start_t = data.t
 						}
 						
-						CopLogicAttack.aim_allow_fire(true, true, data, my_data)
 						CopLogicAttack._cancel_charge(data, my_data)
 						managers.groupai:state():on_tase_start(data.key, focus_enemy.u_key)
 					end
+					
+					local aim = true
+					local shoot = true
+					
+					if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
+						if LIES.settings.enemy_reaction_level < 3 and focus_enemy.acquire_t and not data.unit:in_slot(16) then
+							if not focus_enemy.verified_t or data.t - focus_enemy.verified_t > 2 then
+								focus_enemy.acquire_t = data.t
+							end
+						
+							local react_t = 1.4
+						
+							if shoot then
+								local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
+								local focus_enemy_dis = focus_enemy.dis
+								local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.5, 1)
+								react_t = react_t * lerp
+
+								if data.t - focus_enemy.acquire_t < react_t then
+									aim = true
+									shoot = nil
+								end
+							end
+						end
+					end
+
+					CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 				end
 				
 				if data.logic.chk_should_turn(data, my_data) then
@@ -231,8 +286,10 @@ function TaserLogicAttack._chk_reaction_to_attention_object(data, attention_data
 	if attention_data.is_human_player and not attention_data.unit:movement():is_taser_attack_allowed() then
 		return AIAttentionObject.REACT_COMBAT
 	end
+	
+	local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
 
-	if (attention_data.is_human_player or not attention_data.unit:movement():chk_action_forbidden("hurt")) and attention_data.verified and attention_data.verified_dis < data.internal_data.tase_distance * 0.9 then
+	if (attention_data.is_human_player or not attention_data.unit:movement():chk_action_forbidden("hurt")) and attention_data.verified and attention_data.verified_dis < tase_dis * 0.9 then
 		local vis_ray = data.unit:raycast("ray", data.unit:movement():m_head_pos(), attention_data.m_head_pos, "slot_mask", managers.slot:get_mask("bullet_impact_targets_no_criminals"), "sphere_cast_radius", 30, "ignore_unit", attention_data.unit, "report")
 			
 		if not vis_ray then
@@ -306,6 +363,8 @@ function TaserLogicAttack._upd_enemy_detection(data)
 
 				CopLogicAttack._set_best_cover(data, my_data, nil)
 				TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, new_attention)
+			else
+				TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, new_attention)
 			end
 		else
 			TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, new_attention)
@@ -318,7 +377,6 @@ function TaserLogicAttack._upd_enemy_detection(data)
 	
 	return delay
 end
-
 
 function TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, focus_enemy)
 	if not my_data.tasing and (not data.last_charge_snd_play_t or data.t - data.last_charge_snd_play_t > math.lerp(15, 30, focus_enemy.verified_dis / 3000)) and focus_enemy.verified_dis < 3000 and math.abs(data.m_pos.z - focus_enemy.m_pos.z) < 300 then

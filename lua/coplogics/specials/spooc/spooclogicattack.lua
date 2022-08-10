@@ -113,14 +113,30 @@ function SpoocLogicAttack.update(data)
 		end
 	end
 
-	SpoocLogicAttack._upd_spooc_attack(data, my_data)
+	local do_spooc_attack = true
+
+	if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+		if LIES.settings.enemy_reaction_level < 3 and data.attention_obj.acquire_t and not data.unit:in_slot(16) then
+			if not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 2 then
+				data.attention_obj.acquire_t = data.t
+			end
+		
+			local react_t = 1.4 / LIES.settings.enemy_reaction_level
+		
+			if data.t - data.attention_obj.acquire_t < react_t then
+				do_spooc_attack = nil
+			end
+		end
+	end
+	
+	if do_spooc_attack then
+		SpoocLogicAttack._upd_spooc_attack(data, my_data)
+	elseif data.attention_obj then
+		SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, data.attention_obj)
+	end
 
 	if my_data.spooc_attack then
 		return
-	elseif my_data.has_played_warning then
-		if data.spooc_attack_timeout_t and data.t > data.spooc_attack_timeout_t then
-			my_data.has_played_warning = nil
-		end
 	end
 
 	if AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
@@ -279,33 +295,17 @@ function SpoocLogicAttack._upd_spooc_attack(data, my_data)
 			if LIES.settings.enemy_reaction_level < 3 then
 				SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
 			end
-			
-			if LIES.settings.enemy_reaction_level > 2 or my_data.has_played_warning then
-				local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data)
 
-				if action then
-					my_data.spooc_attack = {
-						start_t = data.t,
-						target_u_data = focus_enemy,
-						action = action
-					}
+			local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data)
 
-					return true
-				end
-			elseif not my_data.turning then
-				if not data.unit:movement():chk_action_forbidden("walk") then
-					local action_data = {
-						variant = "surprised",
-						body_part = 1,
-						type = "act",
-						blocks = {
-							action = -1,
-							walk = -1
-						}
-					}
+			if action then
+				my_data.spooc_attack = {
+					start_t = data.t,
+					target_u_data = focus_enemy,
+					action = action
+				}
 
-					my_data.reacting = data.unit:brain():action_request(action_data)
-				end
+				return true
 			end
 		end
 
@@ -319,33 +319,17 @@ function SpoocLogicAttack._upd_spooc_attack(data, my_data)
 			if LIES.settings.enemy_reaction_level < 3 then
 				SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
 			end
-			
-			if LIES.settings.enemy_reaction_level > 2 or my_data.has_played_warning then
-				local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data, true)
 
-				if action then
-					my_data.spooc_attack = {
-						start_t = data.t,
-						target_u_data = focus_enemy,
-						action = action
-					}
+			local action = SpoocLogicAttack._chk_request_action_spooc_attack(data, my_data, true)
 
-					return true
-				end
-			elseif not my_data.turning then
-				if not data.unit:movement():chk_action_forbidden("walk") then
-					local action_data = {
-						variant = "surprised",
-						body_part = 1,
-						type = "act",
-						blocks = {
-							action = -1,
-							walk = -1
-						}
-					}
+			if action then
+				my_data.spooc_attack = {
+					start_t = data.t,
+					target_u_data = focus_enemy,
+					action = action
+				}
 
-					my_data.reacting = data.unit:brain():action_request(action_data)
-				end
+				return true
 			end
 		end
 	end

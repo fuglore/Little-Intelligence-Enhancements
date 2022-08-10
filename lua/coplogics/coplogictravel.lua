@@ -249,7 +249,7 @@ function CopLogicTravel._update_cover(ignore_this, data)
 end
 
 function CopLogicTravel._chk_close_to_criminal(data, my_data)
-	if data.unit:in_slot(16) or LIES.settings.enemy_aggro_level > 1 then
+	if data.unit:in_slot(16) then
 		return
 	end
 
@@ -520,7 +520,7 @@ function CopLogicTravel.upd_advance(data)
 			end]]
 		end
 	elseif my_data.advance_path then
-		if CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+		if (data.objective.attitude == "engage" or not CopLogicTravel._chk_close_to_criminal(data, my_data)) and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
 			CopLogicTravel._chk_begin_advance(data, my_data)
 
 			if my_data.advancing and my_data.path_ahead then
@@ -886,12 +886,6 @@ function CopLogicTravel.action_complete_clbk(data, action)
 			my_data.coarse_path_index = my_data.coarse_path_index + coarse_index_increment
 
 			if my_data.coarse_path_index > #my_data.coarse_path then
-				log("coarse_path faulty???")
-				for path_i = 1, #my_data.coarse_path do
-					local seg_pos = my_data.coarse_path[path_i][2]
-					line2:cylinder(seg_pos, seg_pos + math_up * 185, 20)
-				end
-
 				my_data.coarse_path_index = my_data.coarse_path_index - 1
 			end
 		end

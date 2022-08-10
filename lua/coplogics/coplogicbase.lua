@@ -130,8 +130,28 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 	end
 	
-	if objective.interrupt_on_contact then
+	if objective.interrupt_on_contact and not objective.in_place then
 		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction then
+			if data.unit:base():has_tag("spooc") or data.unit:base()._tweak_table == "shadow_spooc" then
+				data.spooc_attack_timeout_t = data.spooc_attack_timeout_t or 0
+			
+				if attention.nav_tracker and attention.is_person and attention.criminal_record and not attention.criminal_record.status and not my_data.spooc_attack and AIAttentionObject.REACT_SHOOT <= attention.reaction and data.spooc_attack_timeout_t < data.t and attention.verified_dis < (my_data.want_to_take_cover and 1500 or 2500) and not data.unit:movement():chk_action_forbidden("walk") and not SpoocLogicAttack._is_last_standing_criminal(attention) and not attention.unit:movement():zipline_unit() and attention.unit:movement():is_SPOOC_attack_allowed() then
+					return true, true
+				end
+			end
+			
+			if data.unit:base():has_tag("taser") then
+				if AIAttentionObject.REACT_SPECIAL_ATTACK <= attention.reaction then
+					return true, true
+				end
+			
+				local reaction = TaserLogicAttack._chk_reaction_to_attention_object(data, attention) 
+				
+				if reaction == AIAttentionObject.REACT_SPECIAL_ATTACK then
+					return true, true
+				end
+			end
+		
 			local aggro_level = LIES.settings.enemy_aggro_level
 			
 			if attention.verified_t and data.t - attention.verified_t <= 15 then

@@ -896,7 +896,7 @@ function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
 	for c_key, c_data in pairs(self._char_criminals) do
 		if c_key ~= u_key then
 			if not c_data.status or c_data.status == "electrified" then
-				if mvec3_dis(pos, c_data.m_pos) < 2250000 then
+				if mvec3_dis(pos, c_data.m_pos) < 2500000 then
 					nearby = nearby + 1
 				end
 			end
@@ -1156,10 +1156,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				if aggression_level > 2 then
 					push = true
 				elseif aggression_level > 1 then
-					if group.is_chasing or not tactics_map or not tactics_map.ranged_fire or self._t - group.in_place_t > 7 then
+					if group.is_chasing or (not tactics_map or not tactics_map.ranged_fire) and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 7 then
 						push = true
 					end
-				elseif group.is_chasing or not tactics_map or not tactics_map.ranged_fire and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 15 then
+				elseif group.is_chasing or (not tactics_map or not tactics_map.ranged_fire) and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 15 then
 					push = true
 				end
 			elseif phase_is_anticipation and current_objective.open_fire then
@@ -1407,7 +1407,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					moving_in = push and true or nil,
 					open_fire = push or nil,
 					pushed = push or nil,
-					charge = charge or aggression_level > 3,
+					charge = charge or push and aggression_level > 3,
 					interrupt_dis = nil
 				}
 				group.is_chasing = group.is_chasing or push

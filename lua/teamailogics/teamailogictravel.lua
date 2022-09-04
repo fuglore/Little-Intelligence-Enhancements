@@ -70,6 +70,8 @@ function TeamAILogicTravel.enter(data, new_logic_name, enter_params)
 
 		data.unit:brain():action_request(new_action)
 	end
+	
+	my_data.criminal = true
 end
 
 function TeamAILogicTravel._upd_enemy_detection(data)

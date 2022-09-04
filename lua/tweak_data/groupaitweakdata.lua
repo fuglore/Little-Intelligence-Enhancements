@@ -1487,6 +1487,38 @@ function GroupAITweakData:_LIES_setup()
 
 		local level_id =  Global.game_settings and Global.game_settings.level_id
 		
+		if level_id ~= "ranc" then
+			self.enemy_spawn_groups.marshal_squad = {
+				spawn_cooldown = 60,
+				max_nr_simultaneous_groups = 1,
+				initial_spawn_delay = 300,
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						respawn_cooldown = 30,
+						amount_min = 2,
+						rank = 1,
+						freq = 1,
+						unit = "marshal_marksman",
+						tactics = self._tactics.marshal_marksman
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+			
+			if difficulty_index > 5 then
+				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
+				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
+				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 150
+			end
+		end
+		
 		if level_id == "ranc" then
 			self.enemy_spawn_groups.Cowboys = {
 				spawn_cooldown = 30,

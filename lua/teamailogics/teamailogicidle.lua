@@ -285,6 +285,11 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 	if new_attention and (new_attention.nearly_visible or new_attention.verified) and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.dis < 2000 then
 		data.last_engage_t = data.t
 	end
+	
+	if my_data ~= data.internal_data then
+		return
+	end
+
 
 	if new_reaction and AIAttentionObject.REACT_SCARED <= new_reaction then
 		local objective = data.objective

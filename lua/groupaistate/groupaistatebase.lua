@@ -125,8 +125,8 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 				scan = true,
 				type = "free",
 				no_arrest = objective.no_arrest,
-				attitude = objective.attitude,
-				grp_objective = objective.grp_objective
+				grp_objective = objective.grp_objective,
+				attitude = objective.attitude or objective.grp_objective and objective.grp_objective.attitude,
 			}
 
 			if u_data.assigned_area then

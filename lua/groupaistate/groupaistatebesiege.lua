@@ -48,6 +48,10 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 		if l_data.spawned_in_phase then
 			text_str = text_str .. ":" .. l_data.spawned_in_phase
 		end
+		
+		if l_data.internal_data and l_data.internal_data.attitude then
+			text_str = text_str .. ":" .. l_data.internal_data.attitude
+		end
 
 		if logic_name_text then
 			logic_name_text:set_text(text_str)
@@ -281,6 +285,14 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 			panel:remove(gui_text)
 
 			group_id_texts[group_id] = nil
+		end
+	end
+end
+
+function GroupAIStateBesiege:_voice_open_fire_start(group)
+	for u_key, unit_data in pairs(group.units) do
+		if unit_data.char_tweak.chatter.aggressive and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "open_fire") then
+			break
 		end
 	end
 end
@@ -906,6 +918,26 @@ function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
 	return nearby
 end
 
+function GroupAIStateBesiege:_chk_coarse_path_obstructed(group)
+	local current_objective = group.objective
+
+	if not current_objective.coarse_path then
+		return
+	end
+
+	local forwardmost_i_nav_point = self:_get_group_forwardmost_coarse_path_index(group)
+
+	if forwardmost_i_nav_point then
+		for i = forwardmost_i_nav_point + 1, #current_objective.coarse_path do
+			local nav_point = current_objective.coarse_path[i]
+
+			if not self:is_nav_seg_safe(nav_point[1]) then
+				return i
+			end
+		end
+	end
+end
+
 function GroupAIStateBesiege:_chk_group_engaging_area(group)
 	local engaging_area = nil
 
@@ -934,7 +966,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 	local phase_is_anticipation = phase == "anticipation"
 	local current_objective = group.objective
-	local approach, open_fire, push, pull_back, charge, hard_charge = nil
+	local approach, open_fire, push, pull_back, charge, reassign, hard_charge = nil
 	local obstructed_area = self:_chk_group_areas_tresspassed(group)
 	local group_leader_u_key, group_leader_u_data = self._determine_group_leader(group.units)
 	local tactics_map = nil
@@ -1096,7 +1128,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	local objective_area = nil
 
 	if obstructed_area then
-		if current_objective.moving_out and phase_is_anticipation then
+		if phase_is_anticipation then
 			pull_back = true
 		elseif tactics_map and tactics_map.ranged_fire then
 			pull_back = true
@@ -1127,10 +1159,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		elseif obstructed_path_index then
 			if aggression_level > 3 and current_objective.attitude == "engage" then
 				objective_area = self:get_area_from_nav_seg_id(group.objective.coarse_path[math.max(obstructed_path_index, 1)][1])
-				push = true
+				reassign = true
 			else
 				objective_area = self:get_area_from_nav_seg_id(group.objective.coarse_path[math.max(obstructed_path_index - 1, 1)][1])
-				pull_back = true
+				reassign = true
 			end
 		elseif not current_objective.moving_out then
 			local has_criminals_close = nil
@@ -1146,20 +1178,20 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			end
 			
 			--groups that have begun aggressive pushes will chase down players properly, aggression_level 4 chases constantly if the assault is happening
-			if charge or group.is_chasing or aggression_level > 3 and not phase_is_anticipation and (not tactics_map or not tactics_map.flank) then 
+			if charge then 
 				push = true
 			elseif not has_criminals_close or not group.in_place_t then
 				approach = true
 			elseif not phase_is_anticipation and not current_objective.open_fire then
 				open_fire = true
 			elseif not phase_is_anticipation and group.in_place_t then
-				if aggression_level > 2 then
+				if aggression_level > 2 or group.is_chasing then
 					push = true
 				elseif aggression_level > 1 then
-					if group.is_chasing or (not tactics_map or not tactics_map.ranged_fire) and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 7 then
+					if not (tactics_map and tactics_map.ranged_fire) and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 7 then
 						push = true
 					end
-				elseif group.is_chasing or (not tactics_map or not tactics_map.ranged_fire) and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 15 then
+				elseif not (tactics_map and tactics_map.ranged_fire) and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 15 then
 					push = true
 				end
 			elseif phase_is_anticipation and current_objective.open_fire then
@@ -1261,7 +1293,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						--i was previously making units declare they were flanking audibly when they were not, i'm a dum-dum
 						
 						for u_key, u_data in pairs(cop_units) do 
-							if u_data.group and u_data.group ~= group and u_data.group.objective.type == "assault_area" and (not u_data.tactics or not u_data.tactics.flank) then
+							if u_data.group and u_data.group ~= group and u_data.group.objective.type == "assault_area" then
 								assault_from_here = false
 								flank = true
 
@@ -1413,7 +1445,26 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				group.is_chasing = group.is_chasing or push
 
 				self:_set_objective_to_enemy_group(group, grp_objective)
+				
+				return
 			end
+		end
+	elseif reassign then
+		if objective_area then
+			local new_grp_objective = clone(current_objective)
+			
+			new_grp_objective.area = objective_area
+			new_grp_objective.nav_seg = nil
+			new_grp_objective.coarse_path = {
+				{
+					objective_area.pos_nav_seg,
+					mvector3.copy(objective_area.pos)
+				}
+			}
+
+			self:_set_objective_to_enemy_group(group, new_grp_objective)
+			
+			return
 		end
 	elseif pull_back then
 		local retreat_area = nil
@@ -1613,10 +1664,10 @@ function GroupAIStateBesiege:_set_recon_objective_to_group(group)
 
 			if forwardmost_i_nav_point and forwardmost_i_nav_point > 1 then
 				for i = forwardmost_i_nav_point + 1, #current_objective.coarse_path do
-					local nav_point = current_objective.coarse_path[forwardmost_i_nav_point]
+					local nav_point = current_objective.coarse_path[i]
 
 					if not self:is_nav_seg_safe(nav_point[1]) then
-						for i = 0, #current_objective.coarse_path - forwardmost_i_nav_point do
+						for i = 0, #current_objective.coarse_path - i do
 							table.remove(current_objective.coarse_path)
 						end
 
@@ -1721,7 +1772,6 @@ function GroupAIStateBesiege:_chk_group_area_presence(group, area_to_chk)
 	
 	return group_in_area
 end
-
 
 
 --if a detonate_pos gets set, the function doesn't complete because shooter_u_data doesn't get set, this fixes that

@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V4.9",
+		version = "V5",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -796,7 +796,6 @@ if RequiredScript == "lib/managers/menumanager" then
 			
 			LIES:Save()
 		end
-	
 
 		--create menus
 		MenuHelper:LoadFromJsonFile(LIES.options_path, LIES, LIES.settings)

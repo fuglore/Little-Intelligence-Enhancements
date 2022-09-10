@@ -249,7 +249,7 @@ function CopLogicTravel._update_cover(ignore_this, data)
 end
 
 function CopLogicTravel._chk_close_to_criminal(data, my_data)
-	if data.unit:in_slot(16) or my_data.criminal then
+	if data.unit:in_slot(16) or my_data.criminal or data.cool then
 		return
 	end
 

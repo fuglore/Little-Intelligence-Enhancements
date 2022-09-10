@@ -41,7 +41,7 @@ function CopLogicAttack.enter(data, new_logic_name, enter_params)
 	if data.unit:base():has_tag("medic") then
 		my_data.attitude = "avoid"
 	else
-		my_data.attitude = objective and objective.attitude or "avoid"
+		my_data.attitude = data.objective and data.objective.attitude or "avoid"
 	end
 
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
@@ -1378,8 +1378,6 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 			my_data.charge_path_search_id = "charge" .. tostring(data.key)
 
 			data.unit:brain():search_for_path(my_data.charge_path_search_id, my_data.charge_pos, nil, nil, nil)
-				
-			action_taken = true
 		end
 	end
 end
@@ -1500,7 +1498,7 @@ function CopLogicAttack._confirm_retreat_position_visless(retreat_pos, threat_po
 	local slotmask = managers.slot:get_mask("bullet_blank_impact_targets")
 	local ray_res = World:raycast("ray", retreat_head_pos, threat_head_pos, "slot_mask", slotmask, "ray_type", "ai_vision")
 
-	if not ray_res then
+	if ray_res then
 		return true
 	end
 

@@ -3020,6 +3020,20 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 			1.2
 		}
 	}
+	self.enemy_chatter.open_fire = {
+		radius = 1000,
+		max_nr = 1,
+		queue = "att",
+		group_min = 2,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
 	self.enemy_chatter.ready = {
 		radius = 1000,
 		max_nr = 1,

@@ -369,6 +369,20 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 	end
 end
 
+function NavigationManager:clamp_position_to_field(position)
+	if not position then
+		return
+	end
+	
+	local position_tracker = self._quad_field:create_nav_tracker(position)
+	
+	local new_pos = position_tracker:field_position()
+	
+	self._quad_field:destroy_nav_tracker(position_tracker)
+
+	return new_pos
+end
+
 function NavigationManager:pad_out_position(position, nr_rays, dis)
 	nr_rays = math.max(2, nr_rays or 4)
 	dis = dis or 46.5
@@ -409,8 +423,9 @@ function NavigationManager:pad_out_position(position, nr_rays, dis)
 		i_ray = i_ray + 1
 	end
 	
+	local altered_pos = altered_pos:with_z(position.z)
 	local position_tracker = self._quad_field:create_nav_tracker(altered_pos, true)
-	altered_pos = position_tracker:field_position():with_z(position.z)
+	altered_pos = position_tracker:field_position()
 
 	self._quad_field:destroy_nav_tracker(position_tracker)
 	

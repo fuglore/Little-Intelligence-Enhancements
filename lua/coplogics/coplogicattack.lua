@@ -306,6 +306,16 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 			return true
 		end
 	end
+	
+	if aggro_level < 2 then
+		if not my_data.in_cover and my_data.firing then
+			return true
+		end
+	
+		if not my_data.cover_enter_t or data.t - my_data.cover_enter_t > 8 then
+			return true
+		end
+	end
 end
 
 function CopLogicAttack.chk_should_turn(data, my_data)
@@ -1021,8 +1031,8 @@ function CopLogicAttack._upd_combat_movement(data)
 	
 		local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
 		
-		if can_charge then
-			if my_data.flank_cover and my_data.flank_cover.failed or data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or aggro_level > 3 and engage or aggro_level > 1 and engage and (not data.tactics or not data.tactics.ranged_fire) then
+		if can_charge and engage then
+			if my_data.flank_cover and my_data.flank_cover.failed or data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or aggro_level > 3 or aggro_level > 1 and (not data.tactics or not data.tactics.ranged_fire) then
 				if my_data.charge_path then
 					local path = my_data.charge_path
 					my_data.charge_path = nil

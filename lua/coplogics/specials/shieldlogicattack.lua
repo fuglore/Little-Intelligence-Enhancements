@@ -230,7 +230,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 				end
 			end
 
-			if AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker then
+			if AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker and my_data.attitude == "engage" then
 				my_data.optimal_pos = CopLogicAttack._find_flank_pos(data, my_data, new_attention.nav_tracker)
 			end
 		elseif old_att_obj and not data.unit:movement():chk_action_forbidden("walk") then
@@ -248,6 +248,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 	if my_data.optimal_pos and focus_enemy then
 		mvector3.set_z(my_data.optimal_pos, focus_enemy.m_pos.z)
+		my_data.optimal_pos = managers.navigation:clamp_position_to_field(my_data.optimal_pos)
 	end
 end
 

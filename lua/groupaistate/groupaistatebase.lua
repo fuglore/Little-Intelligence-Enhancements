@@ -114,12 +114,12 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 	end
 
 	local new_objective = nil
+	local u_key = unit:key()
+	local u_data = self._police[u_key]
+	local valid_and_alive = u_data and unit:brain():is_active() and not unit:character_damage():dead()
 
 	if unit:brain():objective() == objective then
-		local u_key = unit:key()
-		local u_data = self._police[u_key]
-
-		if u_data and unit:brain():is_active() and not unit:character_damage():dead() then
+		if valid_and_alive then
 			new_objective = {
 				is_default = true,
 				scan = true,
@@ -142,6 +142,10 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 
 	if new_objective then
 		unit:brain():set_objective(new_objective)
+	end
+	
+	if valid_and_alive and u_data.group then
+		self:_upd_group(u_data.group)
 	end
 
 	if fail_clbk then

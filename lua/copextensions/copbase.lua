@@ -1,5 +1,15 @@
-function CopBase:default_weapon_name()
+Hooks:PostHook(CopBase, "init", "lies_spicy_compatibility", function(self, unit)
+	if LIES.settings.hhtacs then
+		self.default_weapon_name = self.default_weapon_name_hhtacs
+	end
+end)
+
+function CopBase:default_weapon_name_hhtacs()
 	local m_weapon_id = self._default_weapon_id
+	
+	if self._chosen_weapon_name then
+		return self._chosen_weapon_name
+	end
 	
 	if LIES.settings.hhtacs then
 		local security_vars = {
@@ -40,7 +50,9 @@ function CopBase:default_weapon_name()
 
 	for i_weap_id, weap_id in ipairs(weap_ids) do
 		if m_weapon_id == weap_id then
-			return tweak_data.character.weap_unit_names[i_weap_id]
+			self._chosen_weapon_name = tweak_data.character.weap_unit_names[i_weap_id]
+		
+			return self._chosen_weapon_name
 		end
 	end
 end

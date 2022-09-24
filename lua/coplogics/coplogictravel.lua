@@ -374,7 +374,6 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 
 	local my_dis = mvector3.distance_sq(my_objective.area.pos, data.m_pos)
 	
-	
 	if not LIES.settings.hhtacs then
 		if my_dis > 4000000 then
 			return true
@@ -408,6 +407,12 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 	end
 	
 	if not can_continue then
+		local u_data = managers.groupai:state()._police and managers.groupai:state()._police[u_key]
+	
+		if u_data and u_data.group then
+			managers.groupai:state():_upd_group(u_data.group)
+		end
+	
 		if data.char_tweak.chatter and data.char_tweak.chatter.ready then
 			managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "follow_me")
 		end
@@ -520,7 +525,7 @@ function CopLogicTravel.upd_advance(data)
 			end]]
 		end
 	elseif my_data.advance_path then
-		if (data.objective.attitude == "engage" or not CopLogicTravel._chk_close_to_criminal(data, my_data)) and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+		if CopLogicTravel.chk_group_ready_to_move(data, my_data) then --to-do, make chk_close_to_criminal make more sense...
 			CopLogicTravel._chk_begin_advance(data, my_data)
 
 			if my_data.advancing and my_data.path_ahead then
@@ -539,10 +544,12 @@ function CopLogicTravel.upd_advance(data)
 		if not my_data.processing_advance_path and not my_data.processing_coarse_path then
 			if was_processing_advance_path then
 				if my_data.advance_path and not my_data.advancing then
-					CopLogicTravel._chk_begin_advance(data, my_data)
+					if CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+						CopLogicTravel._chk_begin_advance(data, my_data)
 
-					if my_data.advancing and my_data.path_ahead then
-						CopLogicTravel._check_start_path_ahead(data)
+						if my_data.advancing and my_data.path_ahead then
+							CopLogicTravel._check_start_path_ahead(data)
+						end
 					end
 				end
 			elseif my_data.coarse_path and not my_data.advancing then

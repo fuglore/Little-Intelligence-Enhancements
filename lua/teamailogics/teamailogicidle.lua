@@ -290,7 +290,6 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 		return
 	end
 
-
 	if new_reaction and AIAttentionObject.REACT_SCARED <= new_reaction then
 		local objective = data.objective
 		local wanted_state = nil

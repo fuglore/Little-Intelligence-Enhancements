@@ -143,13 +143,13 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 	if new_objective then
 		unit:brain():set_objective(new_objective)
 	end
-	
-	if valid_and_alive and u_data.group then
-		self:_upd_group(u_data.group)
-	end
 
 	if fail_clbk then
 		fail_clbk(unit)
+	end
+	
+	if valid_and_alive and u_data.group then
+		self:_upd_group(u_data.group)
 	end
 end
 

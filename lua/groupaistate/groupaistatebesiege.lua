@@ -923,10 +923,6 @@ function GroupAIStateBesiege:on_objective_complete(unit, objective)
 	
 	local u_key = unit:key()
 	local u_data = self._police[u_key]
-	
-	if u_data and u_data.group then
-		self:_upd_group(u_data.group)
-	end
 
 	if objective.complete_clbk then
 		objective.complete_clbk(unit)
@@ -935,6 +931,11 @@ function GroupAIStateBesiege:on_objective_complete(unit, objective)
 	if so_element then
 		so_element:clbk_objective_administered(unit)
 	end
+	
+	if u_data and u_data.group then
+		self:_upd_group(u_data.group)
+	end
+
 end
 
 function GroupAIStateBesiege:on_defend_travel_end(unit, objective)

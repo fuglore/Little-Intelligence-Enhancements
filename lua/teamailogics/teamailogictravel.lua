@@ -59,7 +59,11 @@ function TeamAILogicTravel.enter(data, new_logic_name, enter_params)
 
 	if w_td then
 		local cw_td = data.char_tweak.weapon[w_td.usage]
-		my_data.weapon_range = (cw_td or {}).range or 5000
+		my_data.weapon_range = cw_td and cw_td.range or {
+			optimal = 2000,
+			far = 5000,
+			close = 1000
+		}
 	end
 
 	if not data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then

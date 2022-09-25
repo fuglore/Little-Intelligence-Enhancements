@@ -348,7 +348,11 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 			end
 		end
 	end
-
+	
+	if my_data ~= data.internal_data then
+		log("YOU FELL FOR IT FOOL, THUNDER CROSS SPLIT ATTACK!!!")
+	end
+	
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, TeamAILogicIdle._upd_enemy_detection, data, data.t + delay)
 end
 

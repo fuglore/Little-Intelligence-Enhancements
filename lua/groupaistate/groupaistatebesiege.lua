@@ -932,7 +932,7 @@ function GroupAIStateBesiege:on_objective_complete(unit, objective)
 		so_element:clbk_objective_administered(unit)
 	end
 	
-	if u_data and u_data.group then
+	if u_data and u_data.group and not u_data.unit:movement():cool() then
 		self:_upd_group(u_data.group)
 	end
 
@@ -959,7 +959,7 @@ function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
 			self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "in_pos")
 		end
 		
-		if unit_data.group then
+		if unit_data.group and not unit_data.unit:movement():cool() then
 			self:_upd_group(unit_data.group)
 		end
 	end
@@ -1316,20 +1316,24 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			if not tactics_map[current_objective.tactic] then
 				current_objective.tactic = nil
 			elseif current_objective.tactic == "deathguard" then
-				for u_key, u_data in pairs(self._char_criminals) do
-					if current_objective.follow_unit:key() == u_key then
-						if u_data.status and u_data.status ~= "electrified" then
-							local crim_nav_seg = u_data.tracker:nav_segment()
+				if alive(current_objective.follow_unit) then
+					for u_key, u_data in pairs(self._char_criminals) do
+						if current_objective.follow_unit:key() == u_key then
+							if u_data.status and u_data.status ~= "electrified" then
+								local crim_nav_seg = u_data.tracker:nav_segment()
 
-							if current_objective.area.nav_segs[crim_nav_seg] then
-								return
+								if current_objective.area.nav_segs[crim_nav_seg] then
+									return
+								else
+									current_objective.tactic = nil
+								end
 							else
 								current_objective.tactic = nil
 							end
-						else
-							current_objective.tactic = nil
 						end
 					end
+				else
+					current_objective.tactic = nil
 				end
 			elseif current_objective.tactic == "flank" then
 				if alive(current_objective.follow_unit) then

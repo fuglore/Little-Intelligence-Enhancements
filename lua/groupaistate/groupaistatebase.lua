@@ -148,7 +148,7 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 		fail_clbk(unit)
 	end
 	
-	if valid_and_alive and u_data.group then
+	if valid_and_alive and u_data.group and not u_data.unit:movement():cool() then
 		self:_upd_group(u_data.group)
 	end
 end

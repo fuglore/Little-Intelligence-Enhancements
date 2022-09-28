@@ -693,7 +693,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 				radius = objective.radius
 			}
 		else
-			local near_pos = objective.follow_unit and objective.follow_unit:movement():nav_tracker():field_position() or data.internal_data.coarse_path[#data.internal_data.coarse_path][2] or managers.navigation._nav_segments[objective.nav_seg].pos
+			local near_pos = objective.follow_unit and alive(objective.follow_unit) and objective.follow_unit:movement():nav_tracker():field_position() or data.internal_data.coarse_path[#data.internal_data.coarse_path][2] or managers.navigation._nav_segments[objective.nav_seg].pos
 			local cover = CopLogicTravel._find_cover(data, objective.nav_seg, near_pos)
 
 			if cover then
@@ -737,10 +737,10 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		}
 	elseif objective.type == "follow" then
 		local my_data = data.internal_data
-		local follow_tracker = objective.follow_unit:movement():nav_tracker()
+		local follow_tracker = objective.follow_unit and alive(objective.follow_unit) and objective.follow_unit:movement():nav_tracker()
 		local dest_nav_seg_id = my_data.coarse_path[#my_data.coarse_path][1]
 		local dest_area = managers.groupai:state():get_area_from_nav_seg_id(dest_nav_seg_id)
-		local follow_pos = follow_tracker:field_position()
+		local follow_pos = follow_tracker and follow_tracker:field_position()
 		local threat_pos = nil
 		local follow_dis = data.internal_data.called and 450 or 700
 
@@ -750,7 +750,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 
 		local cover = managers.navigation:find_cover_in_nav_seg_3(dest_area.nav_segs, follow_dis, follow_pos, threat_pos)
 		
-		if cover and mvector3.distance_sq(cover[1], follow_pos) <= (data.internal_data.called and 202500 or 490000) then
+		if cover and (not follow_pos or mvector3.distance_sq(cover[1], follow_pos) <= (data.internal_data.called and 202500 or 490000)) then
 			local cover_entry = {
 				cover
 			}

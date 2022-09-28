@@ -647,6 +647,12 @@ function CopLogicIdle._chk_relocate(data)
 	end
 
 	if data.objective and data.objective.type == "follow" then
+		if not data.objective.follow_unit or not alive(data.objective.follow_unit) then
+			data.brain:set_objective(nil)
+			
+			return
+		end
+	
 		if data.is_converted or data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 			if TeamAILogicIdle._check_should_relocate(data, data.internal_data, data.objective) then
 				data.objective.in_place = nil

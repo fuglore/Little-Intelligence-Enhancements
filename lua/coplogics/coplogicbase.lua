@@ -14,6 +14,43 @@ local m_rot_x = mrotation.x
 local m_rot_y = mrotation.y
 local m_rot_z = mrotation.z
 
+function CopLogicBase.on_new_objective(data, old_objective)
+	if old_objective and old_objective.follow_unit then
+		if alive(old_objective.follow_unit) then
+			if old_objective.destroy_clbk_key then
+				old_objective.follow_unit:base():remove_destroy_listener(old_objective.destroy_clbk_key)
+
+				old_objective.destroy_clbk_key = nil
+			end
+
+			if old_objective.death_clbk_key then
+				old_objective.follow_unit:character_damage():remove_listener(old_objective.death_clbk_key)
+
+				old_objective.death_clbk_key = nil
+			end
+		end
+	end
+
+	local new_objective = data.objective
+
+	if new_objective and new_objective.follow_unit and not new_objective.destroy_clbk_key then
+		local ext_brain = data.unit:brain()
+		local destroy_clbk_key = "objective_" .. new_objective.type .. tostring(data.unit:key())
+		new_objective.destroy_clbk_key = destroy_clbk_key
+
+		new_objective.follow_unit:base():add_destroy_listener(destroy_clbk_key, callback(ext_brain, ext_brain, "on_objective_unit_destroyed"))
+
+		if new_objective.follow_unit:character_damage() then
+			new_objective.death_clbk_key = destroy_clbk_key
+
+			new_objective.follow_unit:character_damage():add_listener(destroy_clbk_key, {
+				"death",
+				"hurt"
+			}, callback(ext_brain, ext_brain, "on_objective_unit_damaged"))
+		end
+	end
+end
+
 function CopLogicBase.chk_am_i_aimed_at(data, attention_obj, max_dot)
 	if not attention_obj.is_person or not attention_obj.is_alive then
 		return
@@ -115,7 +152,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 	end
 	
-	if not data.cool and (data.unit:base()._tweak_table == "marshal_marksman" or data.unit:base()._tweak_table == "heavy_swat_sniper") and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and (objective.type == "defend_area" or objective.type == "assault_area") then --this is unit is fucking ballin, its almost like i know what im doing
+	if not data.cool and (data.unit:base()._tweak_table == "marshal_marksman" or data.unit:base()._tweak_table == "heavy_swat_sniper") and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and not objective.in_place and (objective.type == "defend_area" or objective.type == "assault_area") then --this is unit is fucking ballin, its almost like i know what im doing
 		local weapon = data.unit:inventory():equipped_unit()
 		local usage = weapon and weapon:base():weapon_tweak_data().usage
 		local range_entry = usage and (data.char_tweak.weapon[usage] or {}).range or {}

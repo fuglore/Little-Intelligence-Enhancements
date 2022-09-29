@@ -650,7 +650,7 @@ function CopLogicIdle._chk_relocate(data)
 		if not data.objective.follow_unit or not alive(data.objective.follow_unit) then
 			data.brain:set_objective(nil)
 			
-			return
+			return true
 		end
 	
 		if data.is_converted or data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then

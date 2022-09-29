@@ -76,7 +76,7 @@ end
 function NavigationManager:_LIES_register_cover()
 	for key, res in pairs(self._nav_segments) do
 		if res.pos then
-			local tracker = self._quad_field:create_nav_tracker(res.pos)
+			local tracker = self._quad_field:create_nav_tracker(res.pos, true)
 			
 			local location_script_data = self._quad_field:get_script_data(tracker)
 			

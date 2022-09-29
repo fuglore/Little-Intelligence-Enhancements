@@ -31,9 +31,90 @@ function CharacterTweakData:setup_hhtacs()
 	
 	if difficulty_index > 5 then
 		self.tank.enrages = true
-	
-		self.heavy_swat.dodge = self.presets.dodge.athletic
-		self.fbi_heavy_swat.dodge = self.presets.dodge.athletic
+
+		local heavy_adv = {
+			speed = 1,
+			occasions = {
+				hit = {
+					chance = 0.75,
+					check_timeout = {
+						0,
+						0
+					},
+					variations = {
+						side_step = {
+							chance = 2,
+							shoot_chance = 0.8,
+							shoot_accuracy = 0.5,
+							timeout = {
+								2,
+								4
+							}
+						},
+						roll = {
+							chance = 1,
+							timeout = {
+								2,
+								4
+							}
+						}
+					}
+				},
+				preemptive = {
+					chance = 0.7,
+					check_timeout = {
+						0,
+						0
+					},
+					variations = {
+						side_step = {
+							chance = 1,
+							shoot_chance = 1,
+							shoot_accuracy = 0.7,
+							timeout = {
+								1,
+								2
+							}
+						}
+					}
+				},
+				scared = {
+					chance = 0.8,
+					check_timeout = {
+						0,
+						0
+					},
+					variations = {
+						side_step = {
+							chance = 3,
+							shoot_chance = 0.5,
+							shoot_accuracy = 0.4,
+							timeout = {
+								1,
+								2
+							}
+						},
+						roll = {
+							chance = 1,
+							timeout = {
+								8,
+								10
+							}
+						},
+						dive = {
+							chance = 2,
+							timeout = {
+								8,
+								10
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		self.heavy_swat.dodge = heavy_adv
+		self.fbi_heavy_swat.dodge = heavy_adv
 		
 		local light_adv = {
 			speed = 1.3,
@@ -66,8 +147,8 @@ function CharacterTweakData:setup_hhtacs()
 				preemptive = {
 					chance = 0.7,
 					check_timeout = {
-						1,
-						2
+						0,
+						0
 					},
 					variations = {
 						side_step = {
@@ -91,8 +172,8 @@ function CharacterTweakData:setup_hhtacs()
 				scared = {
 					chance = 0.75,
 					check_timeout = {
-						1,
-						2
+						0,
+						0
 					},
 					variations = {
 						side_step = {

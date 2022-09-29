@@ -1046,6 +1046,10 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 		return
 	end
 	
+	if not objective.follow_unit or not alive(objective.follow_unit) then
+		return
+	end
+	
 	if my_data.criminal or data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 		local follow_unit = objective.follow_unit
 		local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()

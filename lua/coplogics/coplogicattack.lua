@@ -149,14 +149,27 @@ function CopLogicAttack._upd_enemy_detection(data, is_synchronous)
 	if new_attention then
 		if old_att_obj and old_att_obj.u_key ~= new_attention.u_key then
 			CopLogicAttack._cancel_charge(data, my_data)
+	
+			if my_data.best_cover and (not data.objective or data.objective.type ~= "follow") then
+				local want_to_take_cover = my_data.want_to_take_cover
+				local min_dis, max_dis = nil
 
-			my_data.flank_cover = nil
+				if want_to_take_cover then
+					min_dis = new_attention.dis
+				elseif my_data.attitude == "engage" and my_data.cover_enter_t and data.t - my_data.cover_enter_t > 5 then
+					max_dis = math.min(new_attention.dis * 0.9, new_attention.dis - 200)
+				end
+				
+				if not CopLogicAttack._verify_cover(my_data.best_cover[1], new_attention.m_pos, min_dis, max_dis) then
+					my_data.flank_cover = nil
+				
+					if not data.unit:movement():chk_action_forbidden("walk") then
+						CopLogicAttack._cancel_walking_to_cover(data, my_data)
+					end
 
-			if not data.unit:movement():chk_action_forbidden("walk") then
-				CopLogicAttack._cancel_walking_to_cover(data, my_data)
+					CopLogicAttack._set_best_cover(data, my_data, nil)
+				end
 			end
-
-			CopLogicAttack._set_best_cover(data, my_data, nil)
 		end
 	elseif old_att_obj then
 		CopLogicAttack._cancel_charge(data, my_data)
@@ -783,7 +796,7 @@ function CopLogicAttack._update_cover(data)
 				local min_dis, max_dis = nil
 
 				if want_to_take_cover then
-					min_dis = math.max(data.attention_obj.dis * 0.9, data.attention_obj.dis - 200)
+					min_dis = data.attention_obj.dis
 				elseif my_data.attitude == "engage" and my_data.cover_enter_t and data.t - my_data.cover_enter_t > 5 then
 					max_dis = math.min(data.attention_obj.dis * 0.9, data.attention_obj.dis - 200)
 				end
@@ -847,12 +860,6 @@ function CopLogicAttack._update_cover(data)
 						cone_angle = flank_cover.step
 					else
 						cone_angle = math.lerp(90, 30, math.min(1, optimal_dis / 3000))
-					end
-
-					local search_nav_seg = nil
-
-					if data.objective and data.objective.type == "defend_area" then
-						search_nav_seg = data.objective.area and data.objective.area.nav_segs or data.objective.nav_seg
 					end
 
 					local found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)

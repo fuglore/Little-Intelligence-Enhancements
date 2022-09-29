@@ -1365,12 +1365,14 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 					--small change here to make sure tased players don't get deathguarded, as they're not really "downed"
 					for u_key, u_data in pairs(self._char_criminals) do
-						if u_data.status and u_data.status ~= "electrified" then
-							local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(u_data.m_pos, group.units)
-						
-							if closest_u_dis_sq and (not closest_crim_dis_sq or closest_u_dis_sq < closest_crim_dis_sq) then
-								closest_crim_u_data = u_data
-								closest_crim_dis_sq = closest_u_dis_sq
+						if u_data.unit and alive(u_data.unit) then
+							if u_data.status and u_data.status ~= "electrified" then
+								local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(u_data.m_pos, group.units)
+							
+								if closest_u_dis_sq and (not closest_crim_dis_sq or closest_u_dis_sq < closest_crim_dis_sq) then
+									closest_crim_u_data = u_data
+									closest_crim_dis_sq = closest_u_dis_sq
+								end
 							end
 						end
 					end
@@ -1408,7 +1410,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					
 					--"hunter" tactic added onto flank, find a criminal that is not downed and too far from their friends, hunt them down
 					for u_key, u_data in pairs(self._char_criminals) do
-						if u_data.unit then
+						if u_data.unit and alive(u_data.unit) then
 							if not u_data.status or u_data.status == "electrified" then
 								local players_nearby = self:_chk_crimin_proximity_to_unit(u_data.unit)
 
@@ -1546,7 +1548,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		local closest_crim_u_data, closest_crim_dis_sq = nil
 
 		for u_key, u_data in pairs(self._char_criminals) do
-			if not u_data.status then
+			if not u_data.status and alive(u_data.unit) then
 				local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(u_data.m_pos, group.units)
 
 				if closest_u_dis_sq then

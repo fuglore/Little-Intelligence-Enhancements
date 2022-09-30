@@ -931,11 +931,6 @@ function GroupAIStateBesiege:on_objective_complete(unit, objective)
 	if so_element then
 		so_element:clbk_objective_administered(unit)
 	end
-	
-	if u_data and u_data.group and not u_data.unit:movement():cool() then
-		self:_upd_group(u_data.group)
-	end
-
 end
 
 function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
@@ -957,10 +952,6 @@ function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
 	if unit_data then
 		if unit_data.char_tweak.chatter.ready then
 			self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "in_pos")
-		end
-		
-		if unit_data.group and not unit_data.unit:movement():cool() then
-			self:_upd_group(unit_data.group)
 		end
 	end
 end

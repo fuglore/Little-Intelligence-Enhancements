@@ -407,16 +407,6 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 	end
 	
 	if not can_continue then
-		local u_data = managers.groupai:state()._police and managers.groupai:state()._police[u_key]
-	
-		if u_data and u_data.group then
-			managers.groupai:state():_upd_group(u_data.group)
-			
-			if my_data ~= data.internal_data then
-				return
-			end
-		end
-	
 		if data.char_tweak.chatter and data.char_tweak.chatter.ready then
 			managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "follow_me")
 		end

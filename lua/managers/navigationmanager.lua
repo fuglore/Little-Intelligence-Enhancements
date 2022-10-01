@@ -116,21 +116,21 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 		local ray_from = temp_vec1
 
 		mvec3_set(ray_from, math_up)
-		mvec3_mul(ray_from, 82.5)
+		mvec3_mul(ray_from, 90)
 		mvec3_add(ray_from, cover_pos)
 		
 		local ray_to_pos = temp_vec2
 		
 		mvec3_set(ray_to_pos, math_up)
-		mvec3_mul(ray_to_pos, 82.5)
+		mvec3_mul(ray_to_pos, 90)
 		mvec3_add(ray_to_pos, threat_pos)
 
 		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
-			mvec3_set_z(ray_from, ray_from.z + 82.5)
-			mvec3_set_z(ray_to_pos, ray_to_pos.z + 82.5)
+			mvec3_set_z(ray_from, ray_from.z + 90)
+			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
 
 			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
 		end
@@ -208,21 +208,21 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 		local ray_from = temp_vec1
 
 		mvec3_set(ray_from, math_up)
-		mvec3_mul(ray_from, 82.5)
+		mvec3_mul(ray_from, 90)
 		mvec3_add(ray_from, cover_pos)
 		
 		local ray_to_pos = temp_vec2
 		
 		mvec3_set(ray_to_pos, math_up)
-		mvec3_mul(ray_to_pos, 82.5)
+		mvec3_mul(ray_to_pos, 90)
 		mvec3_add(ray_to_pos, threat_pos)
 
 		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
-			mvec3_set_z(ray_from, ray_from.z + 82.5)
-			mvec3_set_z(ray_to_pos, ray_to_pos.z + 82.5)
+			mvec3_set_z(ray_from, ray_from.z + 90)
+			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
 
 			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
 		end
@@ -300,21 +300,21 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 		local ray_from = temp_vec1
 
 		mvec3_set(ray_from, math_up)
-		mvec3_mul(ray_from, 82.5)
+		mvec3_mul(ray_from, 90)
 		mvec3_add(ray_from, cover_pos)
 		
 		local ray_to_pos = temp_vec2
 		
 		mvec3_set(ray_to_pos, math_up)
-		mvec3_mul(ray_to_pos, 82.5)
+		mvec3_mul(ray_to_pos, 90)
 		mvec3_add(ray_to_pos, threat_pos)
 
 		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
-			mvec3_set_z(ray_from, ray_from.z + 82.5)
-			mvec3_set_z(ray_to_pos, ray_to_pos.z + 82.5)
+			mvec3_set_z(ray_from, ray_from.z + 90)
+			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
 
 			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
 		end

@@ -242,7 +242,7 @@ function CopLogicAttack.update(data)
 			line:cylinder(data.m_pos, my_data.moving_to_cover[1][1], 5)
 			line:cylinder(my_data.moving_to_cover[1][1], my_data.moving_to_cover[1][1] + math.UP * height, 5)
 		elseif my_data.in_cover then
-			local height = my_data.in_cover[4] and 165 or 82.5
+			local height = my_data.in_cover[4] and 180 or 90
 			local line = Draw:brush(Color.red:with_alpha(0.5), 0.2)
 			line:cylinder(my_data.in_cover[1][1], my_data.in_cover[1][1] + math.UP * height, 100)
 		elseif my_data.best_cover then
@@ -250,6 +250,17 @@ function CopLogicAttack.update(data)
 			local line = Draw:brush(Color.green:with_alpha(0.5), 0.2)
 			line:cylinder(data.m_pos, my_data.best_cover[1][1], 5)
 			line:cylinder(my_data.best_cover[1][1], my_data.best_cover[1][1] + math.UP * height, 5)
+		elseif data.attention_obj.verified then
+			if my_data.surprised then
+				local line = Draw:brush(Color.blue:with_alpha(0.5), 0.2)
+				line:sphere(data.unit:movement():m_head_pos(), 30)
+			elseif my_data.want_to_take_cover then
+				local line = Draw:brush(Color.red:with_alpha(0.5), 0.2)
+				line:sphere(data.unit:movement():m_head_pos(), 30)
+			end
+		else
+			local line = Draw:brush(Color.blue:with_alpha(0.25), 0.2)
+			line:cylinder(data.m_pos, data.unit:movement():m_head_pos(), 60)
 		end]]
 
 		CopLogicAttack._update_cover(data)
@@ -320,11 +331,12 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		end
 	end
 	
-	if aggro_level < 2 then
+	if aggro_level < 2 and data.attention_obj.verified then
 		if not my_data.in_cover and my_data.firing then
 			return true
 		end
-	
+		
+		
 		if not my_data.cover_enter_t or data.t - my_data.cover_enter_t > 8 then
 			return true
 		end
@@ -1247,7 +1259,9 @@ function CopLogicAttack._upd_combat_movement(data)
 				return
 			end
 			
-			action_taken = CopLogicAttack._chk_start_action_move_back(data, my_data, focus_enemy, false)
+			if my_data.want_to_take_cover then
+				action_taken = CopLogicAttack._chk_start_action_move_back(data, my_data, focus_enemy, false)
+			end
 		end
 	end
 end
@@ -1338,7 +1352,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 						if dis_sq(data.m_pos, bud_opti_pos) > 22500 then
 							local retreat_to = CopLogicAttack._find_retreat_position(bud_opti_pos, focus_enemy.m_pos, focus_enemy.m_head_pos, focus_enemy.nav_tracker, 100, nil)
 							
-							if retreat_to and LIES:_path_is_straight_line(m_field_pos, retreat_to, data) then
+							if retreat_to then
 								local m_dis = dis_sq(m_field_pos, retreat_to)
 								
 								if not best_dis or best_dis > m_dis then
@@ -1352,7 +1366,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 					elseif buddy_logic_data.unit:movement():nav_tracker() then
 						local fall_pos = CopLogicTravel._get_pos_on_wall(u_data.m_pos, 300, 45, nil)
 						
-						if fall_pos and LIES:_path_is_straight_line(m_field_pos, fall_pos, data) then
+						if fall_pos then
 							local m_dis = dis_sq(m_field_pos, fall_pos)
 							
 							if not has_medic or best_dis > m_dis then
@@ -1399,11 +1413,54 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 	end
 end
 
+function CopLogicAttack._chk_start_action_move_back(data, my_data, focus_enemy, engage)
+	if not my_data.surprised and focus_enemy and focus_enemy.nav_tracker and focus_enemy.verified and CopLogicAttack._can_move(data) then
+		local from_pos = mvector3.copy(data.m_pos)
+		local threat_tracker = focus_enemy.nav_tracker
+		local threat_head_pos = focus_enemy.m_head_pos
+		local max_walk_dis = 400
+		local vis_required = engage
+		local retreat_to = CopLogicAttack._find_retreat_position(from_pos, focus_enemy.m_pos, threat_head_pos, threat_tracker, max_walk_dis, vis_required)
+
+		if retreat_to and mvec3_dis_sq(from_pos, retreat_to) > 10000 then
+			CopLogicAttack._cancel_cover_pathing(data, my_data)
+
+			local end_pose = "crouch"
+
+			if data.char_tweak.allowed_poses then
+				if not data.char_tweak.allowed_poses.crouch then
+					end_pose = "stand"
+				elseif not data.char_tweak.allowed_poses.stand then
+					end_pose = "crouch"
+				end
+			end
+
+			local new_action_data = {
+				variant = "walk",
+				body_part = 2,
+				type = "walk",
+				end_pose = end_pose,
+				nav_path = {
+					from_pos,
+					retreat_to
+				}
+			}
+			my_data.advancing = data.unit:brain():action_request(new_action_data)
+
+			if my_data.advancing then
+				my_data.surprised = true
+
+				return true
+			end
+		end
+	end
+end
+
 function CopLogicAttack._find_retreat_position(from_pos, threat_pos, threat_head_pos, threat_tracker, max_dist, vis_required)
 	local nav_manager = managers.navigation
-	local nr_rays = 7
+	local nr_rays = 9
 	local ray_dis = max_dist or 1000
-	local step = 180 / nr_rays
+	local step = 216 / nr_rays
 	local offset = math.random(step)
 	local dir = math.random() < 0.5 and -1 or 1
 	step = step * dir
@@ -1510,7 +1567,7 @@ end
 function CopLogicAttack._confirm_retreat_position_visless(retreat_pos, threat_pos, threat_head_pos, threat_tracker)
 	local retreat_head_pos = mvector3.copy(retreat_pos)
 
-	mvector3.add(retreat_head_pos, Vector3(0, 0, 82.5))
+	mvector3.add(retreat_head_pos, Vector3(0, 0, 90))
 
 	local slotmask = managers.slot:get_mask("bullet_blank_impact_targets")
 	local ray_res = World:raycast("ray", retreat_head_pos, threat_head_pos, "slot_mask", slotmask, "ray_type", "ai_vision")
@@ -1752,7 +1809,7 @@ function CopLogicAttack._chk_covered(data, cover_pos, threat_pos, slotmask)
 	local ray_from = temp_vec1
 
 	mvec3_set(ray_from, math.UP)
-	mvec3_mul(ray_from, 82.5)
+	mvec3_mul(ray_from, 90)
 	mvec3_add(ray_from, cover_pos)
 
 	local ray_to_pos = threat_pos
@@ -1761,7 +1818,7 @@ function CopLogicAttack._chk_covered(data, cover_pos, threat_pos, slotmask)
 	local high_ray = nil
 
 	if low_ray then		
-		mvec3_set_z(ray_from, ray_from.z + 82.5)
+		mvec3_set_z(ray_from, ray_from.z + 90)
 
 		high_ray = data.unit:raycast("ray", ray_from, ray_to_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
 	end

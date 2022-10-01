@@ -82,22 +82,34 @@ function GroupAITweakData:_LIES_setup()
 			if difficulty_index > 5 then
 				self._tactics.swat_rifle_flank = { --this is the group ever
 					"ranged_fire",
+					"flank",
 					"provide_coverfire",
 					"provide_support",
 					"flash_grenade",
+					"smoke_grenade",
 					"harass"
 				}
 			else
 				self._tactics.swat_rifle_flank = { --this is the group ever
 					"ranged_fire",
+					"flank",
 					"provide_coverfire",
 					"provide_support",
-					"flash_grenade"
+					"flash_grenade",
+					"smoke_grenade",
 				}
 			end
 		else
 			if difficulty_index > 5 then
 				self._tactics.swat_rifle = {
+					"ranged_fire",
+					"provide_coverfire",
+					"provide_support",
+					"smoke_grenade",
+					"harass"
+				}
+				self._tactics.swat_rifle_flank = {
+					"flank",
 					"ranged_fire",
 					"provide_coverfire",
 					"provide_support",
@@ -126,6 +138,13 @@ function GroupAITweakData:_LIES_setup()
 					"provide_support",
 					"smoke_grenade"
 				}
+				self._tactics.swat_rifle_flank = {
+					"flank",
+					"ranged_fire",
+					"provide_coverfire",
+					"provide_support",
+					"smoke_grenade"
+				}
 				self._tactics.swat_shotgun_rush = {
 					"charge",
 					"provide_coverfire",
@@ -134,14 +153,7 @@ function GroupAITweakData:_LIES_setup()
 					"flash_grenade"
 				}
 			end
-			
-			self._tactics.swat_rifle_flank = {
-				"ranged_fire",
-				"flank",
-				"provide_coverfire",
-				"provide_support",
-				"smoke_grenade"
-			}
+
 			self._tactics.tazer_charge = {
 				"charge",
 				"flash_grenade",
@@ -3094,6 +3106,20 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		radius = 700,
 		max_nr = 1,
 		queue = "pus",
+		group_min = 0,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.block_escort = {
+		radius = 700,
+		max_nr = 1,
+		queue = "i02",
 		group_min = 0,
 		duration = {
 			8,

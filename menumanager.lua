@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V5.15",
+		version = "V5.2",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -438,6 +438,25 @@ if RequiredScript == "lib/managers/menumanager" then
 			if nearest_area then
 				primary_target_area = nearest_area
 				task_data.target_areas[1] = nearest_area
+			end
+		end
+
+		if not self._last_upd_t then
+			self._last_upd_t = self._t
+		end
+
+		if primary_target_area then
+			if not task_data.old_target_area then
+				task_data.old_target_area = primary_target_area
+				task_data.old_target_area_t = 0
+			end
+
+			if primary_target_area.pos_nav_seg ~= task_data.old_target_area.pos_nav_seg then
+				task_data.old_target_area = primary_target_area
+				task_data.old_target_area_t = 0
+			else
+				local t_since_upd = self._t - self._last_upd_t
+				task_data.old_target_area_t = task_data.old_target_area_t and task_data.old_target_area_t + t_since_upd or t_since_upd
 			end
 		end
 

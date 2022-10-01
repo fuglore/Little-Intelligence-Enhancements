@@ -215,7 +215,7 @@ end
 
 function CopLogicSniper._chk_stand_visibility(my_pos, target_pos, slotmask)
 	mvector3.set(tmp_vec1, my_pos)
-	mvector3.set_z(tmp_vec1, my_pos.z + 165)
+	mvector3.set_z(tmp_vec1, my_pos.z + 180)
 
 	local ray = World:raycast("ray", tmp_vec1, target_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
 
@@ -224,7 +224,7 @@ end
 
 function CopLogicSniper._chk_crouch_visibility(my_pos, target_pos, slotmask)
 	mvector3.set(tmp_vec1, my_pos)
-	mvector3.set_z(tmp_vec1, my_pos.z + 82.5)
+	mvector3.set_z(tmp_vec1, my_pos.z + 90)
 
 	local ray = World:raycast("ray", tmp_vec1, target_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
 

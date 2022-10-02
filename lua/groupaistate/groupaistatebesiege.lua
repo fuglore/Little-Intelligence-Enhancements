@@ -700,8 +700,10 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 	if not self._last_upd_t then
 		self._last_upd_t = self._t
 	end
+	
+	local task_data = self._task_data.assault
 
-	if task_data.target_areas[1] then
+	if task_data and task_data.target_areas and task_data.target_areas[1] then
 		if not task_data.old_target_area then
 			task_data.old_target_area = task_data.target_areas[1]
 			task_data.old_target_area_t = 0
@@ -719,8 +721,6 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 	if not copsretire then		
 		return
 	end
-
-	local task_data = self._task_data.assault
 	
 	if copsretire then
 		if self._hunt_mode then

@@ -192,14 +192,15 @@ function CopLogicBase.queue_task(internal_data, id, func, data, exec_t, asap)
 	if internal_data.unit and internal_data ~= internal_data.unit:brain()._logic_data.internal_data then
 		log("task queued from the wrong logic")
 		log(tostring(data.name))
-		log(tostring(id))
 	end
 
 	local qd_tasks = internal_data.queued_tasks
 
 	if qd_tasks then
 		if qd_tasks[id] then
-			debug_pause("[CopLogicBase.queue_task] Task queued twice", internal_data.unit, id, func, data, exec_t, asap)
+			log("task queued twice")
+			log(tostring(data.name))
+			log(tostring(func))
 		end
 
 		qd_tasks[id] = true
@@ -310,8 +311,10 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 			if attention_info.last_verified_pos then
 				mvec3_set(attention_info.last_verified_pos, near_pos)
+				attention_info.last_verified_m_pos = near_pos:with_z(attention_info.m_pos.z)
 			else
 				attention_info.last_verified_pos = mvector3.copy(near_pos)
+				attention_info.last_verified_m_pos = near_pos:with_z(attention_info.m_pos.z)
 			end
 		end
 	end
@@ -541,6 +544,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					mvector3.set(attention_info.verified_pos, attention_pos)
 
 					attention_info.last_verified_pos = mvector3.copy(attention_pos)
+					attention_info.last_verified_m_pos = mvector3.copy(attention_info.m_pos)
 					attention_info.verified_dis = dis
 				elseif data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) then
 					if attention_info.criminal_record and AIAttentionObject.REACT_COMBAT <= attention_info.settings.reaction then

@@ -353,8 +353,86 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._check_phalanx_damage_reduction_increase = self._check_phalanx_damage_reduction_increase_LIES
 		self.phalanx_damage_reduction_disable = self.phalanx_damage_reduction_disable_LIES
 		self._check_spawn_phalanx = self._check_spawn_phalanx_LIES
+		
+		--checks for groups that have previously spawned to allow for certain scripted events to be overwritten based on it
+		Hooks:PostHook(GroupAIStateBesiege, "_check_spawn_timed_groups", "lieshhtacs_checkspawnedgroups", function(self, target_area, task_data)
+			if not self._timed_groups then
+				return
+			end
+			
+			local cur_group, cur_group_tweak_data, cur_group_individual_data = nil
+			local t = TimerManager:game():time()
+
+			for group_id, cur_group_data in pairs(self._timed_groups) do
+				if not cur_group_data.has_spawned then
+					cur_group_tweak_data = cur_group_data.tweak_data
+					cur_group_individual_data = cur_group_data.individual_data
+					
+					for i = 1, #cur_group_individual_data do
+						cur_group = cur_group_individual_data[i]
+						
+						if not cur_group.needs_spawn then
+							cur_group_data.has_spawned = true
+							
+							break
+						end
+					end
+				end
+			end
+		end)
 	end
+	
+	Hooks:PostHook(GroupAIStateBesiege, "_perform_group_spawning", "lies_upd_group_early", function(self, spawn_task, force, use_last)
+		if spawn_task.group.has_spawned and self._groups[spawn_task.group.id] then
+			self:_upd_group(spawn_task.group)
+		end
+	end)
+	
+	--Hooks:PostHook(GroupAIStateBesiege, "on_criminal_nav_seg_change", "lies_check_relocation_for_friendlies", function(self, unit, nav_seg_id)
+	--	if unit and self._player_criminals[unit:key()] then
+	--		self:_on_player_slow_pos_rsrv_upd(unit)
+	--	end
+	--end)
 end)
+
+function GroupAIStateBesiege:_on_player_slow_pos_rsrv_upd(unit)
+	if not alive(unit) then
+		return
+	end
+	
+	local p_key = unit:key()
+	local minions = self._player_criminals[p_key].minions
+	
+	for _, u_data in pairs(self._ai_criminals) do
+		if alive(u_data.unit) then
+			local ai_unit = u_data.unit
+			
+			if ai_unit:brain() then
+				local objective = ai_unit:brain():objective()
+				
+				if not objective or objective.type == "free" or objective.type == "follow" and objective.follow_unit and alive(objective.follow_unit) and objective.follow_unit:key() == p_key then
+					ai_unit:brain():_on_player_slow_pos_rsrv_upd()
+				end
+			end
+		end
+	end
+	
+	if minions then
+		for u_key, u_data in pairs(minions) do
+			if alive(u_data.unit) then
+				local ai_unit = u_data.unit
+				
+				if ai_unit:brain() then
+					local objective = ai_unit:brain():objective()
+					
+					if not objective or objective.type == "free" or objective.type == "follow" and objective.follow_unit and alive(objective.follow_unit) and objective.follow_unit:key() == p_key then
+						ai_unit:brain():_on_player_slow_pos_rsrv_upd()
+					end
+				end
+			end
+		end
+	end
+end
 
 function GroupAIStateBesiege:_register_escort(unit)
 	self._escorts = self._escorts or {}
@@ -1204,7 +1282,6 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.pose = "crouch"
 		objective.scan = true
 		objective.interrupt_dis = 200
-		objective.interrupt_suppression = true
 	elseif grp_objective.type == "retire" then
 		objective.type = "defend_area"
 		objective.stance = "hos"
@@ -1226,7 +1303,6 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.stance = "hos"
 		objective.pose = "stand"
 		objective.scan = true
-		objective.interrupt_suppression = true
 	elseif grp_objective.type == "create_phalanx" then
 		objective.type = "phalanx"
 		objective.stance = "hos"

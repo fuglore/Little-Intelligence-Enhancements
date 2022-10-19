@@ -30,14 +30,28 @@
 	"menu_lies_enemy_aggro_high" : "HIGH",
 	"menu_lies_enemy_aggro_poggers" : "MOSH PIT",
 	
+	"menu_lies_enemy_travel_level_title" : "Movement Frequency",
+	"menu_lies_enemy_travel_level_desc" : "Adjusts the delay before enemies travel from location to location. The *SLOWEST* setting emulates Vanilla delays, the *NIGHTMARE* setting is accurate to the *intended* speeds.",
+	"menu_lies_enemy_travel_low" : "SLOWEST",
+	"menu_lies_enemy_travel_normal" : "SLOW",
+	"menu_lies_enemy_travel_high" : "NORMAL",
+	"menu_lies_enemy_travel_poggers" : "NIGHTMARE",
+	
 	"menu_lies_enemy_reaction_level_title" : "Reaction Level",
 	"menu_lies_enemy_reaction_level_desc" : "Adjust how reactive you want enemies regarding shooting in Loud. *Slow* is the closest to Vanilla.",
 	"menu_lies_enemy_reaction_low" : "SLOW",
 	"menu_lies_enemy_reaction_normal" : "NORMAL",
 	"menu_lies_enemy_reaction_none" : "ULTRA-VIOLENCE",
 	
+	"menu_lies_nav_link_interval_title" : "Navlink Delays",
+	"menu_lies_nav_link_interval_desc" : "Adjust the individual delays for movement animations, used by the AI for things such as climbing a fence. NO CHILL completely removes nav link delays and may cause a *stacking* effect on cops.",
+	"menu_lies_nav_link_interval_vanilla" : "1x (Vanilla)",
+	"menu_lies_nav_link_interval_half" : "0.5x (Half)",
+	"menu_lies_nav_link_interval_athird" : "0.25x (One Third)",
+	"menu_lies_nav_link_interval_nochill" : "NO CHILL",
+	
 	"menu_lies_hhtacs_title" : "Spicy Tactics",
-	"menu_lies_hhtacs_desc" : "Adds entirely new AI behaviors and new tactics, and changes things to be just a little bit harder. Extremely not accurate to Vanilla, but accurate to our hopes and dreams. NOTE: High sodium content.",
+	"menu_lies_hhtacs_desc" : "Adds entirely new AI behaviors and new tactics, and changes things to be just a little bit harder. Extremely not accurate to Vanilla, but accurate to me making it the fuck up. NOTE: High sodium content.",
 
 	"menu_lies_teamaihelpers_title" : "Team AI Shouters",
 	"menu_lies_teamaihelpers_desc" : "Allows Team AI to help players with escorts and surrendering cops. Not accurate to Vanilla.",

@@ -107,8 +107,6 @@ function CopActionWalk:_init()
 		else
 			self._simplified_path = self._nav_path
 		end
-	elseif not managers.groupai:state():enemy_weapons_hot() then
-		self._simplified_path = self._nav_path
 	else
 		local good_pos = mvector3.copy(common_data.pos)
 		self._simplified_path = self._calculate_simplified_path(good_pos, self._nav_path, (not self._sync or self._common_data.stance.name == "ntl") and 2 or 1, self._sync, true)
@@ -200,6 +198,115 @@ function CopActionWalk:_init()
 	end
 
 	return true
+end
+
+local tmp_vec1 = Vector3()
+local tmp_vec2 = Vector3()
+local tmp_vec3 = Vector3()
+local tmp_vec4 = Vector3()
+local tmp_vec5 = Vector3()
+local tmp_vec6 = Vector3()
+
+local diagonals = {
+    tmp_vec1,
+    tmp_vec2,
+    tmp_vec5,
+    tmp_vec6
+}
+
+function CopActionWalk._apply_padding_to_simplified_path(path)
+	local dim_mag = 212.132
+
+	mvector3.set_static(tmp_vec1, dim_mag, dim_mag, 0)
+	mvector3.set_static(tmp_vec2, dim_mag, -dim_mag, 0)
+	mvector3.set_static(tmp_vec5, dim_mag, 0, 0)
+	mvector3.set_static(tmp_vec6, 0, dim_mag, 0)
+
+	local index = 2
+	local offset = tmp_vec3
+	local to_pos = tmp_vec4
+
+	while index < #path do
+		local pos = path[index]
+
+		if pos.x then
+			for _, diagonal in ipairs(diagonals) do
+				mvec3_set(to_pos, pos)
+				mvec3_add(to_pos, diagonal)
+
+				local col_pos, trace = CopActionWalk._chk_shortcut_pos_to_pos(pos, to_pos, true)
+
+				mvec3_set(offset, trace[1])
+				mvec3_set(to_pos, pos)
+				mvec3_mul(diagonal, -1)
+				mvec3_add(to_pos, diagonal)
+
+				col_pos, trace = CopActionWalk._chk_shortcut_pos_to_pos(pos, to_pos, true)
+
+				mvec3_lerp(offset, offset, trace[1], 0.5)
+
+				local ray_fwd = CopActionWalk._chk_shortcut_pos_to_pos(offset, CopActionWalk._nav_point_pos(path[index + 1]))
+
+				if ray_fwd then
+					break
+				else
+					local ray_bwd = CopActionWalk._chk_shortcut_pos_to_pos(offset, CopActionWalk._nav_point_pos(path[index - 1]))
+
+					if ray_bwd then
+						break
+					end
+				end
+
+				mvec3_set(pos, offset)
+			end
+
+			index = index + 1
+		else
+			index = index + 2
+		end
+	end
+end
+
+function CopActionWalk._chk_shortcut_pos_to_pos(from, to, trace)
+	local params = CopActionWalk._chk_shortcut_pos_to_pos_params
+	params.pos_from = from
+	params.pos_to = to
+	params.trace = trace
+	
+	--local debugging = true
+	local line1, line4
+		
+	if debugging then
+		line1 = Draw:brush(Color.red:with_alpha(0.5), 2)
+		line4 = Draw:brush(Color.yellow:with_alpha(0.5), 2)
+	end
+	
+	local res = managers.navigation:raycast(params)
+	
+	if res then
+		return res, params.trace
+	else
+		local slotmask = managers.slot:get_mask("AI_graph_obstacle_check")
+		local ray_from = from:with_z(from.z + 50)
+		local ray_to = to:with_z(to.z + 50)
+		
+		local report = not trace and "report" or nil
+		local ray = World:raycast("ray", ray_from, ray_to, "slot_mask", slotmask, "ray_type", "walk", "sphere_cast_radius", 30, "bundle", 5, report)
+		
+		if ray then
+			local hit_pos = nil
+			
+			if not report and ray.hit_position then
+				hit_pos = ray.hit_position:with_z(to.z)
+				hit_pos = managers.navigation:clamp_position_to_field(hit_pos)
+				hit_pos = {hit_pos}
+			end
+			
+			return ray, hit_pos
+		else
+			return ray, {to}
+		end
+	end
 end
 
 function CopActionWalk:append_path_mid_logic(path)

@@ -110,29 +110,31 @@ function TankCopLogicAttack.update(data)
 	end
 
 	if chase then
-		if my_data.walking_to_chase_pos then
-			-- Nothing
-		elseif my_data.pathing_to_chase_pos then
-			-- Nothing
-		elseif my_data.chase_path then
-			local dist = focus_enemy.verified_dis
-			local run_dist = focus_enemy.verified and 1500 or 800
-			local walk = dist < run_dist
+		if not data.next_mov_time or data.next_mov_time < data.t then
+			if my_data.walking_to_chase_pos then
+				-- Nothing
+			elseif my_data.pathing_to_chase_pos then
+				-- Nothing
+			elseif my_data.chase_path then
+				local dist = focus_enemy.verified_dis
+				local run_dist = focus_enemy.verified and 1500 or 800
+				local walk = dist < run_dist
 
-			TankCopLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, walk and "walk" or "run")
-		elseif my_data.chase_pos then
-			my_data.chase_path_search_id = tostring(unit:key()) .. "chase"
-			my_data.pathing_to_chase_pos = true
-			local to_pos = my_data.chase_pos
-			my_data.chase_pos = nil
+				TankCopLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, walk and "walk" or "run")
+			elseif my_data.chase_pos then
+				my_data.chase_path_search_id = tostring(unit:key()) .. "chase"
+				my_data.pathing_to_chase_pos = true
+				local to_pos = my_data.chase_pos
+				my_data.chase_pos = nil
 
-			data.brain:add_pos_rsrv("path", {
-				radius = 60,
-				position = mvector3.copy(to_pos)
-			})
-			unit:brain():search_for_path(my_data.chase_path_search_id, to_pos)
-		elseif focus_enemy.nav_tracker then
-			my_data.chase_pos = CopLogicAttack._find_flank_pos(data, my_data, focus_enemy.nav_tracker)
+				data.brain:add_pos_rsrv("path", {
+					radius = 60,
+					position = mvector3.copy(to_pos)
+				})
+				unit:brain():search_for_path(my_data.chase_path_search_id, to_pos)
+			elseif focus_enemy.nav_tracker then
+				my_data.chase_pos = CopLogicAttack._find_flank_pos(data, my_data, focus_enemy.nav_tracker)
+			end
 		end
 	else
 		TankCopLogicAttack._cancel_chase_attempt(data, my_data)

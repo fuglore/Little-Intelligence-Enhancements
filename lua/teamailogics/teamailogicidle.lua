@@ -2,8 +2,50 @@ TeamAILogicIdle.global_last_cop_int_t = 0
 TeamAILogicIdle.global_last_advance_int_t = 0
 local tmp_vec1 = Vector3()
 
+function TeamAILogicIdle._on_player_slow_pos_rsrv_upd(data)
+	local my_data = data.internal_data
+
+	local objective = data.objective
+
+	if objective then
+		if not my_data.acting then
+			if objective.type == "follow" then
+				if TeamAILogicIdle._check_should_relocate(data, my_data, objective) and not data.unit:movement():chk_action_forbidden("walk") then
+					objective.in_place = nil
+
+					TeamAILogicBase._exit(data.unit, "travel")
+					
+					if my_data ~= data.internal_data then
+						CopLogicBase.cancel_queued_tasks(my_data)
+					
+						return
+					end
+				end
+			elseif objective.type == "revive" then
+				objective.in_place = nil
+
+				TeamAILogicBase._exit(data.unit, "travel")
+				
+				if my_data ~= data.internal_data then
+					CopLogicBase.cancel_queued_tasks(my_data)
+				
+					return
+				end
+			end
+		end
+	elseif not data.path_fail_t or data.t - data.path_fail_t > 6 then
+		managers.groupai:state():on_criminal_jobless(data.unit)
+		
+		if my_data ~= data.internal_data then
+			CopLogicBase.cancel_queued_tasks(my_data)
+		
+			return
+		end
+	end
+end
+
 function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
-	if data.cool or data.unit:movement()._should_stay then
+	if data.cool or data.unit:movement()._should_stay or not objective or not objective.follow_unit then
 		return
 	end
 

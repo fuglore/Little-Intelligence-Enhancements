@@ -318,7 +318,7 @@ function ShieldLogicAttack.queued_update(data)
 	local engage = my_data.attitude == "engage"
 
 	if not action_taken then
-		if not action_taken then
+		if not data.next_mov_time or data.next_mov_time < data.t then
 			if my_data.pathing_to_optimal_pos then
 				-- Nothing
 			elseif my_data.optimal_path then

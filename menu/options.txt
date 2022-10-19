@@ -79,6 +79,20 @@
         },
 		{
             "type" : "multiple_choice",
+            "id" : "lies_enemy_travel_level",
+            "title" : "menu_lies_enemy_travel_level_title",
+            "description" : "menu_lies_enemy_travel_level_desc",
+            "callback" : "callback_lies_enemy_travel_level",
+            "items" : [
+                "menu_lies_enemy_travel_low",
+                "menu_lies_enemy_travel_normal",
+                "menu_lies_enemy_travel_high",
+				"menu_lies_enemy_travel_poggers"
+            ],
+            "value" : "enemy_travel_level"
+        },
+		{
+            "type" : "multiple_choice",
             "id" : "lies_enemy_reaction_level",
             "title" : "menu_lies_enemy_reaction_level_title",
             "description" : "menu_lies_enemy_reaction_level_desc",
@@ -90,6 +104,20 @@
             ],
             "value" : "enemy_reaction_level"
         },
+		{
+			"type" : "multiple_choice",
+			"id" : "lies_nav_link_interval",
+			"title" : "menu_lies_nav_link_interval_title",
+			"description" : "menu_lies_nav_link_interval_desc",
+			"callback" : "callback_lies_nav_link_interval",
+			"items" : [
+                "menu_lies_nav_link_interval_vanilla",
+				"menu_lies_nav_link_interval_half",
+                "menu_lies_nav_link_interval_athird",
+				"menu_lies_nav_link_interval_nochill"
+            ],
+			"value" : "nav_link_interval"
+		},
 		{
 			"type" : "toggle",
 			"id" : "lies_teamaihelpers",

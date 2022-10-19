@@ -87,7 +87,10 @@ function TaserLogicAttack.queued_update(data)
 		--log(tostring(my_data.attitude))
 
 		CopLogicAttack._update_cover(data)
-		CopLogicAttack._upd_combat_movement(data)
+		
+		if not data.next_mov_time or data.next_mov_time < data.t then
+			CopLogicAttack._upd_combat_movement(data)
+		end
 	end
 
 	CopLogicBase.queue_task(my_data, my_data.update_task_key, TaserLogicAttack.queued_update, data, data.t + delay, data.important)
@@ -413,7 +416,14 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 		end
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data) --on finishing a walk action, enemies will try to turn to attention at the end of it
+			data.logic._upd_aim(data, my_data)
+			data.logic._update_cover(data)
+			data.logic._upd_combat_movement(data)
+		end
+	elseif action_type == "act" then
+		if not my_data.advancing and action:expired() then
+			data.logic._upd_aim(data, my_data)
+			data.logic._update_cover(data)
 			data.logic._upd_combat_movement(data)
 		end
 	elseif action_type == "shoot" then
@@ -446,15 +456,6 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 
 		if action:expired() then
-			data.logic._upd_aim(data, my_data)
-		end
-	elseif action_type == "act" then	
-		if action:expired() then
-			if my_data.reacting then
-				my_data.has_played_warning = data.t
-				my_data.reacting = nil
-			end
-		
 			data.logic._upd_aim(data, my_data)
 		end
 	elseif action_type == "tase" then

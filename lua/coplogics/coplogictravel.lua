@@ -458,6 +458,8 @@ function CopLogicTravel.upd_advance(data)
 		end
 	end
 	
+	CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
+	
 	if not data.cool then
 		if my_data.cover_leave_t then
 			if my_data.cover_leave_t > t then
@@ -477,10 +479,10 @@ function CopLogicTravel.upd_advance(data)
 		
 		if my_data.cover_leave_t then
 			return
+		elseif data.next_mov_time and data.next_mov_time > t then
+			return
 		end
 	end
-	
-	CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 	
 	if my_data ~= data.internal_data then
 		return
@@ -907,9 +909,8 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				local high_ray = CopLogicTravel._chk_cover_height(data, my_data.best_cover[1], data.visibility_slotmask)
 				my_data.best_cover[4] = high_ray
 				my_data.in_cover = true
-				
 
-				if CopLogicTravel._chk_close_to_criminal(data, my_data) then
+				if CopLogicTravel._chk_close_to_criminal(data, my_data) or LIES.settings.enemy_aggro_level < 3 and data.is_suppressed then
 					local cover_wait_time = my_data.coarse_path_index == #my_data.coarse_path - 1 and 0.3 or 0.6 + 0.4 * math.random()
 					
 					my_data.cover_leave_t = data.t + cover_wait_time

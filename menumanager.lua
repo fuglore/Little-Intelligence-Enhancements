@@ -5,15 +5,17 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V5.22",
+		version = "V6",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
 			enemy_aggro_level = 2,
 			enemy_reaction_level = 1,
+			enemy_travel_level = 1,
 			fixed_spawngroups = 1,
 			fixed_specialspawncaps = false,
 			copsretire = false,
+			nav_link_interval = 1,
 			interruptoncontact = true,
 			teamaihelpers = true,
 			spawngroupdelays = false,
@@ -22,7 +24,8 @@ if RequiredScript == "lib/managers/menumanager" then
 	}
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
 
-	function LIES:tprint(tbl, indent)
+	function LIES:tprint(tbl, indent, depth)
+		depth = depth or 0
 		indent = indent or 0
 		local toprint = string.rep(" ", indent) .. "{\r\n"
 		indent = indent + 2
@@ -41,7 +44,9 @@ if RequiredScript == "lib/managers/menumanager" then
 			elseif type(v) == "string" then
 				toprint = toprint .. "\"" .. v .. "\",\r\n"
 			elseif type(v) == "table" then
-				--toprint = toprint .. LIES:tprint(v, indent + 2) .. ",\r\n"
+				if depth > 0 then
+					toprint = toprint .. LIES:tprint(v, indent, depth - 1) .. ",\r\n"
+				end
 			else
 				toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
 			end
@@ -108,10 +113,27 @@ if RequiredScript == "lib/managers/menumanager" then
 		
 		return managers.navigation:_find_cover_in_seg_through_lua(copied_threat_pos, near_pos, nav_seg_id)
 	end
-	
-	--Until nav-meshes get good enough to not send enemies through walls randomly if I do this, this is gonna stay disabled.
+
 	function LIES:_path_is_straight_line(pos_from, pos_to, u_data)
-		do return end
+		if not pos_from.z then
+			if alive(pos_from) then
+				pos_from = CopActionWalk._nav_point_pos(pos_from:script_data())
+			else
+				return
+			end
+		end
+		
+		if not pos_to.z then
+			if alive(pos_to) then
+				pos_to = CopActionWalk._nav_point_pos(pos_to:script_data())
+			else
+				return
+			end
+		end
+	
+		if math.abs(pos_from.z - pos_to.z) > 60 then 
+			return
+		end
 	
 		local ray_params = {
 			allow_entry = false,
@@ -120,18 +142,18 @@ if RequiredScript == "lib/managers/menumanager" then
 		}
 
 		if not managers.navigation:raycast(ray_params) then
-			local slotmask = managers.slot:get_mask("world_geometry")
-			local ray_from = pos_from:with_z(pos_from.z + 51)
-			local ray_to = pos_to:with_z(pos_to.z + 51)
+			local slotmask = managers.slot:get_mask("AI_graph_obstacle_check")
+			local ray_from = pos_from:with_z(pos_from.z + 50)
+			local ray_to = pos_to:with_z(pos_to.z + 50)
 			
 			if u_data then
-				if not u_data.unit:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 50, "bundle", 9, "report") then
+				if not u_data.unit:raycast("ray", ray_from, ray_to, "slot_mask", slotmask, "ray_type", "walk", "sphere_cast_radius", 30, "bundle", 5, "report") then
 					return true
 				else
 					return
 				end
 			else
-				if not World:raycast("ray", ray_to, ray_from, "slot_mask", slotmask, "ray_type", "body mover", "sphere_cast_radius", 50, "bundle", 9, "report") then
+				if not World:raycast("ray", ray_from, ray_to, "slot_mask", slotmask, "ray_type", "walk", "sphere_cast_radius", 30, "bundle", 5, "report") then
 					return true
 				else
 					return
@@ -769,6 +791,13 @@ if RequiredScript == "lib/managers/menumanager" then
 			LIES:Save()
 		end
 		
+		MenuCallbackHandler.callback_lies_enemy_travel_level = function(self, item)
+			local value = item:value()
+			LIES.settings.enemy_travel_level = value
+
+			LIES:Save()
+		end
+		
 		MenuCallbackHandler.callback_lies_enemy_reaction_level = function(self, item)
 			local value = item:value()
 			LIES.settings.enemy_reaction_level = value
@@ -800,6 +829,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_teamaihelpers = function(self, item)
 			local on = item:value() == "on"
 			LIES.settings.teamaihelpers = on
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_nav_link_interval = function(self, item)
+			local value = item:value()
+			LIES.settings.nav_link_interval = value
 
 			LIES:Save()
 		end

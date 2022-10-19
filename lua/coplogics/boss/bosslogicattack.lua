@@ -34,6 +34,7 @@ local AI_REACT_AIM = AIAttentionObject.REACT_AIM
 local AI_REACT_SHOOT = AIAttentionObject.REACT_SHOOT
 local AI_REACT_COMBAT = AIAttentionObject.REACT_COMBAT
 local AI_REACT_SPECIAL_ATTACK = AIAttentionObject.REACT_SPECIAL_ATTACK
+BossLogicAttack._global_throwable_delays = {}
 
 function BossLogicAttack.enter(data, new_logic_name, enter_params)
 	CopLogicBase.enter(data, new_logic_name, enter_params)
@@ -428,9 +429,11 @@ function BossLogicAttack._upd_aim(data, my_data)
 		
 		if data.logic.chk_should_turn(data, my_data) then
 			local focus_pos = nil
-			focus_pos = (focus_visible or focus.nearly_visible) and focus.m_pos or expected_pos or focus.last_verified_pos or focus.verified_pos
-
-			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, focus_pos)
+			focus_pos = (focus.verified or focus.nearly_visible) and focus.m_pos or my_data.attention_unit
+			
+			if focus_pos then
+				CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, focus_pos)
+			end
 		end
 	else
 		if my_data.shooting and not data.unit:anim_data().reload then
@@ -470,7 +473,7 @@ function BossLogicAttack._upd_aim(data, my_data)
 end
 
 function BossLogicAttack._upd_combat_movement(data, my_data)
-	if BossLogicAttack.no_movement then
+	if BossLogicAttack.no_movement or data.next_mov_time and data.t < data.next_mov_time then
 		return
 	end
 
@@ -485,7 +488,11 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 			if my_data.chase_path then
 				local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
 				local run_dist = enemy_visible and 800 or 400
-				local speed = enemy_dis < run_dist and "walk" or "run"
+				local speed = "run"
+			
+				if not data.enrage_data or not data.enrage_data.enraged then
+					speed = enemy_dis < run_dist and "walk" or speed
+				end
 
 				BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
 			elseif not my_data.chase_path_search_id and focus_enemy.nav_tracker then
@@ -558,8 +565,12 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 								}
 								local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
 								local run_dist = enemy_visible and 800 or 400
-								local speed = enemy_dis < run_dist and "walk" or "run"
-
+								local speed = "run"
+			
+								if not data.enrage_data or not data.enrage_data.enraged then
+									speed = enemy_dis < run_dist and "walk" or speed
+								end
+								
 								BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
 							else
 								my_data.chase_path_search_id = tostring(data.unit:key()) .. "chase"
@@ -648,6 +659,10 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 	if data.used_throwable_t and data.t < data.used_throwable_t then
 		return
 	end
+	
+	if BossLogicAttack._global_throwable_delays and BossLogicAttack._global_throwable_delays[data.unit:base()._tweak_table] and BossLogicAttack._global_throwable_delays[data.unit:base()._tweak_table] > data.t then
+		return
+	end
 
 	local time_since_verification = focus.verified_t
 
@@ -671,7 +686,6 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 	local throw_dis = focus.verified_dis
 	local distance_check = throwable ~= "molotov" and 600 or 400
 
-
 	if throw_dis < distance_check then
 		return
 	end
@@ -679,11 +693,35 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 	if throw_dis > 2000 then
 		return
 	end
+	
+	local last_seen_pos = focus.last_verified_pos
+	
+	local target_vec = temp_vec3
+	mvec3_dir(target_vec, data.m_pos, last_seen_pos)
+	mvec3_set_z(target_vec, 0)
+	local my_fwd = data.unit:movement():m_fwd()
+	local dot = mvector3.dot(target_vec, my_fwd)
+
+	if dot < 0.6 then
+		return
+	end
 
 	local throw_from = head_pos + mov_ext:m_head_rot():y() * 50
-	local last_seen_pos = focus.last_verified_pos
+	
+	
+	if throwable == "launcher_frag" then
+		last_seen_pos = focus.last_verified_m_pos:with_z(focus.last_verified_m_pos.z + 1)
+	end
+	
 	local slotmask = managers.slot:get_mask("world_geometry")
-	local obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "sphere_cast_radius", 15, "slot_mask", slotmask, "report")
+	local obstructed = nil
+	
+	if throwable == "launcher_frag" then
+		obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "slot_mask", slotmask, "report")
+	else
+		mvec3_set_z(last_seen_pos, last_seen_pos.z + 15)
+		obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "sphere_cast_radius", 15, "slot_mask", slotmask, "report")
+	end
 
 	if obstructed then
 		return
@@ -699,8 +737,14 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 
 	mvec3_set_z(throw_dir, throw_dir.z + compensation)
 	mvec3_norm(throw_dir)
-
-	data.used_throwable_t = data.t + 10
+	
+	local delay = data.char_tweak.throwable_delay or 10
+	
+	if data.char_tweak.global_delay then
+		BossLogicAttack._global_throwable_delays[data.unit:base()._tweak_table] = data.t + data.char_tweak.global_delay
+	end
+	
+	data.used_throwable_t = data.t + delay
 
 	if throwable ~= "launcher_frag" and mov_ext:play_redirect("throw_grenade") then
 		managers.network:session():send_to_peers_synched("play_distance_interact_redirect", data.unit, "throw_grenade")

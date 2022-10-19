@@ -28,44 +28,256 @@ local temp_vec2 = Vector3()
 local math_up = math.UP
 NavigationManager.has_registered_cover_units_for_LIES = nil
 
-Hooks:PostHook(NavigationManager, "update", "lies_cover", function(self, t, dt)
-	if LIES.settings.lua_cover > 1 and not self.has_registered_cover_units_for_LIES then
-		log("LIES: Cover through LUA enabled, registering cover points...")
-		
-		if not self._covers then
-			self._covers = {}
-			self:_LIES_register_cover()
-			self.has_registered_cover_units_for_LIES = true
-		elseif #self._covers > 0 then
-			log("LIES: Covers already registered, this is the work of another mod...")
-			self._covers = {}
-			self:_LIES_register_cover()
-			self.has_registered_cover_units_for_LIES = true
-		else
-			self:_LIES_register_cover()
-			self.has_registered_cover_units_for_LIES = true
-		end
-		
-		if #self._covers > 0 then
-			log("LIES: Covers registered successfully.")
-			log("LIES: " .. tostring(#self._covers) .. " covers registered.")
-			self._funcs_replaced = true
-			self.find_cover_in_cone_from_threat_pos_1 = self.find_cover_in_cone_from_threat_pos_1_LUA
-			self.find_cover_from_threat = self.find_cover_from_threat_LUA
-			self.find_cover_in_nav_seg_3 = self.find_cover_in_nav_seg_3_LUA
-		else
-			log("LIES: Covers failed to register, Vanilla cover behavior will persist.")
+function NavigationManager:find_segment_doors_with_nav_links(from_seg_id, approve_clbk)
+	local all_doors = self._room_doors
+	local all_nav_segs = self._nav_segments
+	local from_seg = all_nav_segs[from_seg_id]
+	local found_doors = {}
+
+	for neighbour_seg_id, door_list in pairs(from_seg.neighbours) do
+		for _, i_door in ipairs(door_list) do
+			if type(i_door) == "number" then
+				table.insert(found_doors, all_doors[i_door])
+			elseif alive(i_door) then
+				local end_pos = i_door:script_data().element:nav_link_end_pos()
+				local fake_door = {center=end_pos}
+				table.insert(found_doors, fake_door)
+			end
 		end
 	end
-end)
+
+	return found_doors
+end
+
+function NavigationManager:generate_cover_fwd(tracker)
+	local all_nav_segs = self._nav_segments
+	local m_seg_id = tracker:nav_segment()
+	
+	if all_nav_segs[m_seg_id] then
+		local new_fwd = temp_vec1
+		local v3_dis_sq = mvec3_dis_sq
+		local doors = self:find_segment_doors_with_nav_links(m_seg_id)
+		local best_door = all_nav_segs[m_seg_id].pos
+		local field_pos = tracker:field_position()
+		local best_door_dis = nil
+		local best_door_has_ray = nil
+		
+		for i = 1, #doors do
+			local door = doors[i]			
+			
+			if math_abs(field_pos.z - door.center.z) < 180 then
+				local door_on_z = door.center:with_z(field_pos.z)
+				local dis = v3_dis_sq(field_pos, door_on_z)
+				local ray = self:raycast({trace = false, pos_from = field_pos, pos_to = door_on_z})
+				
+				if (not best_door_dis or dis < best_door_dis) and (not best_door_has_ray or ray) then
+					best_door = door_on_z
+					best_door_dis = dis
+					best_door_has_clean_ray = not ray
+				end
+			end
+		end
+		
+		mvec3_dir(new_fwd, field_pos, best_door)
+		
+		local ray_params = {
+			trace = false,
+			pos_from = field_pos
+		}
+		
+		local fwd_test = temp_vec2
+		local rot_with = mvector3.rotate_with
+		local nr_rotations = 7
+		local angle = 360 / nr_rotations
+		
+		
+		for i = 1, nr_rotations do
+			mvec3_set(fwd_test, new_fwd)
+			mvec3_mul(fwd_test, 100)
+			mvec3_add(fwd_test, field_pos)
+			ray_params.pos_to = fwd_test
+			
+			if self:raycast(ray_params) then
+				break
+			else
+				rot_with(new_fwd, Rotation(angle))
+			end
+		end
+		
+		return mvec3_cpy(new_fwd)
+	end
+end
+
+function NavigationManager:_draw_covers()
+	local reserved = self.COVER_RESERVED
+	local cone_height = Vector3(0, 0, 80)
+	local arrow_height = Vector3(0, 0, 1)
+
+	for i_cover, cover in ipairs(self._covers) do
+		local draw_pos = cover[1]
+		local tracker = cover[3]
+
+		if tracker:lost() then
+			Application:draw_cone(draw_pos, draw_pos + cone_height, 30, 1, 0, 0)
+
+			local placed_pos = tracker:position()
+
+			Application:draw_sphere(placed_pos, 20, 1, 0, 0)
+			Application:draw_line(placed_pos, draw_pos, 1, 0, 0)
+		else
+			Application:draw_cone(draw_pos, draw_pos + cone_height, 30, 0, 1, 0)
+		end
+
+		local fwd_pos = temp_vec1
+		mvec3_set(fwd_pos, cover[2])
+		mvec3_mul(fwd_pos, 100)
+		mvec3_add(fwd_pos, draw_pos)
+
+		Application:draw_line(draw_pos, fwd_pos, 1, 0, 0)
+
+		if cover[reserved] then
+			Application:draw_sphere(draw_pos, 18, 0, 0, 1)
+		end
+	end
+end
+
+function NavigationManager:register_cover_units()
+	if not self:is_data_ready() then
+		return
+	end
+
+	local rooms = self._rooms
+	local covers = {}
+	local cover_data = managers.worlddefinition:get_cover_data()
+	local t_ins = table.insert
+
+	if cover_data then
+		local v3_dis_sq = mvec3_dis_sq
+		local function _register_cover(pos, fwd)
+			local nav_tracker = self._quad_field:create_nav_tracker(pos, true)
+			
+			if not nav_tracker:lost() or v3_dis_sq(nav_tracker:field_position(), pos) < 3600 then
+				local cover = {
+					nav_tracker:field_position(),
+					fwd,
+					nav_tracker
+				}
+				
+				cover[2] = self:generate_cover_fwd(nav_tracker)
+
+				local location_script_data = self._quad_field:get_script_data(nav_tracker, true)
+
+				if not location_script_data.covers then
+					location_script_data.covers = {}
+				end
+
+				t_ins(location_script_data.covers, cover)
+				t_ins(covers, cover)
+			end
+		end
+
+		local tmp_rot = Rotation(0, 0, 0)
+
+		if cover_data.rotations then
+			local rotations = cover_data.rotations
+
+			for i, yaw in ipairs(cover_data.rotations) do
+				mrotation.set_yaw_pitch_roll(tmp_rot, yaw, 0, 0)
+				mrotation.y(tmp_rot, temp_vec1)
+				_register_cover(cover_data.positions[i], mvector3.copy(temp_vec1))
+			end
+		else
+			for _, cover_desc in ipairs(cover_data) do
+				mrotation.set_yaw_pitch_roll(tmp_rot, cover_desc[2], 0, 0)
+				mrotation.y(tmp_rot, temp_vec1)
+				_register_cover(cover_desc[1], mvector3.copy(temp_vec1))
+			end
+		end
+	else
+		local all_cover_units = World:find_units_quick("all", managers.slot:get_mask("cover"))
+
+		for i, unit in ipairs(all_cover_units) do
+			local pos = unit:position()
+			local fwd = unit:rotation():y()
+			local nav_tracker = self._quad_field:create_nav_tracker(pos, true)
+			local cover = {
+				nav_tracker:field_position(),
+				fwd,
+				nav_tracker,
+				true
+			}
+
+			if self._debug then
+				t_ins(covers, cover)
+			end
+
+			local location_script_data = self._quad_field:get_script_data(nav_tracker)
+
+			if not location_script_data.covers then
+				location_script_data.covers = {}
+			end
+
+			t_ins(location_script_data.covers, cover)
+			self:_safe_remove_unit(unit)
+		end
+	end
+	
+	for key, res in pairs(self._nav_segments) do
+		if res.pos and res.neighbours and next(res.neighbours) then	
+			local tracker = self._quad_field:create_nav_tracker(res.pos, true)
+
+			local location_script_data = self._quad_field:get_script_data(tracker, true)
+
+			if not location_script_data.covers or not next(location_script_data.covers) then
+				if not location_script_data.covers then
+					location_script_data.covers = {}
+				end
+
+				local cover = {
+					tracker:field_position(),
+					nil,
+					tracker
+				}
+				
+				cover[2] = self:generate_cover_fwd(tracker)
+				
+				t_ins(location_script_data.covers, cover)
+				t_ins(covers, cover)
+			else
+				self:destroy_nav_tracker(tracker)
+			end
+		end
+	end
+
+	self._covers = covers
+	
+	if not self.has_registered_cover_units_for_LIES then
+		if #self._covers > 0 then
+			self.has_registered_cover_units_for_LIES = true
+			log("LIES: " .. tostring(#self._covers) .. " cover points.")
+		else
+			self.has_registered_cover_units_for_LIES = true
+			log("LIES: Map has no cover points. ...How!?")
+		end
+	end
+	
+	self:_change_funcs()
+end
+
+--Hooks:PostHook(NavigationManager, "update", "lies_cover", function(self, t, dt)
+--	self:_draw_covers()
+--	self:_draw_coarse_graph()
+--end)
 
 function NavigationManager:_change_funcs()
 	if LIES.settings.lua_cover < 2 and self._funcs_replaced then
+		log("LIES: Cover through LUA disabled.")
 		self._funcs_replaced = nil
 		self.find_cover_in_cone_from_threat_pos_1 = NavigationManager.find_cover_in_cone_from_threat_pos_1
 		self.find_cover_from_threat = NavigationManager.find_cover_from_threat
 		self.find_cover_in_nav_seg_3 = NavigationManager.find_cover_in_nav_seg_3
 	elseif LIES.settings.lua_cover > 1 then
+		log("LIES: Cover through LUA enabled. Mode: " .. tostring(LIES.settings.lua_cover - 1))
 		self._funcs_replaced = true
 		self.find_cover_in_cone_from_threat_pos_1 = self.find_cover_in_cone_from_threat_pos_1_LUA
 		self.find_cover_from_threat = self.find_cover_from_threat_LUA
@@ -73,7 +285,7 @@ function NavigationManager:_change_funcs()
 	end
 end
 
-function NavigationManager:_LIES_register_cover()
+function NavigationManager:_LIES_register_cover()	
 	for key, res in pairs(self._nav_segments) do
 		if res.pos then
 			local tracker = self._quad_field:create_nav_tracker(res.pos, true)
@@ -403,24 +615,29 @@ function NavigationManager:pad_out_position(position, nr_rays, dis)
 		pos_from = position,
 		pos_to = pos_to
 	}
-	local ray_results = {}
 	local i_ray = 1
 	local tmp_vec = temp_vec1
 	local altered_pos = mvec3_cpy(position)
+	--local line = Draw:brush(Color.red:with_alpha(0.5), 2)
+	--local line2 = Draw:brush(Color.green:with_alpha(0.5), 2)
 	
-	while nr_rays >= i_ray do
+	for i = 1, nr_rays do
 		mvec3_rot(vec_to, ray_rot)
 		mvec3_set(pos_to, vec_to)
-		mvec3_add(pos_to, altered_pos)
+		mvec3_add(pos_to, position)
 		local hit = self:raycast(ray_params)
-
+		
 		if hit then
-			mvec3_dir(tmp_vec, ray_params.trace[1], position)
+			if line then
+				line:cylinder(position, pos_to, 1)
+			end
+			
+			mvec3_dir(tmp_vec, pos_to, position)
 			mvec3_mul(tmp_vec, dis)
 			mvec3_add(altered_pos, tmp_vec)
+		elseif line2 then
+			line2:cylinder(position, ray_params.trace[1]:with_z(position.z), 1)
 		end
-
-		i_ray = i_ray + 1
 	end
 	
 	local altered_pos = altered_pos:with_z(position.z)
@@ -428,6 +645,11 @@ function NavigationManager:pad_out_position(position, nr_rays, dis)
 	altered_pos = position_tracker:field_position()
 
 	self._quad_field:destroy_nav_tracker(position_tracker)
+	
+	if line and line2 then
+		line2:sphere(position, 10)
+		line:sphere(altered_pos, 10)
+	end
 	
 	return altered_pos
 end

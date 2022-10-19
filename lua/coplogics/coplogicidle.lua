@@ -92,15 +92,50 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 			cbt = true
 		})
 	end
-
-	local usage = data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage
-	my_data.weapon_range = (data.char_tweak.weapon[usage] or {}).range
+	
+	--enemies can come out of coplogicintimidated without a fucking gun for some goddamn reason
+	local usage = data.unit:inventory():equipped_unit() and alive(data.unit:inventory():equipped_unit()) and data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage
+	my_data.weapon_range = usage and (data.char_tweak.weapon[usage] or {}).range
+	
+	if not my_data.weapon_range then
+		my_data.weapon_range = {
+			optimal = 2000,
+			far = 5000,
+			close = 1000
+		}
+	end
 
 	data.unit:brain():set_update_enabled_state(false)
 	CopLogicIdle._perform_objective_action(data, my_data, objective)
 	data.unit:movement():set_allow_fire(false)
 
 	if my_data ~= data.internal_data then
+		return
+	end
+end
+
+function CopLogicIdle._on_player_slow_pos_rsrv_upd(data)
+	local my_data = data.internal_data
+
+	if data.is_converted or data.check_crim_jobless or data.team.id == "criminal1" then
+		if not data.objective or data.objective.type == "free" then
+			if not data.path_fail_t or data.t - data.path_fail_t > 3 then
+				managers.groupai:state():on_criminal_jobless(data.unit)
+
+				if my_data ~= data.internal_data then
+					CopLogicBase.cancel_queued_tasks(my_data)
+				
+					return
+				end
+			end
+		end
+	end
+	
+	if CopLogicIdle._chk_relocate(data) then
+		if my_data ~= data.internal_data then
+			CopLogicBase.cancel_queued_tasks(my_data)
+		end
+		
 		return
 	end
 end
@@ -127,9 +162,9 @@ function CopLogicIdle.queued_update(data)
 		end
 	end
 
-	if data.is_converted or data.check_crim_jobless then
+	if data.is_converted or data.check_crim_jobless or data.team.id == "criminal1" then
 		if not data.objective or data.objective.type == "free" then
-			if not data.path_fail_t or data.t - data.path_fail_t > 6 then
+			if not data.path_fail_t or data.t - data.path_fail_t > 3 then
 				managers.groupai:state():on_criminal_jobless(data.unit)
 
 				if my_data ~= data.internal_data then
@@ -641,6 +676,66 @@ function CopLogicIdle.on_new_objective(data, old_objective)
 	end
 end
 
+function CopLogicIdle.damage_clbk(data, damage_info)
+	local enemy = damage_info.attacker_unit
+	local enemy_data = nil
+
+	if enemy and enemy:in_slot(data.enemy_slotmask) then
+		local my_data = data.internal_data
+		local enemy_key = enemy:key()
+		enemy_data = data.detected_attention_objects[enemy_key]
+		local t = TimerManager:game():time()
+
+		if enemy_data then
+			enemy_data.dmg_t = t
+			enemy_data.alert_t = t
+			enemy_data.notice_delay = nil
+
+			if not enemy_data.identified then
+				enemy_data.identified = true
+				enemy_data.identified_t = t
+				enemy_data.notice_progress = nil
+				enemy_data.prev_notice_chk_t = nil
+
+				if enemy_data.settings.notice_clbk then
+					enemy_data.settings.notice_clbk(data.unit, true)
+				end
+
+				data.logic.on_attention_obj_identified(data, enemy_key, enemy_data)
+			end
+		else
+			local attention_info = managers.groupai:state():get_AI_attention_objects_by_filter(data.SO_access_str)[enemy_key]
+
+			if attention_info then
+				local settings = attention_info.handler:get_attention(data.SO_access, nil, nil, data.team)
+
+				if settings then
+					enemy_data = CopLogicBase.identify_attention_obj_instant(data, enemy_key)
+					enemy_data.dmg_t = t
+					enemy_data.alert_t = t
+					enemy_data.identified = true
+					enemy_data.identified_t = t
+					enemy_data.notice_progress = nil
+					enemy_data.prev_notice_chk_t = nil
+
+					if enemy_data.settings.notice_clbk then
+						enemy_data.settings.notice_clbk(data.unit, true)
+					end
+
+					data.detected_attention_objects[enemy_key] = enemy_data
+
+					data.logic.on_attention_obj_identified(data, enemy_key, enemy_data)
+				end
+			end
+		end
+	end
+
+	if enemy_data and enemy_data.criminal_record then
+		managers.groupai:state():criminal_spotted(enemy)
+		managers.groupai:state():report_aggression(enemy)
+	end
+end
+
 function CopLogicIdle._chk_relocate(data)
 	if not data.objective then
 		return
@@ -749,117 +844,6 @@ function CopLogicIdle.action_complete_clbk(data, action)
 		data.internal_data.advancing = nil
 	elseif not data.is_converted and action_type == "hurt" and data.important and action:expired() then
 		CopLogicBase.chk_start_action_dodge(data, "hit")
-	end
-end
-
-function CopLogicIdle.enter(data, new_logic_name, enter_params)
-	CopLogicBase.enter(data, new_logic_name, enter_params)
-
-	local my_data = {
-		unit = data.unit
-	}
-	local is_cool = data.unit:movement():cool()
-
-	if is_cool then
-		my_data.detection = data.char_tweak.detection.ntl
-	else
-		my_data.detection = data.char_tweak.detection.idle
-	end
-
-	local old_internal_data = data.internal_data
-
-	if old_internal_data then
-		my_data.turning = old_internal_data.turning
-
-		if old_internal_data.firing then
-			data.unit:movement():set_allow_fire(false)
-		end
-
-		if old_internal_data.shooting then
-			data.unit:brain():action_request({
-				body_part = 3,
-				type = "idle"
-			})
-		end
-
-		local lower_body_action = data.unit:movement()._active_actions[2]
-		my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
-
-		if old_internal_data.best_cover then
-			my_data.best_cover = old_internal_data.best_cover
-
-			managers.navigation:reserve_cover(my_data.best_cover[1], data.pos_rsrv_id)
-		end
-
-		if old_internal_data.nearest_cover then
-			my_data.nearest_cover = old_internal_data.nearest_cover
-
-			managers.navigation:reserve_cover(my_data.nearest_cover[1], data.pos_rsrv_id)
-		end
-	end
-
-	data.internal_data = my_data
-	local key_str = tostring(data.unit:key())
-	my_data.detection_task_key = "CopLogicIdle.update" .. key_str
-
-	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t)
-
-	if my_data.nearest_cover or my_data.best_cover then
-		my_data.cover_update_task_key = "CopLogicIdle._update_cover" .. key_str
-
-		CopLogicBase.add_delayed_clbk(my_data, my_data.cover_update_task_key, callback(CopLogicTravel, CopLogicTravel, "_update_cover", data), data.t + 1)
-	end
-
-	local objective = data.objective
-
-	if objective then
-		if (objective.nav_seg or objective.type == "follow") and not objective.in_place then
-			debug_pause_unit(data.unit, "[CopLogicIdle.enter] wrong logic", data.unit)
-		end
-
-		my_data.scan = objective.scan
-		my_data.rubberband_rotation = objective.rubberband_rotation and data.unit:movement():m_rot():y()
-	else
-		my_data.scan = true
-	end
-
-	if my_data.scan then
-		my_data.stare_path_search_id = "stare" .. key_str
-		my_data.wall_stare_task_key = "CopLogicIdle._chk_stare_into_wall" .. key_str
-	end
-
-	CopLogicIdle._chk_has_old_action(data, my_data)
-
-	if my_data.scan and (not objective or not objective.action) then
-		CopLogicBase.queue_task(my_data, my_data.wall_stare_task_key, CopLogicIdle._chk_stare_into_wall_1, data, data.t)
-	end
-
-	if is_cool then
-		data.unit:brain():set_attention_settings({
-			peaceful = true
-		})
-	else
-		data.unit:brain():set_attention_settings({
-			cbt = true
-		})
-	end
-
-	local usage = data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage
-	my_data.weapon_range = (data.char_tweak.weapon[usage] or {}).range
-	
-	if not my_data.weapon_range then
-		my_data.weapon_range = {
-			optimal = 2000,
-			far = 5000,
-			close = 1000
-		}
-	end
-
-	data.unit:brain():set_update_enabled_state(false)
-	CopLogicIdle._perform_objective_action(data, my_data, objective)
-
-	if my_data ~= data.internal_data then
-		return
 	end
 end
 

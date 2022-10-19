@@ -52,7 +52,7 @@ function TeamAILogicAssault.update(data)
 		end
 	end
 
-	if not data.objective and (not data.path_fail_t or data.t - data.path_fail_t > 6) then
+	if not data.objective and (not data.path_fail_t or data.t - data.path_fail_t > 3) then
 		managers.groupai:state():on_criminal_jobless(unit)
 
 		if my_data ~= data.internal_data then
@@ -64,6 +64,34 @@ function TeamAILogicAssault.update(data)
 		CopLogicAttack._update_cover(data)
 
 		my_data.cover_chk_t = data.t + TeamAILogicAssault._COVER_CHK_INTERVAL
+	end
+end
+
+function TeamAILogicAssault._on_player_slow_pos_rsrv_upd(data)
+	local my_data = data.internal_data
+
+	local objective = data.objective
+
+	if objective and objective.type == "follow" and TeamAILogicIdle._check_should_relocate(data, my_data, objective) and not data.unit:movement():chk_action_forbidden("walk") then
+		objective.in_place = nil
+
+		TeamAILogicBase._exit(data.unit, "travel")
+		
+		if my_data ~= data.internal_data then
+			CopLogicBase.cancel_queued_tasks(my_data)
+		
+			return
+		end
+	elseif not objective then
+		if not data.path_fail_t or data.t - data.path_fail_t > 3 then
+			managers.groupai:state():on_criminal_jobless(unit)
+
+			if my_data ~= data.internal_data then
+				CopLogicBase.cancel_queued_tasks(my_data)
+				
+				return
+			end
+		end
 	end
 end
 

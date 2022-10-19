@@ -6,11 +6,14 @@ function WeaponTweakData:_setup_hhtacs()
 
 		if difficulty_index > 7 then
 			self.dmr_npc.CLIP_AMMO_MAX = 12
+			self.heavy_snp_npc.CLIP_AMMO_MAX = 12
 		else
 			self.dmr_npc.CLIP_AMMO_MAX = 9
+			self.heavy_snp_npc.CLIP_AMMO_MAX = 9
 		end
 
 		self.saiga_npc.CLIP_AMMO_MAX = 14
+		self.contraband_npc.CLIP_AMMO_MAX = 45
 		self.m4_npc.CLIP_AMMO_MAX = 45
 		self.m4_yellow_npc.CLIP_AMMO_MAX = 45
 		self.ak47_ass_npc.CLIP_AMMO_MAX = 45

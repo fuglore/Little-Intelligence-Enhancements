@@ -143,7 +143,10 @@ function SpoocLogicAttack.update(data)
 		my_data.want_to_take_cover = SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 
 		CopLogicAttack._update_cover(data)
-		CopLogicAttack._upd_combat_movement(data)
+		
+		if not data.next_mov_time or data.next_mov_time < data.t then
+			CopLogicAttack._upd_combat_movement(data)
+		end
 	end
 
 	CopLogicBase._report_detections(data.detected_attention_objects)
@@ -231,7 +234,14 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		end
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data) --on finishing a walk action, enemies will try to turn to attention at the end of it
+			data.logic._upd_aim(data, my_data)
+			data.logic._update_cover(data)
+			data.logic._upd_combat_movement(data)
+		end
+	elseif action_type == "act" then
+		if not my_data.advancing and action:expired() then
+			data.logic._upd_aim(data, my_data)
+			data.logic._update_cover(data)
 			data.logic._upd_combat_movement(data)
 		end
 	elseif action_type == "shoot" then

@@ -165,7 +165,6 @@ function GroupAITweakData:_LIES_setup()
 		--chad wuz here
 	end
 	
-	
 	--allow enemies assigned to group ai to...actually participate to group ai
 	self.besiege.assault.groups.custom = {
 		0,

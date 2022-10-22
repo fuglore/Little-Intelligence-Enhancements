@@ -95,7 +95,7 @@ function CopBase:default_weapon_name()
 			m_weapon_id = police_weapon_ids[math.random(#police_weapon_ids)]
 		end
 	elseif m_weapon_id == "m4" or m_weapon_id == "mp5" then	
-		if Global.game_settings.difficulty == "sm_wish" then
+		if LIES.settings.fixed_spawngroups > 2 and Global.game_settings.difficulty == "sm_wish" then
 			local zeal_types = {
 				swat = true,
 				heavy_swat = true

@@ -49,6 +49,29 @@ function NavigationManager:find_segment_doors_with_nav_links(from_seg_id, approv
 	return found_doors
 end
 
+function NavigationManager:draw_coarse_path(path, alt_color)
+	if not path then
+		return
+	end
+	
+	local all_nav_segs = self._nav_segments
+	
+	local line1 = Draw:brush(Color.red:with_alpha(0.5), 5)
+	local line2 = Draw:brush(Color.blue:with_alpha(0.5), 5)
+	
+	if alt_color then
+		for path_i = 1, #path do
+			local seg_pos = all_nav_segs[path[path_i][1]].pos
+			line2:cylinder(seg_pos, seg_pos + math_up * 185, 20)
+		end
+	else
+		for path_i = 1, #path do
+			local seg_pos = all_nav_segs[path[path_i][1]].pos
+			line1:cylinder(seg_pos, seg_pos + math_up * 185, 20)
+		end
+	end
+end
+
 function NavigationManager:generate_cover_fwd(tracker)
 	local all_nav_segs = self._nav_segments
 	local m_seg_id = tracker:nav_segment()

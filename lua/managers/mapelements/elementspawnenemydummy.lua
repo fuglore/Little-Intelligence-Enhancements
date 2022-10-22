@@ -4,16 +4,12 @@ local instance_strings = {
 	harasser_hards = true,
 	harasser_over = true
 }
-local harassers = {
-	levels = {
-		man = {
-			
-		}
-	}
+local invalid_levels = {
+	flat = true
 }
 
 Hooks:PostHook(ElementSpawnEnemyDummy, "_finalize_values", "lies_hhtacs_elementcheck", function(self)
-	if LIES.settings.hhtacs then
+	if LIES.settings.hhtacs and not invalid_levels[Global.level_data.level_id] then
 		local editor_name = self._editor_name
 		
 		if instance_strings[editor_name] then
@@ -47,6 +43,10 @@ end)
 function ElementSpawnEnemyDummy:check_overwrite_spawn_value()
 	if self._LIES_harasser_spawn then
 		if tweak_data:difficulty_to_index(Global.game_settings.difficulty) < 4 then
+			return
+		end
+		
+		if math.random() < 0.6 then
 			return
 		end
 

@@ -606,6 +606,8 @@ function GroupAIStateBesiege:_check_phalanx_damage_reduction_increase_LIES()
 		local group = self._phalanx_spawn_group
 		
 		if not group then
+			self:phalanx_damage_reduction_disable()
+			
 			return
 		end
 
@@ -651,7 +653,7 @@ function GroupAIStateBesiege:phalanx_damage_reduction_disable_LIES()
 	self:set_phalanx_damage_reduction_buff(-1)
 
 	self._phalanx_damage_reduction_last_increase = nil
-	self._phalanx_center_pos = mvector3.copy(self._phalanx_center_pos_old)
+	self._phalanx_center_pos = self._phalanx_center_pos_old and mvector3.copy(self._phalanx_center_pos_old) or self._phalanx_center_pos
 end
 
 function GroupAIStateBesiege:_set_objective_to_phalanx_group_LIES(group)
@@ -1378,26 +1380,6 @@ function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
 	return nearby
 end
 
-function GroupAIStateBesiege:_chk_coarse_path_obstructed(group)
-	local current_objective = group.objective
-
-	if not current_objective.coarse_path then
-		return
-	end
-
-	local forwardmost_i_nav_point = self:_get_group_forwardmost_coarse_path_index(group)
-
-	if forwardmost_i_nav_point then
-		for i = forwardmost_i_nav_point + 1, #current_objective.coarse_path do
-			local nav_point = current_objective.coarse_path[i]
-
-			if not self:is_nav_seg_safe(nav_point[1]) then
-				return i
-			end
-		end
-	end
-end
-
 function GroupAIStateBesiege:_chk_group_engaging_area(group)
 	for u_key, u_data in pairs(group.units) do 
 		if u_data.unit and alive(u_data.unit) then
@@ -1407,7 +1389,7 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group)
 			if brain._current_logic_name == "attack" and objective and objective.type == "free" then
 				local logic_data = brain._logic_data
 				
-				if logic_data.attention_obj and AIAttentionObject.REACT_COMBAT <= logic_data.attention_obj.reaction then
+				if logic_data.attention_obj and AIAttentionObject.REACT_COMBAT <= logic_data.attention_obj.reaction and logic_data.attention_obj.verify_t then
 					local nav_seg = managers.navigation:get_nav_seg_from_pos(u_data.unit:movement():m_pos())
 					
 					return nav_seg
@@ -1429,6 +1411,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	local group_leader_u_key, group_leader_u_data = self._determine_group_leader(group.units)
 	local tactics_map = nil
 	local aggression_level = LIES.settings.enemy_aggro_level
+	local forwardmost_i_nav_point = nil
 
 	if group_leader_u_data and group_leader_u_data.tactics then
 		tactics_map = {}
@@ -1745,11 +1728,11 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			open_fire = true
 		elseif obstructed_path_index then
 			if aggression_level > 3 and current_objective.attitude == "engage" then
-				objective_area = self:get_area_from_nav_seg_id(group.objective.coarse_path[math.max(obstructed_path_index, 1)][1])
-				reassign = true
+				objective_area = self:get_area_from_nav_seg_id(current_objective.coarse_path[math.max(obstructed_path_index, 1)][1])
+				reassign = obstructed_path_index
 			else
-				objective_area = self:get_area_from_nav_seg_id(group.objective.coarse_path[math.max(obstructed_path_index - 1, 1)][1])
-				reassign = true
+				objective_area = self:get_area_from_nav_seg_id(current_objective.coarse_path[math.max(obstructed_path_index - 1, 1)][1])
+				reassign = obstructed_path_index - 1
 			end
 		elseif not current_objective.moving_out then
 			local has_criminals_close = nil
@@ -2065,12 +2048,19 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			
 			new_grp_objective.area = objective_area
 			new_grp_objective.nav_seg = nil
-			new_grp_objective.coarse_path = {
-				{
-					objective_area.pos_nav_seg,
-					mvector3.copy(objective_area.pos)
-				}
-			}
+			
+			if new_grp_objective.coarse_path then
+				local new_coarse_path = {}
+				forwardmost_i_nav_point = forwardmost_i_nav_point or self:_get_group_forwardmost_coarse_path_index(group)
+				
+				new_coarse_path[#new_coarse_path + 1] = new_grp_objective.coarse_path[forwardmost_i_nav_point]
+				
+				for i = forwardmost_i_nav_point + 1, reassign do
+					new_coarse_path[#new_coarse_path + 1] = new_grp_objective.coarse_path[i]
+				end
+				
+				new_grp_objective.coarse_path = new_coarse_path
+			end
 
 			self:_set_objective_to_enemy_group(group, new_grp_objective)
 			
@@ -2098,7 +2088,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		end
 
 		if not retreat_area and current_objective.coarse_path then
-			local forwardmost_i_nav_point = self:_get_group_forwardmost_coarse_path_index(group)
+			forwardmost_i_nav_point = forwardmost_i_nav_point or self:_get_group_forwardmost_coarse_path_index(group)
 
 			if forwardmost_i_nav_point and forwardmost_i_nav_point > 1 then
 				local nearest_safe_nav_seg_id = current_objective.coarse_path[forwardmost_i_nav_point - 1][1]

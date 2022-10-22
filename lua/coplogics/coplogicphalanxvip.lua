@@ -8,7 +8,7 @@ function CopLogicPhalanxVip.exit(data, new_logic_name, enter_params)
 	CopLogicBase.cancel_delayed_clbks(my_data)
 	data.brain:rem_pos_rsrv("path")
 	
-	if data.objective and data.objective.type ~= "phalanx" then
+	if not data.objective or data.objective.type ~= "phalanx" or new_logic_name == "inactive" then
 		managers.groupai:state():phalanx_damage_reduction_disable()
 		managers.groupai:state():force_end_assault_phase()
 		

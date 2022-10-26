@@ -4,7 +4,22 @@ local shotgun_groups = {
 	tac_shield_wall_charge = true
 }
 
-function CopBase:default_weapon_name()
+function CopBase:default_weapon_name(selection_name)
+	local weap_ids = tweak_data.character.weap_ids
+	local weap_unit_names = tweak_data.character.weap_unit_names
+	
+	if selection_name and self._default_weapons then
+		local weapon_id = self._default_weapons[selection_name]
+
+		if weapon_id then
+			for i_weap_id, weap_id in ipairs(weap_ids) do
+				if weapon_id == weap_id then
+					return weap_unit_names[i_weap_id]
+				end
+			end
+		end
+	end
+
 	local m_weapon_id = self._default_weapon_id
 
 	if LIES.settings.hhtacs then
@@ -115,17 +130,15 @@ function CopBase:default_weapon_name()
 			end
 		end
 	end
-	
-	local weap_ids = tweak_data.character.weap_ids
 
 	for i_weap_id, weap_id in ipairs(weap_ids) do
 		if m_weapon_id == weap_id then
 			self._current_weapon_id = m_weapon_id
 			if not self._old_weapon then
-				self._old_weapon = tweak_data.character.weap_unit_names[i_weap_id]
+				self._old_weapon = weap_unit_names[i_weap_id]
 			end
 			
-			return tweak_data.character.weap_unit_names[i_weap_id]
+			return weap_unit_names[i_weap_id]
 		end
 	end
 end

@@ -4,12 +4,13 @@ local instance_strings = {
 	harasser_hards = true,
 	harasser_over = true
 }
-local invalid_levels = {
-	flat = true
+local valid_levels = {
+	man = true,
+	rvd1 = true
 }
 
 Hooks:PostHook(ElementSpawnEnemyDummy, "_finalize_values", "lies_hhtacs_elementcheck", function(self)
-	if LIES.settings.hhtacs and not invalid_levels[Global.level_data.level_id] then
+	if LIES.settings.hhtacs and valid_levels[Global.level_data.level_id] then
 		local editor_name = self._editor_name
 		
 		if instance_strings[editor_name] then

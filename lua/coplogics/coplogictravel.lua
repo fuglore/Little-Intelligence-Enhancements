@@ -366,9 +366,13 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 end
 
 function CopLogicTravel.chk_group_ready_to_move(data, my_data)
+	if not data.group then
+		return true
+	end
+
 	local my_objective = data.objective
 
-	if not my_objective.grp_objective then
+	if not my_objective.grp_objective or my_objective.grp_objective ~= data.group.grp_objective then
 		return true
 	end
 
@@ -379,27 +383,43 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 			return true
 		end
 	end
-
-	my_dis = my_dis * 1.15 * 1.15
-
+	
+	local forwardmost_index = data.group.objective and data.group.objective.coarse_path and #data.group.objective.coarse_path > 1 and managers.groupai:state():_get_group_forwardmost_coarse_path_index(data.group)
+	
+	if not forwardmost_index then
+		return true
+	end
+	
+	if my_data.coarse_path_index then
+		if forwardmost_index and my_data.coarse_path_index < forwardmost_index then
+			return true
+		end
+	end
+	
 	local can_continue = true
 
 	for u_key, u_data in pairs(data.group.units) do
 		if u_key ~= data.key then
 			local his_objective = u_data.unit:brain():objective()
 
-			if his_objective and his_objective.grp_objective == my_objective.grp_objective and not his_objective.in_place then
+			if his_objective and his_objective.grp_objective == my_objective.grp_objective then
 				if his_objective.is_default then
-					can_continue = nil
+					--nah
+				elseif not his_objective.in_place then
+					local his_logic_data = u_data.unit:brain()._logic_data
 					
-					break
-				else
-					local his_dis = mvector3.distance_sq(his_objective.area.pos, u_data.m_pos)
-
-					if my_dis < his_dis then
-						can_continue = nil
+					if his_logic_data.group then
+						if his_logic_data and his_logic_data.name ~= "travel" then
+							can_continue = nil
+							
+							break
+						end
 						
-						break
+						if forwardmost_index and his_logic_data.internal_data and his_logic_data.internal_data.coarse_path_index and his_logic_data.internal_data.coarse_path_index < forwardmost_index then
+							can_continue = nil
+							
+							break
+						end
 					end
 				end
 			end

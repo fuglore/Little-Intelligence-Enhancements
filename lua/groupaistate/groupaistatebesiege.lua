@@ -388,11 +388,11 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		end
 	end)
 	
-	--Hooks:PostHook(GroupAIStateBesiege, "on_criminal_nav_seg_change", "lies_check_relocation_for_friendlies", function(self, unit, nav_seg_id)
-	--	if unit and self._player_criminals[unit:key()] then
-	--		self:_on_player_slow_pos_rsrv_upd(unit)
-	--	end
-	--end)
+	Hooks:PostHook(GroupAIStateBesiege, "on_criminal_nav_seg_change", "lies_check_relocation_for_friendlies", function(self, unit, nav_seg_id)
+		if unit and self._player_criminals[unit:key()] then
+			self:_on_player_slow_pos_rsrv_upd(unit)
+		end
+	end)
 end)
 
 function GroupAIStateBesiege:_on_player_slow_pos_rsrv_upd(unit)

@@ -1096,8 +1096,6 @@ function CopLogicAttack._upd_combat_movement(data)
 	if action_taken then
 		return
 	end
-	
-	action_taken = action_taken or CopLogicAttack._move_back_into_field_position(data, my_data)
 
 	action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
 	
@@ -1954,7 +1952,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	if my_data.processing_cover_path or my_data.charge_path_search_id then
 		data.logic._process_pathing_results(data, my_data)
 		
-		if my_data.cover_path then
+		if my_data.best_cover and my_data.cover_path then
 			CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
 		elseif my_data.charge_path then
 			local path = my_data.charge_path

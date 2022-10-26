@@ -1496,9 +1496,9 @@ function GroupAITweakData:_LIES_setup()
 		self.unit_categories.medic_shot_refless = clone(self.unit_categories.medic_R870)
 		self.unit_categories.medic_shot_refless.special_type = nil
 
-		local level_id =  Global.game_settings and Global.game_settings.level_id
+		local level_id = Global.level_data and Global.level_data.level_id ~= nil and Global.level_data.level_id or Global.game_settings and Global.game_settings.level_id ~= nil and Global.game_settings.level_id
 		
-		if level_id ~= "ranc" then
+		if level_id ~= "ranc" and level_id ~= "trai" then
 			self.enemy_spawn_groups.marshal_squad = {
 				spawn_cooldown = 60,
 				max_nr_simultaneous_groups = 1,
@@ -1530,7 +1530,48 @@ function GroupAITweakData:_LIES_setup()
 			end
 		end
 		
-		if level_id == "ranc" then
+		if level_id == "trai" then
+			self.enemy_spawn_groups.marshal_squad = {
+				spawn_cooldown = 60,
+				max_nr_simultaneous_groups = 2,
+				initial_spawn_delay = 90,
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						respawn_cooldown = 30,
+						amount_min = 1,
+						rank = 2,
+						freq = 1,
+						unit = "marshal_shield",
+						tactics = self._tactics.marshal_shield
+					},
+					{
+						respawn_cooldown = 30,
+						amount_min = 1,
+						rank = 1,
+						freq = 1,
+						unit = "marshal_marksman",
+						tactics = self._tactics.marshal_marksman
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_shield_wall",
+					"tac_shield_wall_ranged",
+					"tac_shield_wall_charge"
+				})
+			}
+			
+			if difficulty_index > 5 then
+				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
+				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
+				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 20
+				self.enemy_spawn_groups.marshal_squad.amount[2] = 3
+				
+			end
+		elseif level_id == "ranc" then
 			self.enemy_spawn_groups.Cowboys = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,

@@ -184,19 +184,17 @@ function CopLogicIdle.queued_update(data)
 	
 	CopLogicTravel._update_cover(nil, data)
 
-	if not CopLogicIdle._move_back_into_field_position(data, my_data) then
-		CopLogicIdle._perform_objective_action(data, my_data, objective)
-		CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
-		CopLogicIdle._upd_pathing(data, my_data)
-		CopLogicIdle._upd_scan(data, my_data)
+	CopLogicIdle._perform_objective_action(data, my_data, objective)
+	CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
+	CopLogicIdle._upd_pathing(data, my_data)
+	CopLogicIdle._upd_scan(data, my_data)
 		
-		if not my_data.action_started or not my_data.action_started ~= true then
-			if not data.cool then
-				CopLogicIdle._check_needs_reload(data, my_data)
-			end
-			
-			CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
+	if not my_data.action_started or not my_data.action_started ~= true then
+		if not data.cool then
+			CopLogicIdle._check_needs_reload(data, my_data)
 		end
+		
+		CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
 	end
 
 	if data.cool then

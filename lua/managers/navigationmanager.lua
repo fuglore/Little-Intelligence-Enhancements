@@ -144,7 +144,8 @@ function NavigationManager:generate_cover_fwd(tracker)
 		local fwd_test = temp_vec2
 		
 		local nr_rotations = 12
-		local angle = 360 / nr_rotations
+		local angle = 180 / nr_rotations
+		rot_with(new_fwd, Rotation(-90))
 
 		for i = 1, nr_rotations do
 			mvec3_set(fwd_test, new_fwd)
@@ -170,7 +171,7 @@ function NavigationManager:generate_cover_fwd(tracker)
 		if #hits > 0 then
 			for i = 1, #hits do
 				local hit = hits[i]
-				local diff = math.abs(hit[2] - 180)
+				local diff = math.abs(hit[2])
 				
 				if not best_angle or diff < best_angle or diff == best_angle and math.random() <= 0.5 then
 					best_hit = hit[1]
@@ -184,6 +185,7 @@ function NavigationManager:generate_cover_fwd(tracker)
 		if second_best_pos then
 			hits = {}
 			mvec3_dir(new_fwd, field_pos, second_best_pos)
+			rot_with(new_fwd, Rotation(-90))
 			
 			for i = 1, nr_rotations do
 				mvec3_set(fwd_test, new_fwd)
@@ -209,7 +211,7 @@ function NavigationManager:generate_cover_fwd(tracker)
 			if #hits > 0 then
 				for i = 1, #hits do
 					local hit = hits[i]
-					local diff = math.abs(hit[2] - 180)
+					local diff = math.abs(hit[2])
 					
 					if not best_angle or diff < best_angle or diff == best_angle and math.random() <= 0.5 then
 						best_hit = hit[1]

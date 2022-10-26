@@ -382,17 +382,19 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		end)
 	end
 	
-	Hooks:PostHook(GroupAIStateBesiege, "_perform_group_spawning", "lies_upd_group_early", function(self, spawn_task, force, use_last)
-		if spawn_task.group.has_spawned and self._groups[spawn_task.group.id] then
-			self:_upd_group(spawn_task.group)
-		end
-	end)
-	
-	Hooks:PostHook(GroupAIStateBesiege, "on_criminal_nav_seg_change", "lies_check_relocation_for_friendlies", function(self, unit, nav_seg_id)
-		if unit and self._player_criminals[unit:key()] then
-			self:_on_player_slow_pos_rsrv_upd(unit)
-		end
-	end)
+	if Network:is_server() then
+		Hooks:PostHook(GroupAIStateBesiege, "_perform_group_spawning", "lies_upd_group_early", function(self, spawn_task, force, use_last)
+			if spawn_task.group.has_spawned and self._groups[spawn_task.group.id] then
+				self:_upd_group(spawn_task.group)
+			end
+		end)
+		
+		Hooks:PostHook(GroupAIStateBesiege, "on_criminal_nav_seg_change", "lies_check_relocation_for_friendlies", function(self, unit, nav_seg_id)
+			if unit and self._player_criminals[unit:key()] then
+				self:_on_player_slow_pos_rsrv_upd(unit)
+			end
+		end)
+	end
 end)
 
 function GroupAIStateBesiege:_on_player_slow_pos_rsrv_upd(unit)

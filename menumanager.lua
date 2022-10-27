@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V6.22",
+		version = "V6.23",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -29,26 +29,32 @@ if RequiredScript == "lib/managers/menumanager" then
 		indent = indent or 0
 		local toprint = string.rep(" ", indent) .. "{\r\n"
 		indent = indent + 2
+		
+		if type(tbl) ~= "table" then
+			toprint = "type is not table, type is " .. type(tbl) .. " with value of " .. tostring(tbl)
+			
+			return toprint
+		else
+			for k, v in pairs(tbl) do
+				toprint = toprint .. string.rep(" ", indent)
 
-		for k, v in pairs(tbl) do
-			toprint = toprint .. string.rep(" ", indent)
-
-			if type(k) == "number" then
-				toprint = toprint .. "[" .. k .. "] = "
-			elseif type(k) == "string" then
-				toprint = toprint .. k .. "= "
-			end
-
-			if type(v) == "number" then
-				toprint = toprint .. v .. ",\r\n"
-			elseif type(v) == "string" then
-				toprint = toprint .. "\"" .. v .. "\",\r\n"
-			elseif type(v) == "table" then
-				if depth > 0 then
-					toprint = toprint .. LIES:tprint(v, indent, depth - 1) .. ",\r\n"
+				if type(k) == "number" then
+					toprint = toprint .. "[" .. k .. "] = "
+				elseif type(k) == "string" then
+					toprint = toprint .. k .. "= "
 				end
-			else
-				toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
+
+				if type(v) == "number" then
+					toprint = toprint .. v .. ",\r\n"
+				elseif type(v) == "string" then
+					toprint = toprint .. "\"" .. v .. "\",\r\n"
+				elseif type(v) == "table" then
+					if depth > 0 then
+						toprint = toprint .. LIES:tprint(v, indent, depth - 1) .. ",\r\n"
+					end
+				else
+					toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
+				end
 			end
 		end
 

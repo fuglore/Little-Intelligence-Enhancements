@@ -5,8 +5,6 @@ function TeamAILogicAssault.update(data)
 	local t = data.t
 	local unit = data.unit
 	local focus_enemy = data.attention_obj
-	local in_cover = my_data.in_cover
-	local best_cover = my_data.best_cover
 
 	CopLogicAttack._process_pathing_results(data, my_data)
 
@@ -23,32 +21,43 @@ function TeamAILogicAssault.update(data)
 	end
 	
 	if not data.unit:movement()._should_stay then
+		if my_data.cover_chk_t < data.t then
+			CopLogicAttack._update_cover(data)
+
+			my_data.cover_chk_t = data.t + TeamAILogicAssault._COVER_CHK_INTERVAL
+		end
+	
 		local enemy_visible = focus_enemy.verified
 		local action_taken = my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data._turning_to_intimidate
 		my_data.want_to_take_cover = TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 		local want_to_take_cover = my_data.want_to_take_cover
 		action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
-		local move_to_cover = nil
+		local in_cover = my_data.in_cover
+		local best_cover = my_data.best_cover
+		
+		if in_cover and best_cover and in_cover[1] ~= best_cover[1] then
+			in_cover = false
+		end
 
 		if action_taken then
 			-- Nothing
 		else
-			move_to_cover = true
-		end
+			if not in_cover then
+				if my_data.cover_path then
+					action_taken = CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
+				elseif best_cover and (not my_data.cover_path_failed_t or data.t - my_data.cover_path_failed_t > 2) then
+					CopLogicAttack._cancel_cover_pathing(data, my_data)
+				
+					local search_id = tostring(data.key) .. "cover"
 
-		if not my_data.processing_cover_path and not my_data.cover_path and not my_data.charge_path_search_id and not action_taken and best_cover and (not in_cover or best_cover[1] ~= in_cover[1]) then
-			CopLogicAttack._cancel_cover_pathing(data, my_data)
-
-			local search_id = tostring(unit:key()) .. "cover"
-
-			if data.unit:brain():search_for_path_to_cover(search_id, best_cover[1], best_cover[5]) then
-				my_data.cover_path_search_id = search_id
-				my_data.processing_cover_path = best_cover
+					if data.unit:brain():search_for_path_to_cover(search_id, best_cover[1], best_cover[5]) then
+						my_data.cover_path_search_id = search_id
+						my_data.processing_cover_path = best_cover
+					end
+				end
+			else
+				CopLogicAttack._cancel_cover_pathing(data, my_data)
 			end
-		end
-
-		if not action_taken and move_to_cover and my_data.cover_path then
-			action_taken = CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
 		end
 	end
 
@@ -58,12 +67,6 @@ function TeamAILogicAssault.update(data)
 		if my_data ~= data.internal_data then
 			return
 		end
-	end
-
-	if my_data.cover_chk_t < data.t then
-		CopLogicAttack._update_cover(data)
-
-		my_data.cover_chk_t = data.t + TeamAILogicAssault._COVER_CHK_INTERVAL
 	end
 end
 

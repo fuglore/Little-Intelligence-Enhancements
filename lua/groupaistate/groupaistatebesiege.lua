@@ -1401,6 +1401,46 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group)
 	end
 end
 
+function GroupAIStateBesiege:_get_group_forwardmost_coarse_path_index_from_unit(u_key)
+	local u_data = self._police[u_key]
+
+	if not u_data then
+		return
+	end
+	
+	if not u_data.group then
+		return
+	end
+	
+	local group = u_data.group
+	
+	if not group.objective then
+		return
+	end
+	
+	local coarse_path = group.objective.coarse_path
+	
+	if not coarse_path then
+		return
+	end
+	
+	local coarse_path_size = #coarse_path
+	local forwardmost_i_nav_point = #coarse_path
+
+	while forwardmost_i_nav_point > 0 do
+		local nav_seg = coarse_path[forwardmost_i_nav_point][1]
+		local area = self:get_area_from_nav_seg_id(nav_seg)
+
+		for u_key, u_data in pairs(group.units) do
+			if area.nav_segs[u_data.unit:movement():nav_tracker():nav_segment()] then
+				return forwardmost_i_nav_point, coarse_path_size
+			end
+		end
+
+		forwardmost_i_nav_point = forwardmost_i_nav_point - 1
+	end
+end
+
 function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	if not group.has_spawned then
 		return

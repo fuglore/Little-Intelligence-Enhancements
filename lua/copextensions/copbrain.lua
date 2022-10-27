@@ -1,4 +1,6 @@
 Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
+	CopBrain._logic_variants.marshal_marksman = CopBrain._logic_variants.swat
+
 	CopBrain._logic_variants.tank.attack = BossLogicAttack
 	CopBrain._logic_variants.tank_medic.attack = BossLogicAttack
 	CopBrain._logic_variants.tank_mini.attack = BossLogicAttack

@@ -372,7 +372,7 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 
 	local my_objective = data.objective
 
-	if not my_objective.grp_objective or my_objective.grp_objective ~= data.group.grp_objective then
+	if not my_objective.grp_objective then
 		return true
 	end
 
@@ -384,15 +384,28 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 		end
 	end
 	
-	local forwardmost_index = data.group.objective and data.group.objective.coarse_path and #data.group.objective.coarse_path > 1 and managers.groupai:state():_get_group_forwardmost_coarse_path_index(data.group)
+	local forwardmost_index, group_coarse_path_size = managers.groupai:state():_get_group_forwardmost_coarse_path_index_from_unit(data.key)
 	
-	if not forwardmost_index then
+	if not forwardmost_index then	
 		return true
 	end
 	
 	if my_data.coarse_path_index then
-		if forwardmost_index and my_data.coarse_path_index < forwardmost_index then
+		local my_index = my_data.coarse_path_index
+		local my_coarse_path_size = #my_data.coarse_path
+		
+		local diff = my_coarse_path_size - group_coarse_path_size
+	
+		if diff > 0 then
+			my_index = my_index - math.abs(diff)
+		elseif diff < 0 then
+			my_index = my_index + math.abs(diff)
+		end
+	
+		if my_index < forwardmost_index then
 			return true
+		elseif my_index > forwardmost_index then
+			return
 		end
 	end
 	
@@ -415,10 +428,21 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 							break
 						end
 						
-						if forwardmost_index and his_logic_data.internal_data and his_logic_data.internal_data.coarse_path_index and his_logic_data.internal_data.coarse_path_index < forwardmost_index then
-							can_continue = nil
+						if forwardmost_index and his_logic_data.internal_data and his_logic_data.internal_data.coarse_path_index then
+							local his_index = his_logic_data.internal_data.coarse_path_index
+							local his_coarse_path_size = #his_logic_data.internal_data.coarse_path
+							local diff = his_coarse_path_size - group_coarse_path_size
 							
-							break
+							if diff > 0 then
+								his_index = his_index - math.abs(diff)
+							elseif diff < 0 then
+								his_index = his_index + math.abs(diff)
+							end
+							
+							if his_index < forwardmost_index then
+								can_continue = nil		
+								break
+							end
 						end
 					end
 				end

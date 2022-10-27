@@ -18,6 +18,7 @@ local mvec3_dis = mvector3.distance
 local mvec3_dis_sq = mvector3.distance_sq
 local mvec3_rot = mvector3.rotate_with
 local mvec3_length = mvector3.length
+local math_lerp = math.lerp
 local math_abs = math.abs
 local math_max = math.max
 local math_clamp = math.clamp
@@ -171,7 +172,7 @@ function NavigationManager:generate_cover_fwd(tracker)
 		if #hits > 0 then
 			for i = 1, #hits do
 				local hit = hits[i]
-				local diff = math.abs(hit[2])
+				local diff = math_abs(hit[2])
 				
 				if not best_angle or diff < best_angle or diff == best_angle and math.random() <= 0.5 then
 					best_hit = hit[1]
@@ -211,7 +212,7 @@ function NavigationManager:generate_cover_fwd(tracker)
 			if #hits > 0 then
 				for i = 1, #hits do
 					local hit = hits[i]
-					local diff = math.abs(hit[2])
+					local diff = math_abs(hit[2])
 					
 					if not best_angle or diff < best_angle or diff == best_angle and math.random() <= 0.5 then
 						best_hit = hit[1]
@@ -222,6 +223,9 @@ function NavigationManager:generate_cover_fwd(tracker)
 				return best_hit
 			end
 		end
+		
+		--literally nothing worked, just in case, return the original direction since it'll probably be the best
+		mvec3_dir(new_fwd, field_pos, best_door_pos)
 		
 		return mvec3_cpy(new_fwd)
 	end
@@ -346,45 +350,41 @@ function NavigationManager:register_cover_units()
 		end
 	end
 	
-	if testing then
-		local stored_send_data = self.stored_send_data
+	local max_cover_points = math.round(#covers * (math_lerp(2, 1, math_clamp(#covers / 1000, 0, 1))))
+	
+	log("Map has " .. tostring(#covers) .. " cover points, setting generation limit to " .. tostring(max_cover_points) .. " cover points.")
+	
+	if #covers < max_cover_points then
+		for key, res in pairs(self._nav_segments) do
+			if res.pos and res.neighbours and next(res.neighbours) then	
+				local tracker = self._quad_field:create_nav_tracker(res.pos, true)
 
-		for i = 1, #stored_send_data.rooms do
-			local room = stored_send_data.rooms[i]
-			local room_pos = NavFieldBuilder._calculate_room_center(self, room)
-			local tracker = self._quad_field:create_nav_tracker(room_pos, true)
-			
-			if not tracker:lost() or v3_dis_sq(tracker:field_position(), room_pos) < 3600 then
-				local room_nav_seg = self._nav_segments[tracker:nav_segment()]
-				
-				if room_nav_seg.pos and room_nav_seg.neighbours and next(room_nav_seg.neighbours) then
-					local navseg_tracker = self._quad_field:create_nav_tracker(room_nav_seg.pos, true)
-					
-					local location_script_data = self._quad_field:get_script_data(navseg_tracker, true)
-					
+				local location_script_data = self._quad_field:get_script_data(tracker, true)
+
+				if not location_script_data.covers or #location_script_data.covers < 4 then
 					if not location_script_data.covers then
 						location_script_data.covers = {}
 					end
-					
-					if #location_script_data.covers < 4 then
+		
+					for _, room in pairs(res.rooms) do
+						local room_pos = NavFieldBuilder._calculate_room_center(self, room)
 						local place_cover = true
 						
-						for other_i = 1, #covers do
-							local other_cover = covers[other_i]
+						for i = 1, #covers do
+							local other_cover_pos = covers[i][1]
 							
-							if v3_dis_sq(other_cover[1], room_pos) < 6400 then
+							if v3_dis_sq(room_pos, other_cover_pos) <= 8100 then
 								place_cover = nil
-								
-								break
 							end
 						end
 						
 						if place_cover then
 							place_cover = self:check_cover_close_to_wall(room_pos)
 						end
-							
+						
 						if place_cover then
 							local c_tracker = self._quad_field:create_nav_tracker(room_pos, true)
+							
 							local cover = {
 								c_tracker:field_position(),
 								nil,
@@ -395,43 +395,23 @@ function NavigationManager:register_cover_units()
 							
 							t_ins(location_script_data.covers, cover)
 							t_ins(covers, cover)
+							
+							if #location_script_data.covers >= 4 or #covers >= max_cover_points then
+								break
+							end
 						end
 					end
-						
-					self:destroy_nav_tracker(tracker)
-					self:destroy_nav_tracker(navseg_tracker)
 				end
-			end
-		end
-	else
-		for key, res in pairs(self._nav_segments) do
-			if res.pos and res.neighbours and next(res.neighbours) then	
-				local tracker = self._quad_field:create_nav_tracker(res.pos, true)
-
-				local location_script_data = self._quad_field:get_script_data(tracker, true)
-
-				if not location_script_data.covers or not next(location_script_data.covers) then
-					if not location_script_data.covers then
-						location_script_data.covers = {}
-					end
-
-					local cover = {
-						tracker:field_position(),
-						nil,
-						tracker
-					}
-					
-					cover[2] = self:generate_cover_fwd(tracker)
-					
-					t_ins(location_script_data.covers, cover)
-					t_ins(covers, cover)
-				else
-					self:destroy_nav_tracker(tracker)
+				
+				self:destroy_nav_tracker(tracker)
+				
+				if #covers >= max_cover_points then
+					break
 				end
 			end
 		end
 	end
-
+	
 	self._covers = covers
 	
 	if not self.has_registered_cover_units_for_LIES then
@@ -449,10 +429,33 @@ end
 
 --Hooks:PostHook(NavigationManager, "update", "lies_cover", function(self, t, dt)
 	--self:_draw_covers()
+	--self:_draw_rooms_LIES()
 	--self:_draw_doors_LIES()
 	--self:_draw_anim_nav_links()
 	--self:_draw_coarse_graph()
 --end)
+
+function NavigationManager:_draw_rooms_LIES()
+	if not self._rooms_to_draw then
+		self._rooms_to_draw = {}
+		
+		for seg_id, seg_info in pairs(self._nav_segments) do
+			if seg_info.rooms then
+				for room_i, room in pairs(seg_info.rooms) do				
+					self._rooms_to_draw[#self._rooms_to_draw + 1] = room.room_pos
+				end
+			end
+		end
+	end
+	
+	local rooms_to_draw = self._rooms_to_draw
+	
+	for i = 1, #rooms_to_draw do
+		local room_pos = rooms_to_draw[i]
+		
+		Application:draw_sphere(room_pos, 10, 1, 1, 1)
+	end
+end
 
 function NavigationManager:_draw_doors_LIES()
 	if not self._doors_to_draw then
@@ -903,13 +906,13 @@ function NavigationManager:check_cover_close_to_wall(position, nr_rays, dis)
 	end
 end
 
-if never then
 function NavigationManager:send_nav_field_to_engine()
 	local t_ins = table.insert
 	local send_data = {
 		rooms = self._rooms
 	}
 	local nr_rooms = #send_data.rooms
+
 	send_data.doors = self._room_doors
 	send_data.nav_segments = self._nav_segments
 	send_data.quad_grid_size = self._grid_size
@@ -927,8 +930,17 @@ function NavigationManager:send_nav_field_to_engine()
 		local rooms = {}
 
 		for i_room, _ in pairs(vis_group.rooms) do
+			if self._nav_segments[vis_group.seg] and self._nav_segments[vis_group.seg].pos then
+				if not self._nav_segments[vis_group.seg].rooms then 
+					self._nav_segments[vis_group.seg].rooms = {}
+				end
+				
+				self._nav_segments[vis_group.seg].rooms[i_room] = self._rooms[i_room]
+				--self._nav_segments[vis_group.seg].rooms[i_room].room_pos = NavFieldBuilder._calculate_room_center(self, self._rooms[i_room])
+			end
+		
 			if i_room <= nr_rooms then
-				t_ins(rooms, i_room)
+				t_ins(rooms, i_room)	
 			else
 				Application:error("[NavigationManager:send_nav_field_to_engine] Navgraph needs to be rebuilt!")
 			end
@@ -970,7 +982,38 @@ function NavigationManager:send_nav_field_to_engine()
 
 	nav_field:set_navfield(send_data, callback(self, self, "clbk_navfield"))
 	nav_field:set_nav_link_filter(NavigationManager.ACCESS_FLAGS)
-	
-	--self.stored_send_data = send_data
 end
+
+function NavigationManager:_strip_nav_field_for_gameplay()
+	local all_doors = self._room_doors
+	local all_rooms = self._rooms
+	local i_door = #all_doors
+
+	while i_door ~= 0 do
+		local door = all_doors[i_door]
+		local seg_1 = self:get_nav_seg_from_i_room(door.rooms[1])
+		local seg_2 = self:get_nav_seg_from_i_room(door.rooms[2])
+
+		if seg_1 == seg_2 then
+			all_doors[i_door] = nil
+		else
+			local stripped_door = {
+				center = door.pos
+			}
+
+			mvector3.lerp(stripped_door.center, door.pos, door.pos1, 0.5)
+
+			all_doors[i_door] = stripped_door
+		end
+
+		i_door = i_door - 1
+	end
+
+	self._rooms = {}
+	self._geog_segments = {}
+	self._geog_segment_offset = nil
+	self._visibility_groups = {}
+	self._helper_blockers = nil
+	self._builder = nil
+	self._covers = {}
 end

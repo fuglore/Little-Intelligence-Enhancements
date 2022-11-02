@@ -206,7 +206,7 @@ function CopLogicAttack._upd_enemy_detection(data, is_synchronous)
 		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicAttack._upd_enemy_detection, data, delay and data.t + delay, data.important and true)
 	end
 
-	CopLogicBase._report_detections(data.detected_attention_objects)
+	--CopLogicBase._report_detections(data.detected_attention_objects)
 end
 
 function CopLogicAttack._on_player_slow_pos_rsrv_upd(data)
@@ -350,7 +350,7 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 
 	if ammo <= 0 then
-		local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
+		local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised or my_data.walking_to_optimal_pos
 	
 		if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
 			if not data.unit:anim_data().reload and my_data.shooting then
@@ -389,9 +389,11 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		end
 	end
 	
-	if aggro_level < 2 and data.attention_obj.verified then
-		if not my_data.walking_to_cover_shoot_pos and not my_data.in_cover and my_data.firing then
-			return true
+	if aggro_level < 3 and data.attention_obj.verified then
+		if aggro_level < 2 or not data.tactics or data.tactics.ranged_fire and my_data.weapon_range.close < data.attention_obj.verified_dis then
+			if not my_data.walking_to_cover_shoot_pos and not my_data.in_cover and my_data.firing then
+				return true
+			end
 		end
 	end
 end

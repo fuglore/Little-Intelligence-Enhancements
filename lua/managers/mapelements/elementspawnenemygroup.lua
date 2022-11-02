@@ -1,4 +1,8 @@
 Hooks:PostHook(ElementSpawnEnemyGroup, "_finalize_values", "lies_finalize_values", function(self)
+	if self._values.team then
+		self._values.team = tweak_data.levels:get_default_team_ID(self._values.team)
+	end
+
 	if type(LIES.settings.fixed_spawngroups) ~= "number" then
 		return
 	end

@@ -59,6 +59,16 @@ function CopLogicBase.chk_am_i_aimed_at(data, attention_obj, max_dot)
 	return max_dot < mvec3_dot(enemy_vec, enemy_look_dir)
 end
 
+function CopLogicBase._report_detections(enemies)
+	local group = managers.groupai:state()
+
+	for key, data in pairs(enemies) do
+		if data.verified and data.criminal_record and AIAttentionObject.REACT_SUSPICIOUS <= data.reaction then
+			group:criminal_spotted(data.unit, true)
+		end
+	end
+end
+
 function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	local my_data = data.internal_data
 	attention = attention or data.attention_obj
@@ -115,7 +125,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 	end
 	
-	if not data.cool and (data.unit:base()._tweak_table == "marshal_marksman" or data.unit:base()._tweak_table == "heavy_swat_sniper") and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and not objective.in_place and (objective.type == "defend_area" or objective.type == "assault_area") then --this is unit is fucking ballin, its almost like i know what im doing
+	if not data.cool and (data.unit:base()._tweak_table == "marshal_marksman" or data.unit:base()._tweak_table == "heavy_swat_sniper") and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and not objective.in_place and objective.type == "defend_area" and (not objective.grp_objective or objective.grp_objective.type ~= "retire") then --this is unit is fucking ballin, its almost like i know what im doing
 		local weapon = data.unit:inventory():equipped_unit()
 		local usage = weapon and weapon:base():weapon_tweak_data().usage
 		local range_entry = usage and (data.char_tweak.weapon[usage] or {}).range or {}
@@ -213,6 +223,76 @@ function CopLogicBase.queue_task(internal_data, id, func, data, exec_t, asap)
 	managers.enemy:queue_task(id, func, data, exec_t, callback(CopLogicBase, CopLogicBase, "on_queued_task", internal_data), asap)
 end
 
+function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
+	local old_att_obj = data.attention_obj
+	data.attention_obj = new_att_obj
+
+	if new_att_obj then
+		new_reaction = new_reaction or new_att_obj.settings.reaction
+		new_att_obj.reaction = new_reaction
+		local new_crim_rec = new_att_obj.criminal_record
+		local is_same_obj, contact_chatter_time_ok = nil
+
+		if old_att_obj then
+			if old_att_obj.u_key == new_att_obj.u_key then
+				is_same_obj = true
+				contact_chatter_time_ok = new_crim_rec and data.t - new_crim_rec.det_t > 15
+
+				if new_att_obj.stare_expire_t and new_att_obj.stare_expire_t < data.t then
+					if new_att_obj.settings.pause then
+						new_att_obj.stare_expire_t = nil
+						new_att_obj.pause_expire_t = data.t + math.lerp(new_att_obj.settings.pause[1], new_att_obj.settings.pause[2], math.random())
+					end
+				elseif new_att_obj.pause_expire_t and new_att_obj.pause_expire_t < data.t then
+					if not new_att_obj.settings.attract_chance or math.random() < new_att_obj.settings.attract_chance then
+						new_att_obj.pause_expire_t = nil
+						new_att_obj.stare_expire_t = data.t + math.lerp(new_att_obj.settings.duration[1], new_att_obj.settings.duration[2], math.random())
+					else
+						debug_pause_unit(data.unit, "skipping attraction")
+
+						new_att_obj.pause_expire_t = data.t + math.lerp(new_att_obj.settings.pause[1], new_att_obj.settings.pause[2], math.random())
+					end
+				end
+			else
+				if old_att_obj.criminal_record then
+					managers.groupai:state():on_enemy_disengaging(data.unit, old_att_obj.u_key)
+				end
+
+				if new_crim_rec then
+					managers.groupai:state():on_enemy_engaging(data.unit, new_att_obj.u_key)
+				end
+
+				contact_chatter_time_ok = new_crim_rec and data.t - new_crim_rec.det_t > 15
+			end
+		else
+			if new_crim_rec then
+				managers.groupai:state():on_enemy_engaging(data.unit, new_att_obj.u_key)
+			end
+
+			contact_chatter_time_ok = new_crim_rec and data.t - new_crim_rec.det_t > 15
+		end
+
+		if not is_same_obj then
+			if new_att_obj.settings.duration then
+				new_att_obj.stare_expire_t = data.t + math.lerp(new_att_obj.settings.duration[1], new_att_obj.settings.duration[2], math.random())
+				new_att_obj.pause_expire_t = nil
+			end
+
+			new_att_obj.acquire_t = data.t
+		end
+
+		if AIAttentionObject.REACT_SHOOT <= new_reaction and new_att_obj.verified and contact_chatter_time_ok and (data.unit:anim_data().idle or data.unit:anim_data().move) and new_att_obj.is_person then
+			if data.char_tweak.chatter.contact then
+				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "contact")
+			elseif not new_crim_rec.gun_called_out and data.char_tweak.chatter.criminalhasgun then
+				new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
+			end
+		end
+	elseif old_att_obj and old_att_obj.criminal_record then
+		managers.groupai:state():on_enemy_disengaging(data.unit, old_att_obj.u_key)
+	end
+end
+
 function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_reaction)
 	local t = data.t
 	local detected_obj = data.detected_attention_objects
@@ -226,7 +306,8 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 	--local chk_vis_func = my_tracker.check_visibility
 	local is_detection_persistent = managers.groupai:state():is_detection_persistent()
 	local is_weapons_hot = managers.groupai:state():enemy_weapons_hot()
-	local delay = 2
+	local delay = managers.groupai:state():whisper_mode() and 0 or 2
+	
 	local player_importance_wgt = data.unit:in_slot(managers.slot:get_mask("enemies")) and {}
 
 	local function _angle_chk(attention_pos, dis, strictness)
@@ -514,8 +595,17 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 						detect_pos = attention_pos
 					end
 
-					local in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
-
+					local in_FOV
+					
+					if attention_info.criminal_record and not attention_info.criminal_record.is_deployable then
+						if attention_info.criminal_record.det_t > 9 then
+							in_FOV = not attention_info.settings.notice_requires_FOV or _angle_chk(attention_pos, dis, 0.8)
+						else
+							in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
+						end
+					else
+						in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
+					end
 					if in_FOV then
 						vis_ray = World:raycast("ray", my_pos, detect_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision")
 
@@ -577,6 +667,10 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 	if player_importance_wgt then
 		managers.groupai:state():set_importance_weight(data.key, player_importance_wgt)
+	end
+	
+	if data.group then
+		CopLogicBase._report_detections(detected_obj)
 	end
 
 	return delay

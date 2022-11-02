@@ -153,6 +153,149 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 	--end
 end
 
+function GroupAIStateBase:criminal_spotted(unit, reported)
+	local u_key = unit:key()
+	local u_sighting = self._criminals[u_key]
+	local prev_seg = u_sighting.seg
+	local prev_area = u_sighting.area
+	local seg = u_sighting.tracker:nav_segment()
+	
+	if not reported and LIES.settings.hhtacs then
+		u_sighting.tracker:m_position(u_sighting.pos)
+		
+		return
+	end
+
+	if u_sighting.undetected then
+		u_sighting.undetected = nil
+	end
+
+	u_sighting.seg = seg
+
+	u_sighting.tracker:m_position(u_sighting.pos)
+
+	u_sighting.det_t = self._t
+	local area = nil
+
+	if prev_area and prev_area.nav_segs[seg] then
+		area = prev_area
+	else
+		area = self:get_area_from_nav_seg_id(seg)
+	end
+
+	if prev_area ~= area then
+		u_sighting.area = area
+
+		if prev_area then
+			prev_area.criminal.units[u_key] = nil
+		end
+
+		area.criminal.units[u_key] = u_sighting
+	end
+
+	if area.is_safe then
+		area.is_safe = nil
+
+		self:_on_area_safety_status(area, {
+			reason = "criminal",
+			record = u_sighting
+		})
+	end
+end
+
+function GroupAIStateBase:report_aggression(unit)
+	local u_key = unit:key()
+	local u_sighting = self._criminals[u_key]
+
+	if not u_sighting then
+		return
+	end
+
+	u_sighting.assault_t = self._t
+	self:criminal_spotted(u_sighting.unit, true)
+end
+
+function GroupAIStateBase:on_criminal_nav_seg_change(unit, nav_seg_id)
+	local u_key = unit:key()
+	local u_sighting = self._criminals[u_key]
+
+	if not u_sighting then
+		return
+	end
+	
+	if LIES.settings.hhtacs then
+		if not self._hunt_mode then
+			if u_sighting.undetected or self._t - u_sighting.det_t > 9 then
+				if self._enemy_weapons_hot then
+					local area_restricted = nil
+					local area = self:get_area_from_nav_seg_id(nav_seg_id)
+					
+					if area then
+						if area.spawn_groups and next(area.spawn_groups) then
+							area_restricted = true
+						else
+							for other_area_id, other_area in pairs(area.neighbours) do
+								if other_area.spawn_groups and next(other_area.spawn_groups) then
+									area_restricted = true
+									
+									break
+								end
+							end
+						end
+					end
+					
+					if area_restricted then
+						self:criminal_spotted(unit, true)
+					else
+						u_sighting.tracker:m_position(u_sighting.pos)
+						
+						if u_sighting.area then
+							u_sighting.area.criminal.units[u_key] = nil
+							u_sighting.area = nil
+						end
+					end
+				end
+					
+				return
+			end
+		end
+	end
+	
+	u_sighting.tracker:m_position(u_sighting.pos)
+	
+	local prev_seg = u_sighting.seg
+	local prev_area = u_sighting.area
+
+	u_sighting.seg = nav_seg_id
+
+	local area = nil
+
+	if prev_area and prev_area.nav_segs[nav_seg_id] then
+		area = prev_area
+	else
+		area = self:get_area_from_nav_seg_id(nav_seg_id)
+	end
+
+	if prev_area ~= area then
+		u_sighting.area = area
+
+		if prev_area then
+			prev_area.criminal.units[u_key] = nil
+		end
+
+		area.criminal.units[u_key] = u_sighting
+	end
+
+	if area.is_safe then
+		area.is_safe = nil
+
+		self:_on_area_safety_status(area, {
+			reason = "criminal",
+			record = u_sighting
+		})
+	end
+end
+
 function GroupAIStateBase:chk_say_teamAI_combat_chatter(unit)
 	if not self:is_detection_persistent() then
 		return
@@ -266,4 +409,20 @@ function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
 	end
 
 	return objective
+end
+
+function GroupAIStateBase:register_security_camera(unit, state)
+	if not state and (self._security_cameras[unit:key()] or unit:base()._destroyed) then
+		if not self._disabled_security_cameras then
+			self._disabled_security_cameras = {}
+		end
+	
+		if not unit:base()._destroyed then
+			self._disabled_security_cameras[unit:key()] = not state and unit or nil
+		else
+			self._disabled_security_cameras[unit:key()] = nil
+		end
+	end
+	
+	self._security_cameras[unit:key()] = state and unit or nil
 end

@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V6.23",
+		version = "V6.24",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -25,7 +25,7 @@ if RequiredScript == "lib/managers/menumanager" then
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
 
 	function LIES:tprint(tbl, indent, depth)
-		depth = depth or 0
+		depth = depth or 2
 		indent = indent or 0
 		local toprint = string.rep(" ", indent) .. "{\r\n"
 		indent = indent + 2
@@ -687,9 +687,7 @@ if RequiredScript == "lib/managers/menumanager" then
 			
 			wanted_group = group_type_order[group_order_index]
 		end
-		
-		--log(tostring(wanted_group))
-		
+
 		for _, group_type in ipairs(group_types) do
 			if not wanted_group or wanted_group == group_type then
 				if tweak_data.group_ai.enemy_spawn_groups[group_type] then

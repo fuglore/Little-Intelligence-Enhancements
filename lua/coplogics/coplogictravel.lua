@@ -256,15 +256,25 @@ function CopLogicTravel._chk_close_to_criminal(data, my_data)
 	if my_data.close_to_criminal == nil then
 		my_data.close_to_criminal = false
 		local my_area = managers.groupai:state():get_area_from_nav_seg_id(data.unit:movement():nav_tracker():nav_segment())
+		local all_criminals = managers.groupai:state():all_char_criminals()
+		local next_seg = my_data.coarse_path_index and my_data.coarse_path[my_data.coarse_path_index + 1] and my_data.coarse_path[my_data.coarse_path_index + 1][1]
+		local next_area = next_seg and managers.groupai:state():get_area_from_nav_seg_id(next_seg)
+		local closest_crim_u_data, closest_crim_dis = nil
 
-		if next(my_area.criminal.units) then
-			my_data.close_to_criminal = true
-		else
-			for _, nbr in pairs(my_area.neighbours) do
-				if next(nbr.criminal.units) then
-					my_data.close_to_criminal = true
-
-					break
+		for u_key, u_data in pairs(all_criminals) do
+			if not u_data.undetected and u_data.det_t and data.t - u_data.det_t < 15 then
+				if not u_data.status or u_data.status == "electrified" then
+					local u_data_seg = u_data.tracker:nav_segment()
+					
+					if my_area.nav_segs[u_data_seg] then
+						my_data.close_to_criminal = true
+						
+						break
+					elseif next_area and next_area.nav_segs[u_data_seg] then
+						my_data.close_to_criminal = true
+						
+						break
+					end
 				end
 			end
 		end
@@ -394,18 +404,16 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 		local my_index = my_data.coarse_path_index
 		local my_coarse_path_size = #my_data.coarse_path
 		
-		local diff = my_coarse_path_size - group_coarse_path_size
-	
-		if diff > 0 then
-			my_index = my_index - math.abs(diff)
-		elseif diff < 0 then
-			my_index = my_index + math.abs(diff)
+		if my_coarse_path_size > group_coarse_path_size then
+			local diff = my_coarse_path_size - group_coarse_path_size 
+			my_index = my_index - diff
+		elseif my_coarse_path_size < group_coarse_path_size then
+			local diff = group_coarse_path_size - my_coarse_path_size
+			my_index = my_index + diff
 		end
-	
+			
 		if my_index < forwardmost_index then
 			return true
-		elseif my_index > forwardmost_index then
-			return
 		end
 	end
 	
@@ -422,25 +430,21 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 					local his_logic_data = u_data.unit:brain()._logic_data
 					
 					if his_logic_data.group then
-						if his_logic_data and his_logic_data.name ~= "travel" then
-							can_continue = nil
-							
-							break
-						end
-						
 						if forwardmost_index and his_logic_data.internal_data and his_logic_data.internal_data.coarse_path_index then
 							local his_index = his_logic_data.internal_data.coarse_path_index
 							local his_coarse_path_size = #his_logic_data.internal_data.coarse_path
-							local diff = his_coarse_path_size - group_coarse_path_size
 							
-							if diff > 0 then
-								his_index = his_index - math.abs(diff)
-							elseif diff < 0 then
-								his_index = his_index + math.abs(diff)
+							if his_coarse_path_size > group_coarse_path_size then
+								local diff = his_coarse_path_size - group_coarse_path_size 
+								his_index = his_index - diff
+							elseif his_coarse_path_size < group_coarse_path_size then
+								local diff = group_coarse_path_size - his_coarse_path_size
+								his_index = his_index + diff
 							end
-							
+
 							if his_index < forwardmost_index then
-								can_continue = nil		
+								can_continue = nil
+
 								break
 							end
 						end
@@ -636,7 +640,7 @@ function CopLogicTravel._chk_say_clear(data)
 			
 			if rng > 0.25 then
 				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "clear")
-			else
+			elseif not managers.groupai:state():is_detection_persistent() then
 				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "controlidle")
 			end
 			
@@ -679,7 +683,7 @@ function CopLogicTravel._upd_enemy_detection(data)
 				CopLogicBase._exit(data.unit, wanted_state)
 			end
 
-			CopLogicBase._report_detections(data.detected_attention_objects)
+			--CopLogicBase._report_detections(data.detected_attention_objects)
 
 			return delay
 		end
@@ -687,7 +691,7 @@ function CopLogicTravel._upd_enemy_detection(data)
 
 	if my_data == data.internal_data then
 		if data.cool and new_reaction == AIAttentionObject.REACT_SUSPICIOUS and CopLogicBase._upd_suspicion(data, my_data, new_attention) then
-			CopLogicBase._report_detections(data.detected_attention_objects)
+			--CopLogicBase._report_detections(data.detected_attention_objects)
 
 			return delay
 		elseif new_reaction and new_reaction <= AIAttentionObject.REACT_SCARED then
@@ -701,7 +705,7 @@ function CopLogicTravel._upd_enemy_detection(data)
 		CopLogicAttack._upd_aim(data, my_data)
 	end
 
-	CopLogicBase._report_detections(data.detected_attention_objects)
+	--CopLogicBase._report_detections(data.detected_attention_objects)
 
 	if data.cool then
 		CopLogicTravel.upd_suspicion_decay(data)
@@ -1186,19 +1190,21 @@ function CopLogicTravel._find_cover(data, search_nav_seg, near_pos)
 		local closest_crim_u_data, closest_crim_dis = nil
 
 		for u_key, u_data in pairs(all_criminals) do
-			if not u_data.status or u_data.status == "electrified" then
-				local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+			if not u_data.undetected and u_data.det_t and data.t - u_data.det_t < 15 then
+				if not u_data.status or u_data.status == "electrified" then
+					local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
 
-				if crim_area == search_area then
-					threat_pos = u_data.m_pos
-
-					break
-				else
-					local crim_dis = mvector3.distance_sq(near_pos, u_data.m_pos)
-
-					if not closest_crim_dis or crim_dis < closest_crim_dis then
+					if crim_area == search_area then
 						threat_pos = u_data.m_pos
-						closest_crim_dis = crim_dis
+
+						break
+					else
+						local crim_dis = mvector3.distance_sq(near_pos, u_data.m_pos)
+
+						if not closest_crim_dis or crim_dis < closest_crim_dis then
+							threat_pos = u_data.m_pos
+							closest_crim_dis = crim_dis
+						end
 					end
 				end
 			end

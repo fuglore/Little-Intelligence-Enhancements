@@ -282,7 +282,7 @@ function NavigationManager:register_cover_units()
 			if not nav_tracker:lost() or v3_dis_sq(nav_tracker:field_position(), pos) < 3600 then
 				local room_nav_seg = self._nav_segments[nav_tracker:nav_segment()]
 				local navseg_tracker = self._quad_field:create_nav_tracker(room_nav_seg.pos, true)
-				
+				local field_pos = nav_tracker:field_position()
 				local cover = {
 					nav_tracker:field_position(),
 					fwd,
@@ -350,7 +350,9 @@ function NavigationManager:register_cover_units()
 		end
 	end
 	
-	local max_cover_points = math.round(#covers * (math_lerp(2, 1, math_clamp(#covers / 1000, 0, 1))))
+	local max_cover_points = #covers <= 0 and 2500 or math.round(#covers * (math_lerp(4, 1, math_clamp(#covers / 2500, 0, 1))))
+	
+	max_cover_points = math_clamp(max_cover_points, 1, 2500)
 	
 	log("Map has " .. tostring(#covers) .. " cover points, setting generation limit to " .. tostring(max_cover_points) .. " cover points.")
 	
@@ -361,12 +363,13 @@ function NavigationManager:register_cover_units()
 
 				local location_script_data = self._quad_field:get_script_data(tracker, true)
 
-				if not location_script_data.covers or #location_script_data.covers < 4 then
+				if not location_script_data.covers or #location_script_data.covers < 8 then
 					if not location_script_data.covers then
 						location_script_data.covers = {}
 					end
 		
 					for _, room in pairs(res.rooms) do
+						local c_tracker = nil
 						local room_pos = NavFieldBuilder._calculate_room_center(self, room)
 						local place_cover = true
 						
@@ -380,10 +383,49 @@ function NavigationManager:register_cover_units()
 						
 						if place_cover then
 							place_cover = self:check_cover_close_to_wall(room_pos)
+							
+							if not place_cover then
+								local across_vec = temp_vec1
+								mvec3_set_st(across_vec, room.borders.x_pos, room.borders.y_pos, 0)
+								mvec3_add(across_vec, room_pos)
+								c_tracker = self._quad_field:create_nav_tracker(room_pos, true)
+								local new_positions = self:find_walls_accross_tracker(c_tracker, across_vec, 360, 8)
+								
+								if new_positions then
+									for i = 1, #new_positions do
+										local good_cover = new_positions[i][2]
+										
+										if good_cover then
+											local try_pos = new_positions[i][1]
+											
+											for i = 1, #covers do
+												local other_cover_pos = covers[i][1]
+												
+												if v3_dis_sq(try_pos, other_cover_pos) <= 8100 then
+													good_cover = nil
+												end
+											end
+											
+											if good_cover and self:check_cover_close_to_wall(try_pos) then
+												if c_tracker:nav_segment() == key then
+													place_cover = true
+													c_tracker:move(try_pos)
+
+													break
+												end
+											end
+										end
+									end
+								else
+									place_cover = nil
+								end
+							end
 						end
 						
 						if place_cover then
-							local c_tracker = self._quad_field:create_nav_tracker(room_pos, true)
+							if not c_tracker then
+								c_tracker = self._quad_field:create_nav_tracker(room_pos, true)
+							end
 							
 							local cover = {
 								c_tracker:field_position(),
@@ -396,9 +438,11 @@ function NavigationManager:register_cover_units()
 							t_ins(location_script_data.covers, cover)
 							t_ins(covers, cover)
 							
-							if #location_script_data.covers >= 4 or #covers >= max_cover_points then
+							if #location_script_data.covers >= 8 or #covers >= max_cover_points then
 								break
 							end
+						elseif c_tracker then
+							self:destroy_nav_tracker(c_tracker)
 						end
 					end
 				end
@@ -871,7 +915,7 @@ function NavigationManager:pad_out_position(position, nr_rays, dis)
 end
 
 function NavigationManager:check_cover_close_to_wall(position, nr_rays, dis)
-	nr_rays = math.max(2, nr_rays or 4)
+	nr_rays = math.max(2, nr_rays or 8)
 	dis = dis or 46.5
 	local angle = 360
 	local rot_step = angle / nr_rays

@@ -27,11 +27,16 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 	for key, enemy_data in pairs(enemies) do
 		threat_epicenter = threat_epicenter or Vector3()
-
-		mvector3.add(threat_epicenter, enemy_data.m_pos)
+		local enemy_pos = enemy_data.last_verified_m_pos or enemy_data.m_pos
+		mvector3.add(threat_epicenter, enemy_pos)
 
 		nr_threats = nr_threats + 1
-		enemy_data.aimed_at = CopLogicIdle.chk_am_i_aimed_at(data, enemy_data, enemy_data.aimed_at and 0.95 or 0.985)
+		
+		if not enemy_data.verified then
+			enemy_data.aimed_at = nil
+		else
+			enemy_data.aimed_at = CopLogicIdle.chk_am_i_aimed_at(data, enemy_data, enemy_data.aimed_at and 0.95 or 0.985)
+		end
 	end
 
 	if threat_epicenter then
@@ -45,7 +50,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 		local furthest_pt_dist = 0
 		local furthest_line = nil
 
-		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 100 then
+		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 60 then
 			my_data.threat_epicenter = mvector3.copy(threat_epicenter)
 
 			for key1, enemy_data1 in pairs(enemies) do
@@ -162,7 +167,12 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			optimal_direction = mvector3.copy(out)
 
 			mvector3.multiply(optimal_direction, -1)
-			mvector3.multiply(out, mvector3.dot(out, PA) + 600)
+			
+			if my_data.attitude == "engage" then
+				mvector3.multiply(out, mvector3.dot(out, PA) + 600)
+			else
+				mvector3.multiply(out, mvector3.dot(out, PA) + 900)
+			end
 
 			my_data.optimal_pos = mvector3.copy(data.m_pos)
 
@@ -185,8 +195,13 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			end
 
 			local optimal_pos = mvector3.copy(optimal_direction)
+			
+			if my_data.attitude == "engage" then
+				mvector3.multiply(optimal_pos, -(optimal_length + 600))
+			else
+				mvector3.multiply(optimal_pos, -(optimal_length + 900))
+			end
 
-			mvector3.multiply(optimal_pos, -(optimal_length + 600))
 			mvector3.add(optimal_pos, threat_epicenter)
 
 			my_data.optimal_pos = optimal_pos
@@ -308,6 +323,9 @@ function ShieldLogicAttack.queued_update(data)
 	end
 
 	local focus_enemy = data.attention_obj
+	
+	my_data.want_to_take_cover = CopLogicAttack._chk_wants_to_take_cover(data, my_data)
+	
 	local action_taken = my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.walking_to_optimal_pos
 
 	if not action_taken and unit:anim_data().stand then
@@ -364,12 +382,12 @@ function ShieldLogicAttack.queued_update(data)
 
 				local fwd_bump = nil
 				to_pos, fwd_bump = ShieldLogicAttack.chk_wall_distance(data, my_data, to_pos)
-				local do_move = mvector3.distance_sq(to_pos, data.m_pos) > 10000
+				local do_move = mvector3.distance_sq(to_pos, data.m_pos) > 900
 
 				if not do_move then
 					local to_pos_current, fwd_bump_current = ShieldLogicAttack.chk_wall_distance(data, my_data, data.m_pos)
 
-					if fwd_bump_current then
+					if fwd_bump_current and mvector3.distance_sq(to_pos_current, data.m_pos) > 900 then
 						do_move = true
 					end
 				end

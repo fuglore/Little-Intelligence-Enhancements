@@ -127,6 +127,7 @@ function CopSound:_play_vc_framework_voice(sound_name, important)
 end
 
 local important_sounds = {
+	a08 = true,
 	x02a_any_3p = true,
 	x01a_any_3p = true,
 	cloaker_taunt_during_assault = true,

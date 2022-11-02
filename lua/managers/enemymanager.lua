@@ -348,40 +348,68 @@ function EnemyManager:_update_queued_tasks(t, dt)
 	local n_tasks = #self._queued_tasks
 	
 	if n_tasks > 0 then
-		local tick_rate = tweak_data.group_ai.ai_tick_rate
-		local max_buffer = tick_rate * n_tasks
-		self._queue_buffer = math.min(self._queue_buffer + dt, tick_rate * n_tasks)
+		local whisper = managers.groupai:state():whisper_mode()
 
-		while tick_rate <= self._queue_buffer do
-			if #self._queued_tasks > 0 then
-				local best_i_task, best_task_t 
+		if whisper then
+			while #self._queued_tasks > 0 do
+				local executed_task = nil
 				
 				for i_task = 1, #self._queued_tasks do
 					local task_data = self._queued_tasks[i_task]
 
 					if not task_data.t then
 						self:_execute_queued_task(i_task)
-
-						self._queue_buffer = self._queue_buffer - tick_rate
+						executed_task = true
 						
 						break
 					elseif task_data.asap and not self._queued_task_executed or task_data.t < t then
-						if not best_task_t or task_data.t < best_task_t then
-							best_task_t = task_data.t
-							best_i_task = i_task
-						end
+						self:_execute_queued_task(i_task)
+						executed_task = true
+						
+						break
 					end
 				end
+				
+				if not executed_task then
+					break
+				end
+			end
+		else
+			local tick_rate = tweak_data.group_ai.ai_tick_rate
+			local max_buffer = tick_rate * n_tasks
+			self._queue_buffer = math.min(self._queue_buffer + dt, tick_rate * n_tasks)
+			
+			while tick_rate <= self._queue_buffer do
+				if #self._queued_tasks > 0 then
+					local best_i_task, best_task_t 
 					
-				if best_i_task then
-					self:_execute_queued_task(best_i_task)
-					
-					self._queue_buffer = self._queue_buffer - tick_rate
+					for i_task = 1, #self._queued_tasks do
+						local task_data = self._queued_tasks[i_task]
+
+						if not task_data.t then
+							self:_execute_queued_task(i_task)
+
+							self._queue_buffer = self._queue_buffer - tick_rate
+							
+							break
+						elseif task_data.asap and not self._queued_task_executed or task_data.t < t then
+							if not best_task_t or task_data.t < best_task_t then
+								best_task_t = task_data.t
+								best_i_task = i_task
+							end
+						end
+					end
+						
+					if best_i_task then
+						self:_execute_queued_task(best_i_task)
+						
+						self._queue_buffer = self._queue_buffer - tick_rate
+					else
+						break
+					end
 				else
 					break
 				end
-			else
-				break
 			end
 		end
 	else

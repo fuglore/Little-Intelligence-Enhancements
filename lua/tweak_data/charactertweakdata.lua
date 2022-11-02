@@ -1,5 +1,16 @@
 Hooks:PostHook(CharacterTweakData, "init", "lies_fix_nosup", function(self, tweak_data)
 	self:fix_no_supress()
+	
+	self.security.chatter.contact = nil
+	self.security.chatter.criminalhasgun = true
+	self.security_undominatable.chatter.contact = nil
+	self.security_undominatable.chatter.criminalhasgun = true
+	self.security_mex.chatter.contact = nil
+	self.security_mex.chatter.criminalhasgun = true
+	self.security_mex_no_pager.chatter.contact = nil
+	self.security_mex_no_pager.chatter.criminalhasgun = true
+	self.gensec.chatter.contact = nil
+	self.gensec.chatter.criminalhasgun = true
 end)
 
 function CharacterTweakData:fix_no_supress()

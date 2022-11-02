@@ -145,7 +145,7 @@ function CopLogicIdle.queued_update(data)
 	local delay = data.logic._upd_enemy_detection(data)
 
 	if data.internal_data ~= my_data then
-		CopLogicBase._report_detections(data.detected_attention_objects)
+		--CopLogicBase._report_detections(data.detected_attention_objects)
 
 		return
 	end
@@ -187,7 +187,10 @@ function CopLogicIdle.queued_update(data)
 	CopLogicIdle._perform_objective_action(data, my_data, objective)
 	CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
 	CopLogicIdle._upd_pathing(data, my_data)
-	CopLogicIdle._upd_scan(data, my_data)
+	
+	if my_data.scan then
+		CopLogicIdle._upd_scan(data, my_data)
+	end
 		
 	if not my_data.action_started or not my_data.action_started ~= true then
 		if not data.cool then
@@ -202,7 +205,7 @@ function CopLogicIdle.queued_update(data)
 	end
 
 	if data.internal_data ~= my_data then
-		CopLogicBase._report_detections(data.detected_attention_objects)
+		--CopLogicBase._report_detections(data.detected_attention_objects)
 
 		return
 	end
@@ -431,9 +434,24 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 	for u_key, attention_data in pairs(attention_objects) do
 		local att_unit = attention_data.unit
 		local crim_record = attention_data.criminal_record
+		local detected = crim_record and crim_record.det_t and data.t - crim_record.det_t < 9
 
 		if not attention_data.identified then
-			-- Nothing
+			if data.cool then
+				if AIAttentionObject.REACT_SUSPICIOUS <= attention_data.reaction then
+					if attention_data.notice_progress > 0 then
+						if not attention_data.reacted_to then
+							if crim record and math.random() <= 0.25 then
+								data.unit:sound():say("a07a", true)
+							end
+							
+							attention_data.reacted_to = true
+						end
+					elseif attention_data.reacted_to then
+						attention_data.reacted_to = nil
+					end
+				end
+			end
 		elseif attention_data.pause_expire_t then
 			if attention_data.pause_expire_t < data.t then
 				if not attention_data.settings.attract_chance or math.random() < attention_data.settings.attract_chance then
@@ -455,6 +473,10 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 
 			if data.cool and AIAttentionObject.REACT_SCARED <= reaction then
 				data.unit:movement():set_cool(false, managers.groupai:state().analyse_giveaway(data.unit:base()._tweak_table, att_unit))
+				
+				if crim_record and not crim_record.is_deployable then
+					data.unit:sound():say("a08", true)
+				end
 			end
 
 			local reaction_too_mild = nil
@@ -577,7 +599,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					end
 
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
-				else
+				elseif detected or alert_dt < 9 or dmg_dt < 9 or attention_data.verified_t and attention_data.verified_t < 9 then
 					target_priority_slot = 7
 					
 					if not has_damaged then
@@ -729,8 +751,10 @@ function CopLogicIdle.damage_clbk(data, damage_info)
 	end
 
 	if enemy_data and enemy_data.criminal_record then
-		managers.groupai:state():criminal_spotted(enemy)
-		managers.groupai:state():report_aggression(enemy)
+		if data.group then
+			managers.groupai:state():criminal_spotted(enemy, true)
+			managers.groupai:state():report_aggression(enemy)
+		end
 	end
 end
 
@@ -880,17 +904,27 @@ function CopLogicIdle.on_alert(data, alert_data)
 			}
 
 			data.unit:brain():action_request(action_data)
+			
+			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
+				data.unit:sound():say("lk3b", true)
+			end
+		elseif not is_new and att_obj_data.is_person and att_obj_data.verified and att_obj_data.crim_record and not att_obj_data.crim_record.gun_called_out and data.char_tweak.chatter.criminalhasgun then
+			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
+				new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
+			end
 		end
-
+		
 		if not action_data and alert_type == "bullet" and data.logic.should_duck_on_alert(data, alert_data) then
 			action_data = CopLogicAttack._chk_request_action_crouch(data)
 		end
 
 		if att_obj_data.criminal_record then
-			managers.groupai:state():criminal_spotted(alert_unit)
+			if data.group then
+				managers.groupai:state():criminal_spotted(alert_unit)
 
-			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
-				managers.groupai:state():report_aggression(alert_unit)
+				if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
+					managers.groupai:state():report_aggression(alert_unit)
+				end
 			end
 		end
 	elseif was_cool and (alert_type == "footstep" or alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" or alert_type == "vo_cbt" or alert_type == "vo_intimidate" or alert_type == "vo_distress") then

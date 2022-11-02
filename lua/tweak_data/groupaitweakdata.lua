@@ -3108,10 +3108,52 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 end
 
 Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(self)
+	self.enemy_chatter.retreat = {
+		radius = 800,
+		max_nr = 2,
+		queue = "m01",
+		group_min = 2,
+		duration = {
+			4,
+			8
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
 	self.enemy_chatter.go_go = {
 		radius = 1000,
 		max_nr = 1,
 		queue = "mov",
+		group_min = 2,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.criminalhasgun = {
+		radius = 3000,
+		max_nr = 1,
+		queue = "a01",
+		group_min = 2,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.contact = {
+		radius = 1000,
+		max_nr = 1,
+		queue = "c01",
 		group_min = 2,
 		duration = {
 			8,

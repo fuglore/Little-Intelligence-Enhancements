@@ -13,6 +13,10 @@
 			"script_path" : "menunodegui.lua"
 		},
 		{
+			"hook_id": "lib/tweak_data/attentiontweakdata",
+			"script_path": "lua/tweak_data/attentiontweakdata.lua"
+		},
+		{
 			"hook_id": "lib/tweak_data/weapontweakdata",
 			"script_path": "lua/tweak_data/weapontweakdata.lua"
 		},
@@ -35,6 +39,10 @@
 		{
 			"hook_id": "lib/managers/navigationmanager",
 			"script_path": "lua/managers/navigationmanager.lua"
+		},
+		{
+			"hook_id": "lib/units/props/securitycamera",
+			"script_path": "lua/props/securitycamera.lua"
 		},
 		{
 			"hook_id": "lib/units/props/drill",

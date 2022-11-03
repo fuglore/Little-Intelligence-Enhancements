@@ -117,7 +117,7 @@ end
 function CopLogicIdle._on_player_slow_pos_rsrv_upd(data)
 	local my_data = data.internal_data
 
-	if data.is_converted or data.check_crim_jobless or data.team.id == "criminal1" then
+	if data.is_converted or data.check_crim_jobless or data.unit:in_slot(16) then
 		if not data.objective or data.objective.type == "free" then
 			if not data.path_fail_t or data.t - data.path_fail_t > 3 then
 				managers.groupai:state():on_criminal_jobless(data.unit)
@@ -162,7 +162,7 @@ function CopLogicIdle.queued_update(data)
 		end
 	end
 
-	if data.is_converted or data.check_crim_jobless or data.team.id == "criminal1" then
+	if data.is_converted or data.check_crim_jobless or data.unit:in_slot(16) then
 		if not data.objective or data.objective.type == "free" then
 			if not data.path_fail_t or data.t - data.path_fail_t > 3 then
 				managers.groupai:state():on_criminal_jobless(data.unit)
@@ -187,10 +187,7 @@ function CopLogicIdle.queued_update(data)
 	CopLogicIdle._perform_objective_action(data, my_data, objective)
 	CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
 	CopLogicIdle._upd_pathing(data, my_data)
-	
-	if my_data.scan then
-		CopLogicIdle._upd_scan(data, my_data)
-	end
+	CopLogicIdle._upd_scan(data, my_data)
 		
 	if not my_data.action_started or not my_data.action_started ~= true then
 		if not data.cool then
@@ -441,7 +438,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				if AIAttentionObject.REACT_SUSPICIOUS <= attention_data.reaction then
 					if attention_data.notice_progress > 0 then
 						if not attention_data.reacted_to then
-							if crim record and math.random() <= 0.25 then
+							if crim_record and math.random() <= 0.25 then
 								data.unit:sound():say("a07a", true)
 							end
 							
@@ -770,7 +767,7 @@ function CopLogicIdle._chk_relocate(data)
 			return true
 		end
 	
-		if data.is_converted or data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
+		if data.is_converted or data.unit:in_slot(16) then
 			if TeamAILogicIdle._check_should_relocate(data, data.internal_data, data.objective) then
 				data.objective.in_place = nil
 

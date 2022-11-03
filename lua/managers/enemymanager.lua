@@ -424,3 +424,50 @@ function EnemyManager:_update_queued_tasks(t, dt)
 		clbk()
 	end
 end
+
+function EnemyManager:_execute_queued_task(i)
+    local new_task_table = {}
+    
+	--table.remove sucks, don't use it, instead, recreate the table with everything except the task we are executing to save performance
+    for task_i = 1, #self._queued_tasks do
+        if task_i < i or task_i > i then
+            new_task_table[#new_task_table + 1] = self._queued_tasks[task_i]
+        end
+    end
+
+    local task = self._queued_tasks[i]
+    self._queued_task_executed = true
+
+    if task.data and task.data.unit and not alive(task.data.unit) then
+        print("[EnemyManager:_execute_queued_task] dead unit", inspect(task))
+        Application:stack_dump()
+    end
+	
+	self._queued_tasks = new_task_table
+
+    if task.v_cb then
+        task.v_cb(task.id)
+    end
+
+    task.clbk(task.data) 
+end
+
+function EnemyManager:unqueue_task(id)
+    local tasks = self._queued_tasks
+    local new_task_table = {}
+    local biffed = true
+    
+    for i = 1, #tasks do
+        if tasks[i].id ~= id then 
+            new_task_table[#new_task_table + 1] = self._queued_tasks[i]
+        else
+            biffed = nil
+        end
+    end
+    
+    self._queued_tasks = new_task_table
+
+    if biffed then
+        debug_pause("[EnemyManager:unqueue_task] task", id, "was not queued!!!")
+    end
+end

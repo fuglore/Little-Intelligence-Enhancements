@@ -157,13 +157,20 @@ end
 local tmp_rot1 = Rotation()
 
 function SecurityCamera:_detect_criminals_loud(t, criminals)
-	if not criminals then
+	if not criminals or self._invalid_camera then
 		return
 	end
 	
 	if not self._set_settings then
 		self._look_obj = self._unit:get_object(Idstring("CameraLens"))
 		self._yaw_obj = self._unit:get_object(Idstring("CameraYaw"))
+		
+		if not self._yaw_obj then
+			self._invalid_camera = true
+			
+			return
+		end
+		
 		self._pitch_obj = self._unit:get_object(Idstring("CameraPitch"))
 		self._pos = self._yaw_obj:position()
 		

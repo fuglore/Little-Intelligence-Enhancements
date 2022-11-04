@@ -312,6 +312,7 @@ end
 
 Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 	self._escorts = {}
+	self._MAX_SIMULTANEOUS_SPAWNS = 2
 
 	if LIES.settings.fixed_spawngroups == 2 or LIES.settings.fixed_spawngroups == 4 then
 		self._group_type_order = {
@@ -968,7 +969,7 @@ function GroupAIStateBesiege:_queue_police_upd_task()
 		end
 		
 		--moving this to a delayed callback makes sure it not take up space in the enemy manager tasks
-		managers.enemy:add_delayed_clbk("GroupAIStateBesiege._upd_police_activity", callback(self, self, "_upd_police_activity"), self._t + (next(self._spawning_groups) and 0.4 or 2))
+		managers.enemy:add_delayed_clbk("GroupAIStateBesiege._upd_police_activity", callback(self, self, "_upd_police_activity"), self._t + 2)
 	end
 end
 

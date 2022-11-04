@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V6.26",
+		version = "V6.3",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -16,6 +16,7 @@ if RequiredScript == "lib/managers/menumanager" then
 			fixed_specialspawncaps = false,
 			copsretire = false,
 			nav_link_interval = 1,
+			coplimit = 1,
 			interruptoncontact = true,
 			teamaihelpers = true,
 			spawngroupdelays = false,
@@ -840,6 +841,13 @@ if RequiredScript == "lib/managers/menumanager" then
 		MenuCallbackHandler.callback_lies_nav_link_interval = function(self, item)
 			local value = item:value()
 			LIES.settings.nav_link_interval = value
+
+			LIES:Save()
+		end
+		
+		MenuCallbackHandler.callback_lies_coplimit = function(self, item)
+			local value = item:value()
+			LIES.settings.coplimit = value
 
 			LIES:Save()
 		end

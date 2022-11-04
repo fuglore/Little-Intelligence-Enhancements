@@ -50,6 +50,9 @@
 	"menu_lies_nav_link_interval_athird" : "0.25x (One Third)",
 	"menu_lies_nav_link_interval_nochill" : "NO CHILL",
 	
+	"menu_lies_coplimit_title" : "Max Enemies Multiplier",
+	"menu_lies_coplimit_desc" : "Allows you to reduce or increase the maximum amount of enemies that spawn to your liking. NOTE: Values higher than default will affect performance negatively.",
+	
 	"menu_lies_hhtacs_title" : "Spicy Tactics",
 	"menu_lies_hhtacs_desc" : "Adds entirely new AI behaviors and new tactics, and changes things to be just a little bit harder. Extremely not accurate to Vanilla, but accurate to me making it the fuck up. NOTE: High sodium content.",
 

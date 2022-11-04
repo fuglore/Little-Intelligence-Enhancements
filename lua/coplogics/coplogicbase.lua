@@ -675,3 +675,16 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 	return delay
 end
+
+function CopLogicBase.death_clbk(data, damage_info)
+	if data.enrage_data and data.enrage_data.played_warning then
+		local is_dead = data.unit:character_damage():dead()
+		if is_dead then
+			data.unit:sound():play("slot_machine_loose", nil, true)
+		else
+			data.unit:sound():corpse_play("slot_machine_loose", nil, true)
+		end
+		
+		data.enrage_data.played_warning = nil
+	end
+end

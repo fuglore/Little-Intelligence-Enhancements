@@ -119,6 +119,18 @@
 			"value" : "nav_link_interval"
 		},
 		{
+			"type" : "slider",
+			"id" : "lies_coplimit",
+			"title" : "menu_lies_coplimit_title",
+			"description" : "menu_lies_coplimit_desc",
+			"callback" : "callback_lies_coplimit",
+			"min" : "0.5",
+			"max" : "2",
+			"step" : "0.05",
+			"show_value" : "true",
+			"value" : "coplimit"
+		},
+		{
 			"type" : "toggle",
 			"id" : "lies_teamaihelpers",
 			"title" : "menu_lies_teamaihelpers_title",

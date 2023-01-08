@@ -2,13 +2,6 @@ function GroupAITweakData:_LIES_setup()
 	if self._LIES_fix then
 		return
 	end
-	
-	self.besiege.assault.force[1] = self.besiege.assault.force[1] * LIES.settings.coplimit
-	self.besiege.assault.force[2] = self.besiege.assault.force[2] * LIES.settings.coplimit
-	self.besiege.assault.force[3] = self.besiege.assault.force[3] * LIES.settings.coplimit
-	self.besiege.assault.force_pool[1] = self.besiege.assault.force_pool[1] * LIES.settings.coplimit
-	self.besiege.assault.force_pool[2] = self.besiege.assault.force_pool[2] * LIES.settings.coplimit
-	self.besiege.assault.force_pool[3] = self.besiege.assault.force_pool[3] * LIES.settings.coplimit
 
 	if self.enemy_spawn_groups["tac_swat_shotgun_rush"] and not self._LIES_fix or not self.unit_categories["medic_M4"] and not self._LIES_fix then
 		log("LIES: Another mod has already changed spawn groups and tactics. Ignoring tweakdata setup.")

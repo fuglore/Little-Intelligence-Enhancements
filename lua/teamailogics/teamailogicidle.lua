@@ -21,7 +21,7 @@ function TeamAILogicIdle._on_player_slow_pos_rsrv_upd(data)
 						return
 					end
 				end
-			elseif objective.type == "revive" then
+			elseif objective.type == "revive" and not data.unit:movement()._should_stay then
 				objective.in_place = nil
 
 				TeamAILogicBase._exit(data.unit, "travel")
@@ -112,6 +112,36 @@ function TeamAILogicIdle.on_new_objective(data, old_objective)
 	end
 end
 
+function TeamAILogicIdle.is_available_for_assignment(data, new_objective)
+	if data.internal_data.exiting then
+		return
+	elseif data.path_fail_t and data.t < data.path_fail_t + 6 then
+		return
+	elseif data.unit:movement()._should_stay and (not new_objective or not new_objective.type ~= "stop") then
+		return
+	elseif data.objective then
+		if data.internal_data.performing_act_objective and not data.unit:anim_data().act_idle then
+			return
+		end
+
+		if new_objective and CopLogicBase.is_obstructed(data, new_objective, 0.2) then
+			return
+		end
+
+		local old_objective_type = data.objective.type
+
+		if not new_objective then
+			-- Nothing
+		elseif old_objective_type == "revive" then
+			return
+		elseif old_objective_type == "follow" and data.objective.called then
+			return
+		end
+	end
+
+	return true
+end
+
 function TeamAILogicIdle._get_priority_attention(data, attention_objects, reaction_func)
 	reaction_func = reaction_func or TeamAILogicBase._chk_reaction_to_attention_object
 	local best_target, best_target_priority_slot, best_target_priority, best_target_reaction = nil
@@ -155,12 +185,13 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 			if not reaction_too_mild then
 				local aimed_at = TeamAILogicIdle.chk_am_i_aimed_at(data, attention_data, attention_data.aimed_at and 0.95 or 0.985)
 				attention_data.aimed_at = aimed_at
+				local dangerous_special = nil
 			
 				local alert_dt = attention_data.alert_t and data.t - attention_data.alert_t or 10000
 				local dmg_dt = attention_data.dmg_t and data.t - attention_data.dmg_t or 10000
 				local mark_dt = attention_data.mark_t and data.t - attention_data.mark_t or 10000
 				local target_priority = distance
-				local close_threshold = ranges.close
+				local close_threshold = ranges.optimal
 
 				if data.attention_obj and data.attention_obj.u_key == u_key then
 					alert_dt = alert_dt * 0.8
@@ -196,6 +227,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 							end
 						elseif attention_unit:base().has_tag and attention_unit:base():has_tag("special") then
 							if attention_unit:base():has_tag("sniper") and aimed_at then
+								dangerous_special = true
 								if has_damaged then
 									target_priority_slot = 2
 								elseif has_alerted then
@@ -205,6 +237,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								end
 							elseif attention_unit:base():has_tag("spooc") then
 								if distance < 1500 then
+									dangerous_special = true
 									local trying_to_kick_criminal = attention_unit:brain()._logic_data and attention_unit:brain()._logic_data.internal_data and attention_unit:brain()._logic_data.internal_data.spooc_attack
 
 									if trying_to_kick_criminal then
@@ -231,6 +264,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								end
 							elseif attention_unit:base():has_tag("taser") then
 								if distance < 1500 then
+									dangerous_special = true
 									local trying_to_tase_criminal = att_unit:brain()._logic_data and att_unit:brain()._logic_data.internal_data and att_unit:brain()._logic_data.internal_data.tasing
 
 									if trying_to_tase_criminal then
@@ -251,6 +285,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								local dozer_type = attention_unit:base()._tweak_table
 								
 								if near then
+									--dangerous_special = true
+									
 									if dozer_type == "tank_mini" then
 										target_priority_slot = 4
 									else
@@ -277,6 +313,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 				else
 					target_priority_slot = 11
 				end
+				
+				attention_data.dangerous_special = dangerous_special
 
 				if reaction < AIAttentionObject.REACT_COMBAT then
 					target_priority = target_priority * 10

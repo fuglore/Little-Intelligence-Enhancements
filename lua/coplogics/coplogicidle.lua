@@ -189,7 +189,7 @@ function CopLogicIdle.queued_update(data)
 	CopLogicIdle._upd_pathing(data, my_data)
 	CopLogicIdle._upd_scan(data, my_data)
 		
-	if not my_data.action_started or not my_data.action_started ~= true then
+	if my_data.action_started and my_data.action_started == true then
 		if not data.cool then
 			CopLogicIdle._check_needs_reload(data, my_data)
 		end

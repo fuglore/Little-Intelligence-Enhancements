@@ -28,7 +28,7 @@ function TeamAILogicAssault.update(data)
 		end
 	
 		local enemy_visible = focus_enemy.verified
-		local action_taken = my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data._turning_to_intimidate
+		local action_taken = my_data.advancing or my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data._turning_to_intimidate
 		my_data.want_to_take_cover = TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 		local want_to_take_cover = my_data.want_to_take_cover
 		action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
@@ -54,9 +54,14 @@ function TeamAILogicAssault.update(data)
 						my_data.cover_path_search_id = search_id
 						my_data.processing_cover_path = best_cover
 					end
+					
+					action_taken = true
 				end
+				
+				action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 			else
 				CopLogicAttack._cancel_cover_pathing(data, my_data)
+				action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 			end
 		end
 	end
@@ -333,6 +338,10 @@ function TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 	end
 	
 	if data.unit:character_damage()._health_ratio < 0.75 then
+		return true
+	end
+	
+	if data.attention_obj and data.attention_obj.dangerous_special then
 		return true
 	end
 end

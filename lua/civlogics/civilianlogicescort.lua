@@ -88,8 +88,6 @@ function CivilianLogicEscort._get_objective_path_data(data, my_data)
 					path[1],
 					path[#path]
 				}
-			else
-				path = LIES:_optimize_path(path, data)
 			end
 
 			my_data.advance_path = path
@@ -122,34 +120,18 @@ function CivilianLogicEscort._get_objective_path_data(data, my_data)
 			local target_pos = points[#path_data.points].position
 			local target_seg = managers.navigation:get_nav_seg_from_pos(target_pos)
 			
-			local alt_coarse_params = {
-				from_tracker = m_tracker,
-				to_pos = target_pos,
-				access = {
-					"walk"
-				},
-				id = "CivilianLogicEscort.alt_coarse_search" .. tostring(data.key),
-				access_pos = data.char_tweak.access
-			}
-			
-			local alt_coarse = managers.navigation:search_coarse(alt_coarse_params)
-
-			if alt_coarse and #alt_coarse <= #points then
-				my_data.coarse_path = alt_coarse
-			else
-				local coarse_path = my_data.coarse_path
+			local coarse_path = my_data.coarse_path
 				
-				while i_point <= #path_data.points do
-					local next_pos = points[i_point].position
-					local next_seg = managers.navigation:get_nav_seg_from_pos(next_pos)
+			while i_point <= #path_data.points do
+				local next_pos = points[i_point].position
+				local next_seg = managers.navigation:get_nav_seg_from_pos(next_pos)
 
-					t_ins(coarse_path, {
-						next_seg,
-						mvector3.copy(next_pos)
-					})
+				t_ins(coarse_path, {
+					next_seg,
+					mvector3.copy(next_pos)
+				})
 
-					i_point = i_point + 1
-				end
+				i_point = i_point + 1
 			end
 			
 		elseif path_style == "destination" then

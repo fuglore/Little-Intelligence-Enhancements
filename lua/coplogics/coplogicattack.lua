@@ -897,7 +897,7 @@ function CopLogicAttack._update_cover(data)
 			local enemy_tracker = data.attention_obj.nav_tracker
 			local threat_pos = enemy_tracker:field_position()
 
-			if data.objective and data.objective.type == "follow" then
+			if data.objective and data.objective.type == "follow" and not data.attention_obj.dangerous_special then
 				local near_pos = data.objective.follow_unit:movement():m_pos()
 
 				if (not best_cover or not CopLogicAttack._verify_follow_cover(best_cover[1], near_pos, threat_pos, 200, 1000)) and not my_data.processing_cover_path then
@@ -1181,8 +1181,11 @@ function CopLogicAttack._upd_combat_movement(data)
 				
 				action_taken = true
 			end
+			
+			action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 		else
 			CopLogicAttack._cancel_cover_pathing(data, my_data)
+			action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 		end
 		
 		return
@@ -1193,7 +1196,7 @@ function CopLogicAttack._upd_combat_movement(data)
 	
 		local can_charge = not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 6
 		
-		if can_charge and engage and (aggro_level > 2 or my_data.cover_enter_t and data.t - my_data.cover_enter_t > 4) then
+		if can_charge and engage and (aggro_level > 2 or my_data.cover_enter_t and data.t - my_data.cover_enter_t > 1) then
 			if my_data.flank_cover and my_data.flank_cover.failed or data.objective and data.objective.grp_objective and data.objective.grp_objective.charge or aggro_level > 3 or aggro_level > 2 and (not data.tactics or not data.tactics.ranged_fire) then
 				if my_data.charge_path then
 					local path = my_data.charge_path
@@ -1226,7 +1229,7 @@ function CopLogicAttack._upd_combat_movement(data)
 		end
 		
 		if engage then
-			if not enemy_visible_soft and my_data.cover_test_step <= 2 and my_data.cover_enter_t and data.t - my_data.cover_enter_t > 4 then
+			if not enemy_visible_soft and my_data.cover_test_step <= 2 and my_data.cover_enter_t and data.t - my_data.cover_enter_t > 1 then
 				local height = nil
 
 				if in_cover[4] then

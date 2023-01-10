@@ -239,7 +239,7 @@ function NavigationManager:_draw_covers()
 	for i_cover, cover in ipairs(self._covers) do
 		local draw_pos = cover[1]
 		local tracker = cover[3]
-
+		
 		if tracker:lost() then
 			Application:draw_cone(draw_pos, draw_pos + cone_height, 30, 1, 0, 0)
 
@@ -247,6 +247,8 @@ function NavigationManager:_draw_covers()
 
 			Application:draw_sphere(placed_pos, 20, 1, 0, 0)
 			Application:draw_line(placed_pos, draw_pos, 1, 0, 0)
+		elseif tracker:obstructed() or not self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) then
+			Application:draw_cone(draw_pos, draw_pos + cone_height, 30, 1, 0, 1)
 		else
 			Application:draw_cone(draw_pos, draw_pos + cone_height, 30, 0, 1, 0)
 		end
@@ -279,7 +281,7 @@ function NavigationManager:register_cover_units()
 		local function _register_cover(pos, fwd)
 			local nav_tracker = self._quad_field:create_nav_tracker(pos, true)
 
-			if not nav_tracker:lost() or v3_dis_sq(nav_tracker:field_position(), pos) < 3600 then
+			if not nav_tracker:lost() then
 				local room_nav_seg = self._nav_segments[nav_tracker:nav_segment()]
 				local navseg_tracker = self._quad_field:create_nav_tracker(room_nav_seg.pos, true)
 				local field_pos = nav_tracker:field_position()
@@ -477,7 +479,33 @@ end
 	--self:_draw_doors_LIES()
 	--self:_draw_anim_nav_links()
 	--self:_draw_coarse_graph()
+	--self:_draw_coarse_graph_areas()
 --end)
+
+function NavigationManager:_draw_coarse_graph_areas()
+	if not managers.groupai:state()._area_data then
+		return	
+	end
+	
+	local all_areas = managers.groupai:state()._area_data 
+	local cone_height = Vector3(0, 0, 50)
+	local color = {
+		0,
+		1,
+		1
+	}
+	
+	for area_id, area_data in pairs(all_areas) do
+		Application:draw_cone(area_data.pos, area_data.pos + cone_height, 40, unpack(color))
+		local neighbours = area_data.neighbours
+
+		for neighbour_id, neighbour_data in pairs(neighbours) do
+			local pos = neighbour_data.pos
+			
+			Application:draw_cone(pos, area_data.pos, 12, unpack(color))
+		end
+	end
+end
 
 function NavigationManager:_draw_rooms_LIES()
 	if not self._rooms_to_draw then
@@ -613,7 +641,7 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 	for i = 1, #self._covers do
 		local cover = self._covers[i]
 		
-		if not cover[self.COVER_RESERVED] and self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) then
+		if not cover[self.COVER_RESERVED] and self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) and not cover[3]:obstructed() and not cover[3]:lost() then
 			if not nav_segs or nav_segs[cover[3]:nav_segment()] then
 				local cover_dis = mvec3_dis_sq(near_pos, cover[1])
 				local threat_dir = threat_pos - cover[1]
@@ -705,7 +733,7 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 	for i = 1, #self._covers do
 		local cover = self._covers[i]
 		
-		if not cover[self.COVER_RESERVED] and self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) then
+		if not cover[self.COVER_RESERVED] and self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) and not cover[3]:obstructed() and not cover[3]:lost() then
 			if not nav_segs or nav_segs[cover[3]:nav_segment()] then
 				local cover_dis = v3_dis_sq(near_pos, cover[1])
 				local threat_dist
@@ -797,7 +825,7 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 	for i = 1, #self._covers do
 		local cover = self._covers[i]
 		
-		if not cover[self.COVER_RESERVED] and self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) then
+		if not cover[self.COVER_RESERVED] and self._quad_field:is_nav_segment_enabled(cover[3]:nav_segment()) and not cover[3]:obstructed() and not cover[3]:lost() then
 			if not nav_segs or nav_segs[cover[3]:nav_segment()] then
 				local cover_dis = mvec3_dis_sq(near_pos, cover[1])
 				local threat_dist

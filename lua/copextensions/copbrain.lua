@@ -94,6 +94,10 @@ local scaling_units = {
 }
 
 Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group)
+	if not Network:is_server() then
+		return
+	end
+
 	local weap_name = self._unit:base():default_weapon_name()
 	
 	if self._unit:base()._old_weapon and weap_name ~= self._unit:base()._old_weapon then

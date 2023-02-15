@@ -164,8 +164,13 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		
 			local aggro_level = LIES.settings.enemy_aggro_level
 			
-			if attention.verified_t and data.t - attention.verified_t <= 15 then
-				local z_diff = math.abs(attention.m_pos.z - data.m_pos.z)
+			if attention.verified_t and data.t - attention.verified_t <= 15 or aggro_level < 3 then
+				local z_diff = 0
+				
+				if not data.tactics or not data.tactics.sniper or attention.m_pos.z - data.m_pos.z > -250 then
+					z_diff = math.abs(attention.m_pos.z - data.m_pos.z)
+				end
+				
 				local enemy_dis = attention.dis * (1 - strictness)
 				local interrupt_dis = nil
 				

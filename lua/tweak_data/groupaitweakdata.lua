@@ -2,6 +2,9 @@ function GroupAITweakData:_LIES_setup()
 	if self._LIES_fix then
 		return
 	end
+	
+	local faction = tweak_data.levels:get_ai_group_type()
+	self._not_america = faction ~= "america"
 
 	if self.enemy_spawn_groups["tac_swat_shotgun_rush"] and not self._LIES_fix or not self.unit_categories["medic_M4"] and not self._LIES_fix then
 		log("LIES: Another mod has already changed spawn groups and tactics. Ignoring tweakdata setup.")
@@ -75,7 +78,8 @@ function GroupAITweakData:_LIES_setup()
 		
 		self._tactics.marshal_marksman = {
 			"ranged_fire",
-			"murder"
+			"murder",
+			"sniper"
 		}
 		
 		if LIES.settings.fixed_spawngroups < 3 then
@@ -1377,6 +1381,28 @@ function GroupAITweakData:_LIES_setup()
 		self.unit_categories.tank_refless = clone(self.unit_categories.FBI_tank)
 		self.unit_categories.tank_refless.special_type = nil
 		
+		
+		self.unit_categories.tank_r870 = {
+			unit_types = {
+				america = {
+					Idstring("units/payday2/characters/ene_bulldozer_1/ene_bulldozer_1")
+				},
+				russia = {
+					Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_tank_r870/ene_akan_fbi_tank_r870")
+				},
+				zombie = {
+					Idstring("units/pd2_dlc_hvh/characters/ene_bulldozer_hvh_1/ene_bulldozer_hvh_1")
+				},
+				murkywater = {
+					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_2/ene_murkywater_bulldozer_2")
+				},
+				federales = {
+					Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_r870/ene_swat_dozer_policia_federale_r870")
+				}
+			},
+			access = access_type_all
+		}
+		
 		if difficulty_index < 5 then
 			self.unit_categories.tank_diff_specific = {
 				unit_types = {
@@ -1735,16 +1761,16 @@ function GroupAITweakData:_LIES_setup()
 				end
 			
 				self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
-					spawn_cooldown = 120,
+					spawn_cooldown = 240,
 					max_nr_simultaneous_groups = 1,
-					initial_spawn_delay = 60,
+					initial_spawn_delay = 180,
 					amount = {
 						4,
 						4
 					},
 					spawn = {
 						{
-							respawn_cooldown = 30,
+							respawn_cooldown = 120,
 							amount_min = 4,
 							rank = 1,
 							freq = 1,
@@ -1812,9 +1838,9 @@ function GroupAITweakData:_LIES_setup()
 				self.enemy_spawn_groups.FBI_office_agents.spawn[1].respawn_cooldown = 15
 				
 				self.enemy_spawn_groups.CS_swat_taser_tac = {
-					spawn_cooldown = 30,
+					spawn_cooldown = 60,
 					max_nr_simultaneous_groups = 2,
-					initial_spawn_delay = 60,
+					initial_spawn_delay = 120,
 					amount = {
 						2,
 						4
@@ -1862,6 +1888,91 @@ function GroupAITweakData:_LIES_setup()
 					0
 				}
 			end
+		elseif level_id == "nmh" then
+			self.enemy_spawn_groups.CS_cops = {
+				spawn_cooldown = 30,
+				max_nr_simultaneous_groups = 2,
+				initial_spawn_delay = 90,
+				amount = {
+					2,
+					4
+				},
+				spawn = {
+					{
+						respawn_cooldown = 20,
+						amount_min = 2,
+						rank = 1,
+						freq = 1,
+						unit = "CS_cop_all",
+						tactics = self._tactics.swat_rifle_flank
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+			
+			self.besiege.assault.groups.CS_cops = {
+				0,
+				0,
+				0
+			}
+			self.besiege.recon.groups.CS_cops = {
+				0,
+				0,
+				0
+			}
+			
+			if difficulty_index > 5 then
+				self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
+				self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
+				self.enemy_spawn_groups.CS_cops.spawn = {
+					{
+						respawn_cooldown = 10,
+						amount_min = 2,
+						rank = 1,
+						freq = 1,
+						unit = "CS_fbi_all",
+						tactics = self._tactics.swat_rifle_flank
+					}
+				}
+				
+				self.enemy_spawn_groups.bulls_on_parade = {
+					spawn_cooldown = 240,
+					max_nr_simultaneous_groups = 1,
+					initial_spawn_delay = 180,
+					amount = {
+						4,
+						4
+					},
+					spawn = {
+						{
+							respawn_cooldown = 120,
+							amount_min = 4,
+							amount_max = 4,
+							rank = 2,
+							freq = 1,
+							unit = "tank_r870",
+							tactics = self._tactics.tank_rush
+						}
+					},
+					spawn_point_chk_ref = table.list_to_set({
+						"tac_bull_rush"
+					})
+				}
+				
+				self.besiege.assault.groups.bulls_on_parade = {
+					0,
+					0,
+					0
+				}
+				self.besiege.recon.groups.bulls_on_parade = {
+					0,
+					0,
+					0
+				}
+			end
 		elseif level_id == "dinner" then
 			self.enemy_spawn_groups.Murkies = {
 				spawn_cooldown = 60,
@@ -1902,12 +2013,11 @@ function GroupAITweakData:_LIES_setup()
 			if difficulty_index > 5 then
 				self.enemy_spawn_groups.Murkies.initial_spawn_delay = 60
 				self.enemy_spawn_groups.Murkies.spawn_cooldown = 45
-			
-			
+
 				self.enemy_spawn_groups.FBI_tank_and_backup = {
 					spawn_cooldown = 60,
 					max_nr_simultaneous_groups = 1,
-					initial_spawn_delay = 60,
+					initial_spawn_delay = 120,
 					amount = {
 						2,
 						2
@@ -1993,16 +2103,16 @@ function GroupAITweakData:_LIES_setup()
 				self.enemy_spawn_groups.FBI_infil.initial_spawn_delay = 60
 				
 				self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
-					spawn_cooldown = 120,
+					spawn_cooldown = 240,
 					max_nr_simultaneous_groups = 1,
-					initial_spawn_delay = 60,
+					initial_spawn_delay = 180,
 					amount = {
 						4,
 						4
 					},
 					spawn = {
 						{
-							respawn_cooldown = 30,
+							respawn_cooldown = 120,
 							amount_min = 4,
 							rank = 1,
 							freq = 1,
@@ -2028,9 +2138,6 @@ function GroupAITweakData:_LIES_setup()
 				}
 			end
 		elseif not managers.skirmish:is_skirmish() then
-			local faction = tweak_data.levels:get_ai_group_type()
-			
-			
 			if actually_finished_factions[faction] then
 				self.enemy_spawn_groups.CS_cops = {
 					spawn_cooldown = 30,
@@ -2091,7 +2198,7 @@ function GroupAITweakData:_LIES_setup()
 					self.enemy_spawn_groups.FBI_tank_and_backup = {
 						spawn_cooldown = 60,
 						max_nr_simultaneous_groups = 1,
-						initial_spawn_delay = 60,
+						initial_spawn_delay = 120,
 						amount = {
 							2,
 							2
@@ -2138,9 +2245,9 @@ function GroupAITweakData:_LIES_setup()
 					}
 				elseif group == 2 then
 					self.enemy_spawn_groups.CS_swat_taser_tac = {
-						spawn_cooldown = 30,
+						spawn_cooldown = 60,
 						max_nr_simultaneous_groups = 2,
-						initial_spawn_delay = 60,
+						initial_spawn_delay = 120,
 						amount = {
 							2,
 							4
@@ -2189,16 +2296,16 @@ function GroupAITweakData:_LIES_setup()
 					}
 				else
 					self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
-						spawn_cooldown = 120,
+						spawn_cooldown = 240,
 						max_nr_simultaneous_groups = 1,
-						initial_spawn_delay = 60,
+						initial_spawn_delay = 180,
 						amount = {
 							4,
 							4
 						},
 						spawn = {
 							{
-								respawn_cooldown = 30,
+								respawn_cooldown = 120,
 								amount_min = 4,
 								rank = 1,
 								freq = 1,

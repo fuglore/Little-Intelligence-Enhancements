@@ -50,7 +50,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 		local furthest_pt_dist = 0
 		local furthest_line = nil
 
-		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 60 then
+		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 100 then
 			my_data.threat_epicenter = mvector3.copy(threat_epicenter)
 
 			for key1, enemy_data1 in pairs(enemies) do
@@ -349,45 +349,34 @@ function ShieldLogicAttack.queued_update(data)
 			elseif my_data.optimal_pos and focus_enemy.nav_tracker then
 				local to_pos = my_data.optimal_pos
 				my_data.optimal_pos = nil
-				local ray_params = {
-					trace = true,
-					tracker_from = unit:movement():nav_tracker(),
-					pos_to = to_pos
-				}
-				local ray_res = managers.navigation:raycast(ray_params)
-				to_pos = ray_params.trace[1]
-
-				if ray_res then
-					local vec = data.m_pos - to_pos
-
-					mvector3.normalize(vec)
-
-					local fwd = unit:movement():m_fwd()
-					local fwd_dot = fwd:dot(vec)
-
-					if fwd_dot > 0 then
-						local enemy_tracker = focus_enemy.nav_tracker
-
-						if enemy_tracker:lost() then
-							ray_params.tracker_from = nil
-							ray_params.pos_from = enemy_tracker:field_position()
-						else
-							ray_params.tracker_from = enemy_tracker
-						end
-
-						ray_res = managers.navigation:raycast(ray_params)
-						to_pos = ray_params.trace[1]
+				
+				if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 3 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) then
+					local ray_params = {
+						pos_to = to_pos,
+						trace = true
+					}
+				
+					local enemy_tracker = focus_enemy.unit:movement():nav_tracker()
+					
+					if enemy_tracker:lost() then
+						ray_params.tracker_from = nil
+						ray_params.pos_from = enemy_tracker:field_position()
+					else
+						ray_params.tracker_from = enemy_tracker
 					end
+					
+					local ray_res = managers.navigation:raycast(ray_params)
+					to_pos = ray_params.trace[1]
 				end
 
 				local fwd_bump = nil
 				to_pos, fwd_bump = ShieldLogicAttack.chk_wall_distance(data, my_data, to_pos)
-				local do_move = mvector3.distance_sq(to_pos, data.m_pos) > 900
+				local do_move = mvector3.distance_sq(to_pos, data.m_pos) > 10000
 
 				if not do_move then
 					local to_pos_current, fwd_bump_current = ShieldLogicAttack.chk_wall_distance(data, my_data, data.m_pos)
 
-					if fwd_bump_current and mvector3.distance_sq(to_pos_current, data.m_pos) > 900 then
+					if fwd_bump_current and mvector3.distance_sq(to_pos_current, data.m_pos) > 10000 then
 						do_move = true
 					end
 				end

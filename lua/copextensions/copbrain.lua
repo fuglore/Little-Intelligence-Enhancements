@@ -37,10 +37,6 @@ Hooks:PostHook(CopBrain, "_reset_logic_data", "lies_reset_logic_data", function(
 	self._logic_data.next_mov_time = self:get_movement_delay()
 end)
 
-Hooks:PostHook(CopBrain, "on_reload", "lies_on_reload", function(self)
-	self._logic_data.char_tweak = self._unit:base()._char_tweak or tweak_data.character[self._unit:base()._tweak_table]
-end)
-
 Hooks:PostHook(CopBrain, "set_spawn_entry", "lies_accessentry", function(self, spawn_entry, tactics_map)
 	if spawn_entry.access then
 		self._SO_access = managers.navigation:convert_access_flag(spawn_entry.access)
@@ -84,6 +80,7 @@ local ludicrous_damage = {
 
 local scaling_units = {
 	security = true,
+	shield = true,
 	cop = true,
 	fbi = true,
 	swat = true,
@@ -93,9 +90,35 @@ local scaling_units = {
 	taser = true
 }
 
+local non_scaling_units = {
+	fbi_heavy_swat = "heavy_swat",
+	fbi_swat = "swat",
+	city_swat = "swat"
+}
+
 Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group)
 	if not Network:is_server() then
 		return
+	end
+	
+	if LIES.settings.hhtacs then
+		local not_america = tweak_data.group_ai._not_america
+		local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
+		local difficulty_index = tweak_data:difficulty_to_index(difficulty)
+		
+		if not_america and difficulty == "sm_wish" then
+			if non_scaling_units[self._unit:base()._tweak_table] then
+				local new_tweak_name = non_scaling_units[self._unit:base()._tweak_table]
+				self._unit:base():change_and_sync_char_tweak(new_tweak_name)
+			end
+		end
+		
+		if scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
+			self._needs_falloff = {
+				id = self._unit:base():add_buff("base_damage", 0),
+				amount = 0
+			}
+		end
 	end
 
 	local weap_name = self._unit:base():default_weapon_name()
@@ -107,7 +130,31 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 		self._unit:inventory():add_unit_by_name(weap_name, true)
 	end
 	
-	if LIES.settings.hhtacs then
+	if LIES.settings.hhtacs then	
+		if not self._ludicrous_damage_debuff and ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
+			--m4 nerds with spicy tactics on death sentence will deal more or less the same damage as a zeal heavy
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.33)
+		elseif self._ludicrous_damage_debuff then
+			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
+			
+			self._ludicrous_damage_debuff = nil
+		end
+	end
+end)
+
+Hooks:PostHook(CopBrain, "on_reload", "lies_on_reload", function(self)
+	self._logic_data.char_tweak = self._unit:base()._char_tweak or tweak_data.character[self._unit:base()._tweak_table]
+	
+	local weap_name = self._unit:base():default_weapon_name()
+	
+	if self._unit:base()._old_weapon and weap_name ~= self._unit:base()._old_weapon then
+		self._unit:base()._old_weapon = nil
+		PlayerInventory.destroy_all_items(self._unit:inventory())
+
+		self._unit:inventory():add_unit_by_name(weap_name, true)
+	end
+	
+	if LIES.settings.hhtacs then	
 		if not self._ludicrous_damage_debuff and ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
 			--m4 nerds with spicy tactics on death sentence will deal more or less the same damage as a zeal heavy
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.33)
@@ -451,24 +498,32 @@ local walk_blocked_actions = {
 }
 
 function CopBrain:action_complete_clbk(action)
-	self._unit:movement():upd_m_head_pos()
-
-	local stand_rsrv = self:get_pos_rsrv("stand")
-
-	if not stand_rsrv or mvector3.distance_sq(stand_rsrv.position, self._unit:movement():m_pos()) > 400 then
-		self:add_pos_rsrv("stand", {
-			radius = 30,
-			position = mvector3.copy(self._unit:movement():m_pos())
-		})
+	if self._unit:character_damage():dead() then
+		return
 	end
 	
 	local action_type = action:type()
 	
-	if walk_blocked_actions[action_type] and not self:is_criminal() then
-		local delay = self:get_movement_delay()
+	if walk_blocked_actions[action_type] then
+		if action_type ~= "walk" then
+			self._unit:movement():upd_m_head_pos()
+		end
+
+		local stand_rsrv = self:get_pos_rsrv("stand")
+
+		if not stand_rsrv or mvector3.distance_sq(stand_rsrv.position, self._unit:movement():m_pos()) > 400 then
+			self:add_pos_rsrv("stand", {
+				radius = 30,
+				position = mvector3.copy(self._unit:movement():m_pos())
+			})
+		end
 		
-		if delay > 0 then
-			self._logic_data.next_mov_time = self._timer:time() + delay
+		if not self:is_criminal() then
+			local delay = self:get_movement_delay()
+			
+			if delay > 0 then
+				self._logic_data.next_mov_time = self._timer:time() + delay
+			end
 		end
 	end
 	

@@ -2292,7 +2292,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			for key, pos in pairs(valid_criminal_pos) do
 				for area_id, area_data in pairs(all_areas) do
 					if not next(area_data.police.units) and (not area_data.spawn_groups or not next(area_data.spawn_groups)) then
-						if mvec3_dis(pos, area_data.pos) < 4000000 then
+						if mvec3_dis(pos, area_data.pos) < 16000000 then
 						
 							if not areas_to_explore[area_id] then
 								areas_to_explore[area_id] = true
@@ -2361,7 +2361,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				if use_gas and detonate_pos then
 					used_grenade = self:_chk_group_use_gas_grenade(group, self._task_data.assault, detonate_pos)
 					
-					if not charge then
+					if used_grenade then
+						group.in_place_t = self._t
+						used_grenade = nil
+					elseif not charge then
 						detonate_pos = nil
 					end
 				end

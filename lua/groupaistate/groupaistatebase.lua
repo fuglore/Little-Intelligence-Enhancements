@@ -426,3 +426,57 @@ function GroupAIStateBase:register_security_camera(unit, state)
 	
 	self._security_cameras[unit:key()] = state and unit or nil
 end
+
+function GroupAIStateBase:on_criminal_disabled(unit, custom_status)
+	print("GroupAIStateBase:on_criminal_disabled", "custom_status", custom_status)
+
+	local criminal_key = unit:key()
+	local record = self._criminals[criminal_key]
+
+	if not record then
+		return
+	end
+
+	record.disabled_t = self._t
+	record.status = custom_status or "disabled"
+
+	if Network:is_server() then
+		if custom_status ~= "electrified" then
+			self._downs_during_assault = self._downs_during_assault + 1
+		end
+
+		for key, data in pairs(self._police) do
+			data.unit:brain():on_criminal_neutralized(criminal_key)
+		end
+
+		self:_add_drama(self._drama_data.actions.criminal_disabled)
+		self:check_gameover_conditions()
+	end
+end
+
+function GroupAIStateBase:on_criminal_neutralized(unit)
+	local criminal_key = unit:key()
+	local record = self._criminals[criminal_key]
+
+	if not record then
+		return
+	end
+	
+	local had_status = record.status and record.status ~= "electrified" and true
+	
+	record.status = "dead"
+	record.arrest_timeout = 0
+
+	if Network:is_server() then
+		if not had_status then
+			self._downs_during_assault = self._downs_during_assault + 1
+		end
+
+		for key, data in pairs(self._police) do
+			data.unit:brain():on_criminal_neutralized(criminal_key)
+		end
+
+		self:_add_drama(self._drama_data.actions.criminal_dead)
+		self:check_gameover_conditions()
+	end
+end

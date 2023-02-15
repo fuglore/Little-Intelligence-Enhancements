@@ -33,7 +33,7 @@ function TeamAILogicIdle._on_player_slow_pos_rsrv_upd(data)
 				end
 			end
 		end
-	elseif not data.path_fail_t or data.t - data.path_fail_t > 6 then
+	elseif not data.path_fail_t or data.t - data.path_fail_t > 3 then
 		managers.groupai:state():on_criminal_jobless(data.unit)
 		
 		if my_data ~= data.internal_data then
@@ -408,7 +408,7 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 		end
 	end
 	
-	if not data.cool then
+	if not data.cool and not my_data.performing_act_objective and not my_data.acting then
 		if not my_data._intimidate_t or my_data._intimidate_t + 2 < data.t and not my_data._turning_to_intimidate then
 			local can_turn = not data.unit:movement():chk_action_forbidden("turn") and (not new_prio_slot or new_prio_slot > 7)
 			local is_assault = managers.groupai:state():get_assault_mode()
@@ -451,7 +451,7 @@ function TeamAILogicIdle._find_intimidateable_civilians(criminal, use_default_sh
 			local unit = u_data.unit
 			
 			if not tweak_data.character[unit:base()._tweak_table].is_escort and tweak_data.character[unit:base()._tweak_table].intimidateable and not unit:base().unintimidateable and not unit:anim_data().unintimidateable and not unit:brain():is_tied() and not unit:unit_data().disable_shout then
-				local unit_is_not_drop = unit:anim_data().run or unit:anim_data().stand or unit:anim_data().halt or unit:anim_data().panic
+				local unit_is_not_drop = unit:anim_data().run or unit:anim_data().stand or unit:anim_data().halt or unit:anim_data().panic or unit:anim_data().react
 				
 				local does_not_need_intimidation = not unit_is_not_drop and unit:brain()._logic_data and unit:brain()._logic_data.internal_data and unit:brain()._logic_data.internal_data.submission_meter and unit:brain()._logic_data.internal_data.submission_meter > 20
 

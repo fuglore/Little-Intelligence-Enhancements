@@ -17,3 +17,11 @@ function CopMovement:action_request(action_desc)
 	
 	return action_req_orig(self, action_desc)
 end
+
+function CopMovement:force_upd_z_ray()
+	self:upd_ground_ray()
+
+	if self._gnd_ray then
+		self:set_position(self._gnd_ray.position)
+	end
+end

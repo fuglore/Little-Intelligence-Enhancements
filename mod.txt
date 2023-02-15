@@ -181,6 +181,14 @@
 			"script_path": "lua/player/states/playerfatal.lua"
 		},
 		{
+			"hook_id": "lib/units/civilians/logics/civilianlogicflee",
+			"script_path": "lua/civlogics/civilianlogicflee.lua"
+		},
+		{
+			"hook_id": "lib/units/civilians/logics/civilianlogictravel",
+			"script_path": "lua/civlogics/civilianlogictravel.lua"
+		},
+		{
 			"hook_id": "lib/units/civilians/logics/civilianlogicescort",
 			"script_path": "lua/civlogics/civilianlogicescort.lua"
 		},

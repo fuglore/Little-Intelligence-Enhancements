@@ -19,20 +19,25 @@ function CopBase:default_weapon_name(selection_name)
 			end
 		end
 	end
+	
+	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
+	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 
 	local m_weapon_id = self._default_weapon_id
 
 	if LIES.settings.hhtacs then
-		if Global.game_settings.difficulty == "sm_wish" then
+		if difficulty == "sm_wish" then
 			if m_weapon_id == "dmr" then
 				m_weapon_id = "heavy_zeal_sniper"
 			end
 			
-			if m_weapon_id == "m4" or m_weapon_id == "mp5" then	
+			if m_weapon_id == "m4" or m_weapon_id == "mp5" or m_weapon_id == "ak47_ass" then	
 				local zeal_types = {
 					swat = true,
 					heavy_swat = true
 				}
+				
+				--log(self._tweak_table)
 				
 				if zeal_types[self._tweak_table] then
 					if self._unit:brain()._logic_data and self._unit:brain()._logic_data.group and self._unit:brain()._logic_data.group.type ~= "custom" then
@@ -46,7 +51,7 @@ function CopBase:default_weapon_name(selection_name)
 						m_weapon_id = "benelli"
 					end
 					
-					if m_weapon_id == "m4" then
+					if m_weapon_id == "m4" or m_weapon_id == "ak47_ass" then
 						m_weapon_id = "sg417"
 
 						if not self._char_tweak.throwable then
@@ -74,6 +79,9 @@ function CopBase:default_weapon_name(selection_name)
 						end
 					end
 				end
+			elseif tweak_data.group_ai._not_america and m_weapon_id == "r870" then
+				m_weapon_id = "benelli"
+				self._shotgunner = true
 			end
 		end
 	
@@ -108,9 +116,17 @@ function CopBase:default_weapon_name(selection_name)
 			}
 			
 			m_weapon_id = police_weapon_ids[math.random(#police_weapon_ids)]
+			
+			if difficulty_index > 6 and m_weapon_id == "r870" then
+				if difficulty_index > 7 then
+					m_weapon_id = "benelli"
+				end
+				
+				self._shotgunner = true
+			end
 		end
-	elseif m_weapon_id == "m4" or m_weapon_id == "mp5" then	
-		if LIES.settings.fixed_spawngroups > 2 and Global.game_settings.difficulty == "sm_wish" then
+	elseif m_weapon_id == "m4" or m_weapon_id == "mp5" or m_weapon_id == "ak47_ass" then	
+		if LIES.settings.fixed_spawngroups > 2 and difficulty == "sm_wish" then
 			local zeal_types = {
 				swat = true,
 				heavy_swat = true
@@ -161,4 +177,30 @@ function CopBase:change_buff_by_id(name, id, value)
 	if old_value ~= value then
 		self:_refresh_buff_total(name)
 	end
+end
+
+function CopBase:change_and_sync_char_tweak(new_tweak_name)
+	if not Network:is_server() then
+		return
+	end
+
+	local new_tweak_data = tweak_data.character[new_tweak_name]
+
+	if not new_tweak_data then
+		return
+	end
+
+	if new_tweak_name == self._tweak_table then
+		return
+	end
+
+	local old_tweak_data = self._char_tweak
+	self._tweak_table = new_tweak_name
+	self._char_tweak = new_tweak_data
+	
+	if not Global.game_settings.single_player then
+		managers.network:session():send_to_peers_synched("sync_change_char_tweak", self._unit, new_tweak_name)
+	end
+	
+	self:_chk_call_tweak_data_changed_listeners(old_tweak_data, new_tweak_data)
 end

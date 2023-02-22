@@ -39,7 +39,9 @@ function CopBase:default_weapon_name(selection_name)
 				
 				--log(self._tweak_table)
 				
-				if zeal_types[self._tweak_table] then
+				if self._tweak_table == "taser" then
+					m_weapon_id = "m4_yellow"
+				elseif zeal_types[self._tweak_table] then
 					if self._unit:brain()._logic_data and self._unit:brain()._logic_data.group and self._unit:brain()._logic_data.group.type ~= "custom" then
 						local l_data = self._unit:brain()._logic_data
 						
@@ -83,6 +85,11 @@ function CopBase:default_weapon_name(selection_name)
 				m_weapon_id = "benelli"
 				self._shotgunner = true
 			end
+		elseif difficulty_index > 6 and m_weapon_id == "r870" then
+			m_weapon_id = "benelli"
+			self._shotgunner = true
+		elseif self._tweak_table == "taser" then
+			m_weapon_id = "m4_yellow"
 		end
 	
 		local security_vars = {
@@ -118,7 +125,7 @@ function CopBase:default_weapon_name(selection_name)
 			m_weapon_id = police_weapon_ids[math.random(#police_weapon_ids)]
 			
 			if difficulty_index > 6 and m_weapon_id == "r870" then
-				if difficulty_index > 7 then
+				if difficulty_index > 6 then
 					m_weapon_id = "benelli"
 				end
 				

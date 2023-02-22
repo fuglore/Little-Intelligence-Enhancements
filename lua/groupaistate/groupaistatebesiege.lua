@@ -461,6 +461,8 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 				end
 			end
 		end)
+		
+		--self:set_debug_draw_state(true)
 	end
 end)
 
@@ -969,7 +971,7 @@ function GroupAIStateBesiege:_queue_police_upd_task()
 		end
 		
 		--moving this to a delayed callback makes sure it not take up space in the enemy manager tasks
-		managers.enemy:add_delayed_clbk("GroupAIStateBesiege._upd_police_activity", callback(self, self, "_upd_police_activity"), self._t + 2)
+		managers.enemy:add_delayed_clbk("GroupAIStateBesiege._upd_police_activity", callback(self, self, "_upd_police_activity"), self._t + 1)
 	end
 end
 
@@ -1549,7 +1551,7 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 	end
 	
 	if LIES.settings.interruptoncontact then
-		if objective.type == "defend_area" or objective.type == "follow" then
+		if objective.type == "defend_area" or objective.type == "follow" or objective.type == "hunt" then
 			objective.interrupt_on_contact = true
 		end
 	end
@@ -2070,7 +2072,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				approach = true
 			elseif not phase_is_anticipation and not current_objective.open_fire then
 				open_fire = true
-			elseif not phase_is_anticipation and group.in_place_t and (not tactics_map or not tactics_map.shield) then
+			elseif not phase_is_anticipation and group.in_place_t and (not tactics_map or not tactics_map.shield and not tactics_map.sniper) then
 				if aggression_level > 2 or group.is_chasing then
 					push = true
 				elseif aggression_level > 1 then
@@ -2364,6 +2366,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					if used_grenade then
 						group.in_place_t = self._t
 						used_grenade = nil
+						
+						return
 					elseif not charge then
 						detonate_pos = nil
 					end
@@ -2385,16 +2389,12 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			
 			--essentially ensure the group uses a grenade if they can, this check wasn't here originally in some very old builds of the game
 			--in vanilla, groups can only push if they deploy a grenade as a result of the check being added, i guess they thought enemies were too aggressive
-			local can_push = used_grenade or self._task_data.assault.use_smoke_timer > self._t
+			local can_push = used_grenade
 			
 			if not can_push then
-				if aggression_level > 2 then
+				if not tactics_map or not tactics_map.ranged_fire or charge then
 					can_push = true
-				elseif aggression_level > 1 then
-					can_push = group.is_chasing 
-				end
-				
-				if not can_push then
+				elseif self._task_data.assault.cs_grenade_active_t and self._task_data.assault.cs_grenade_active_t < self._t or self._drama_data.amount <= tweak_data.drama.low and aggression_level > 2 then
 					can_push = charge or self._drama_data.amount <= tweak_data.drama.low
 				end
 			end
@@ -3179,8 +3179,9 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 		grenade:base():detonate()
 		
 		local cs_grenade_cooldown = duration * 2
-		cs_grenade_cooldown = cs_grenade_cooldown + cs_grenade_cooldown * math.random()
+		cs_grenade_cooldown = cs_grenade_cooldown + cs_grenade_cooldown + cs_grenade_cooldown * math.random()
 		
+		task_data.cs_grenade_active_t = self._t + duration
 		task_data.next_allowed_cs_grenade_t = self._t + cs_grenade_cooldown
 		
 		if not DeadLocke then

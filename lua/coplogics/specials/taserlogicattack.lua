@@ -53,7 +53,7 @@ function TaserLogicAttack.queued_update(data)
 					focus_enemy.acquire_t = data.t
 				end
 			
-				local react_t = 1.4
+				local react_t = 2
 			
 				if shoot then
 					local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
@@ -201,7 +201,7 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 								focus_enemy.acquire_t = data.t
 							end
 						
-							local react_t = 1.4
+							local react_t = 2
 						
 							if shoot then
 								local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance

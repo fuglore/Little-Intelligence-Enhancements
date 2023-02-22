@@ -587,17 +587,17 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						target_priority_slot = target_priority_slot - 2
 					elseif has_alerted then
 						target_priority_slot = target_priority_slot - 1
-					elseif free_status and assault_reaction then
-						target_priority_slot = 5
+					elseif not free_status then
+						target_priority_slot = target_priority_slot + 1
 					end
 
-					if old_enemy then
+					if free_status and old_enemy then
 						target_priority_slot = target_priority_slot - 3
 					end
 
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
 				elseif detected or alert_dt < 9 or dmg_dt < 9 or attention_data.verified_t and attention_data.verified_t < 9 then
-					target_priority_slot = 7
+					target_priority_slot = 10
 					
 					if not has_damaged then
 						target_priority_slot = target_priority_slot + 1
@@ -793,8 +793,10 @@ function CopLogicIdle._chk_relocate(data)
 		if data.objective.relocated_to and mvector3.distance_sq(data.objective.relocated_to, follow_unit_pos) < 100 then
 			return
 		end
-
-		if data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then
+		
+		if data.is_tied and 200 < mvector3.distance(data.m_pos, follow_unit_pos) then
+			relocate = true
+		elseif data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then
 			relocate = true
 		end
 

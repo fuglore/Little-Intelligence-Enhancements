@@ -166,6 +166,20 @@ function CopLogicSniper._upd_aim(data, my_data)
 		BossLogicAttack._chk_use_throwable(data, my_data, focus_enemy)
 	end
 	
+	if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
+		if LIES.settings.enemy_reaction_level < 3 and focus_enemy.acquire_t and not data.unit:in_slot(16) then
+			if not focus_enemy.verified_t or data.t - focus_enemy.verified_t > 2 then
+				focus_enemy.acquire_t = data.t
+			end
+		
+			local react_t = 2 / LIES.settings.enemy_reaction_level
+		
+			if data.t - focus_enemy.acquire_t < react_t then
+				shoot = nil
+			end
+		end
+	end
+	
 	if aim or shoot then
 		if focus_enemy.verified then
 			if my_data.attention_unit ~= focus_enemy.unit:key() then

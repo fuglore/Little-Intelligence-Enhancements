@@ -43,8 +43,10 @@ function CopLogicAttack.enter(data, new_logic_name, enter_params)
 	else
 		my_data.attitude = data.objective and data.objective.attitude or "avoid"
 	end
-
-	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	
+	if data.char_tweak.weapon and data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage] then
+		my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	end
 	
 	if not my_data.weapon_range then
 		my_data.weapon_range = {
@@ -670,7 +672,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 				focus_enemy.acquire_t = data.t
 			end
 		
-			local react_t = 0.7 / LIES.settings.enemy_reaction_level
+			local react_t = 2 / LIES.settings.enemy_reaction_level
 		
 			if data.t - focus_enemy.acquire_t < react_t then
 				shoot = nil

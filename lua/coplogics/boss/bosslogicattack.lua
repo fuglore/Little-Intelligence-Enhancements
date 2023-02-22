@@ -458,7 +458,7 @@ function BossLogicAttack._upd_aim(data, my_data)
 				focus.acquire_t = data.t
 			end
 		
-			local react_t = 0.7 / LIES.settings.enemy_reaction_level
+			local react_t = 2 / LIES.settings.enemy_reaction_level
 		
 			if shoot then
 				if data.t - focus.acquire_t < react_t then

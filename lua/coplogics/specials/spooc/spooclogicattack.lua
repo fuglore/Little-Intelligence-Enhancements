@@ -121,7 +121,7 @@ function SpoocLogicAttack.update(data)
 				data.attention_obj.acquire_t = data.t
 			end
 		
-			local react_t = 1.4 / LIES.settings.enemy_reaction_level
+			local react_t = 2 / LIES.settings.enemy_reaction_level
 		
 			if data.t - data.attention_obj.acquire_t < react_t then
 				do_spooc_attack = nil

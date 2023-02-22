@@ -303,7 +303,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 	local detected_obj = data.detected_attention_objects
 	local my_data = data.internal_data
 	local my_key = data.key
-	local my_pos = data.m_pos:with_z(data.unit:movement():m_head_pos().z)
+	local my_pos = data.cool and data.unit:movement():m_head_pos() or data.m_pos:with_z(data.unit:movement():m_head_pos().z)
 	local my_access = data.SO_access
 	local all_attention_objects = managers.groupai:state():get_AI_attention_objects_by_filter(data.SO_access_str, data.team)
 	local my_head_fwd = nil
@@ -546,6 +546,18 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 						end
 
 						local notice_delay_modified = math.lerp(min_delay * notice_delay_mul, max_delay, dis_mul_mod + angle_mul_mod)
+						
+						if attention_info.is_husk_player then
+							local peer = managers.network:session():peer_by_unit(attention_info.unit)
+							local latency = peer and Network:qos(peer:rpc()).ping or nil
+							
+							if latency then
+								local ping = latency / 1000
+								
+								notice_delay_modified = notice_delay_modified + ping + 0.02
+							end	
+						end
+							
 						delta_prog = notice_delay_modified > 0 and dt / notice_delay_modified or 1
 					end
 				else
@@ -589,16 +601,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 				local dis = mvector3.distance(data.m_pos, attention_info.m_pos)
 
 				if dis < my_data.detection.dis_max * 1.2 and (not attention_info.settings.max_range or dis < attention_info.settings.max_range * (attention_info.settings.detection and attention_info.settings.detection.range_mul or 1) * 1.2) then
-					local detect_pos = nil
-
-					if attention_info.is_husk_player and attention_info.unit:anim_data().crouch then
-						detect_pos = tmp_vec1
-
-						mvector3.set(detect_pos, attention_info.m_pos)
-						mvector3.add(detect_pos, tweak_data.player.stances.default.crouched.head.translation)
-					else
-						detect_pos = attention_pos
-					end
+					local detect_pos = attention_pos
 
 					local in_FOV
 					
@@ -611,6 +614,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					else
 						in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
 					end
+					
 					if in_FOV then
 						vis_ray = World:raycast("ray", my_pos, detect_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision")
 

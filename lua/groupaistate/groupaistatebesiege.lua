@@ -3050,31 +3050,33 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 
 		for u_key, u_data in pairs(group.units) do
 			if u_data.tactics_map and u_data.tactics_map.smoke_grenade then
-				if not detonate_pos then
-					local nav_seg_id = u_data.tracker:nav_segment()
-					local nav_seg = managers.navigation._nav_segments[nav_seg_id]
+				if not u_data.unit:movement():chk_action_forbidden("action") then
+					if not detonate_pos then
+						local nav_seg_id = u_data.tracker:nav_segment()
+						local nav_seg = managers.navigation._nav_segments[nav_seg_id]
 
-					for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
-						local area = self:get_area_from_nav_seg_id(neighbour_nav_seg_id)
+						for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
+							local area = self:get_area_from_nav_seg_id(neighbour_nav_seg_id)
 
-						if task_data.target_areas[1].nav_segs[neighbour_nav_seg_id] or next(area.criminal.units) then
-							local random_door_id = door_list[math.random(#door_list)]
+							if task_data.target_areas[1].nav_segs[neighbour_nav_seg_id] or next(area.criminal.units) then
+								local random_door_id = door_list[math.random(#door_list)]
 
-							if type(random_door_id) == "number" then
-								detonate_pos = managers.navigation._room_doors[random_door_id].center
-							else
-								detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
+								if type(random_door_id) == "number" then
+									detonate_pos = managers.navigation._room_doors[random_door_id].center
+								else
+									detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
+								end
+
+								shooter_pos = mvector3.copy(u_data.m_pos)
+								shooter_u_data = u_data
+
+								break
 							end
-
-							shooter_pos = mvector3.copy(u_data.m_pos)
-							shooter_u_data = u_data
-
-							break
 						end
+					else
+						shooter_u_data = u_data
+						shooter_pos = mvector3.copy(u_data.m_pos)
 					end
-				else
-					shooter_u_data = u_data
-					shooter_pos = mvector3.copy(u_data.m_pos)
 				end
 
 				if detonate_pos and shooter_u_data then
@@ -3082,7 +3084,11 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 
 					task_data.use_smoke_timer = self._t + math.lerp(tweak_data.group_ai.smoke_and_flash_grenade_timeout[1], tweak_data.group_ai.smoke_and_flash_grenade_timeout[2], math.rand(0, 1)^0.5)
 					task_data.use_smoke = false
-
+					
+					if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
+						managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
+					end
+					
 					if shooter_u_data.char_tweak.chatter.smoke and not shooter_u_data.unit:sound():speaking(self._t) then
 						self:chk_say_enemy_chatter(shooter_u_data.unit, shooter_u_data.m_pos, "smoke")
 					end
@@ -3101,29 +3107,31 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 
 		for u_key, u_data in pairs(group.units) do
 			if u_data.tactics_map and u_data.tactics_map.flash_grenade then
-				if not detonate_pos then
-					local nav_seg_id = u_data.tracker:nav_segment()
-					local nav_seg = managers.navigation._nav_segments[nav_seg_id]
+				if not u_data.unit:movement():chk_action_forbidden("action") then
+					if not detonate_pos then
+						local nav_seg_id = u_data.tracker:nav_segment()
+						local nav_seg = managers.navigation._nav_segments[nav_seg_id]
 
-					for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
-						if task_data.target_areas[1].nav_segs[neighbour_nav_seg_id] then
-							local random_door_id = door_list[math.random(#door_list)]
+						for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
+							if task_data.target_areas[1].nav_segs[neighbour_nav_seg_id] then
+								local random_door_id = door_list[math.random(#door_list)]
 
-							if type(random_door_id) == "number" then
-								detonate_pos = managers.navigation._room_doors[random_door_id].center
-							else
-								detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
+								if type(random_door_id) == "number" then
+									detonate_pos = managers.navigation._room_doors[random_door_id].center
+								else
+									detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
+								end
+
+								shooter_pos = mvector3.copy(u_data.m_pos)
+								shooter_u_data = u_data
+
+								break
 							end
-
-							shooter_pos = mvector3.copy(u_data.m_pos)
-							shooter_u_data = u_data
-
-							break
 						end
+					else
+						shooter_pos = mvector3.copy(u_data.m_pos)
+						shooter_u_data = u_data
 					end
-				else
-					shooter_pos = mvector3.copy(u_data.m_pos)
-					shooter_u_data = u_data
 				end
 
 				if detonate_pos and shooter_u_data then
@@ -3131,6 +3139,10 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 
 					task_data.use_smoke_timer = self._t + math.lerp(tweak_data.group_ai.smoke_and_flash_grenade_timeout[1], tweak_data.group_ai.smoke_and_flash_grenade_timeout[2], math.random()^0.5)
 					task_data.use_smoke = false
+					
+					if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
+						managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
+					end
 
 					if shooter_u_data.char_tweak.chatter.smoke and not shooter_u_data.unit:sound():speaking(self._t) then --if they can shout smoke, they'll shout flash, just in case
 						self:chk_say_enemy_chatter(shooter_u_data.unit, shooter_u_data.m_pos, "flash_grenade")
@@ -3153,12 +3165,14 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 
 	for u_key, u_data in pairs(group.units) do
 		if u_data.tactics_map and u_data.tactics_map.ranged_fire then
-			local dis = mvector3.distance_sq(detonate_pos, u_data.m_pos)
+			if not u_data.unit:movement():chk_action_forbidden("action") then
+				local dis = mvector3.distance_sq(detonate_pos, u_data.m_pos)
 
-			if not shooter_dis_sq or dis < shooter_dis_sq then
-				shooter_dis_sq = dis
-				shooter_u_data = u_data
-				shooter_pos = mvector3.copy(u_data.m_pos)
+				if not shooter_dis_sq or dis < shooter_dis_sq then
+					shooter_dis_sq = dis
+					shooter_u_data = u_data
+					shooter_pos = mvector3.copy(u_data.m_pos)
+				end
 			end
 		end
 	end
@@ -3203,6 +3217,10 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 			if closest_crim_data then
 				closest_crim_data.unit:sound():say("g42x_any", true)
 			end
+		end
+		
+		if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
+			managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
 		end
 		
 		return true

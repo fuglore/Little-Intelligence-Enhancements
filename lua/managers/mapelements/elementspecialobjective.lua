@@ -40,7 +40,7 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 		end
 	end
 	
-	if self._values.position or self._values.patrol_path then
+	if self._stealth_patrol then
 		if unit:movement()._nav_tracker and unit:brain():SO_access() then
 			local to_pos = self._values.position
 			

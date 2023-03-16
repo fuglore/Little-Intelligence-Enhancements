@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V6.8",
+		version = "V6.9",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -137,36 +137,14 @@ if RequiredScript == "lib/managers/menumanager" then
 				return
 			end
 		end
-	
+
 		if math.abs(pos_from.z - pos_to.z) > 60 then 
 			return
 		end
-	
-		local ray_params = {
-			allow_entry = false,
-			pos_from = pos_from,
-			pos_to = pos_to
-		}
+		
+		local ray = CopActionWalk._chk_shortcut_pos_to_pos(pos_from, pos_to)
 
-		if not managers.navigation:raycast(ray_params) then
-			local slotmask = managers.slot:get_mask("AI_graph_obstacle_check")
-			local ray_from = pos_from:with_z(pos_from.z + 50)
-			local ray_to = pos_to:with_z(pos_to.z + 50)
-			
-			if u_data then
-				if not u_data.unit:raycast("ray", ray_from, ray_to, "slot_mask", slotmask, "ray_type", "walk", "sphere_cast_radius", 30, "bundle", 5, "report") then
-					return true
-				else
-					return
-				end
-			else
-				if not World:raycast("ray", ray_from, ray_to, "slot_mask", slotmask, "ray_type", "walk", "sphere_cast_radius", 30, "bundle", 5, "report") then
-					return true
-				else
-					return
-				end
-			end
-		end
+		return not ray 
 	end
 	
 	function LIES:_optimize_path(path, u_data)		

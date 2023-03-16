@@ -267,48 +267,6 @@ function CopActionWalk._apply_padding_to_simplified_path(path)
 	end
 end
 
-function CopActionWalk._chk_shortcut_pos_to_pos(from, to, trace)
-	local params = CopActionWalk._chk_shortcut_pos_to_pos_params
-	params.pos_from = from
-	params.pos_to = to
-	params.trace = trace
-	
-	--local debugging = true
-	local line1, line4
-		
-	if debugging then
-		line1 = Draw:brush(Color.red:with_alpha(0.5), 2)
-		line4 = Draw:brush(Color.yellow:with_alpha(0.5), 2)
-	end
-	
-	local res = managers.navigation:raycast(params)
-	
-	if res then
-		return res, params.trace
-	else
-		local slotmask = managers.slot:get_mask("AI_graph_obstacle_check")
-		local ray_from = from:with_z(from.z + 50)
-		local ray_to = to:with_z(to.z + 50)
-		
-		local report = not trace and "report" or nil
-		local ray = World:raycast("ray", ray_from, ray_to, "slot_mask", slotmask, "ray_type", "walk", "sphere_cast_radius", 30, "bundle", 5, report)
-		
-		if ray then
-			local hit_pos = nil
-			
-			if not report and ray.hit_position then
-				hit_pos = ray.hit_position:with_z(to.z)
-				hit_pos = managers.navigation:clamp_position_to_field(hit_pos)
-				hit_pos = {hit_pos}
-			end
-			
-			return ray, hit_pos
-		else
-			return ray, {to}
-		end
-	end
-end
-
 function CopActionWalk:append_path_mid_logic(path)
 	--local line = Draw:brush(Color.yellow:with_alpha(1), 3)
 		

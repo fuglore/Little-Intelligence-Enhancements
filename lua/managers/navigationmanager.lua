@@ -1291,3 +1291,37 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 
 	return found_segs
 end
+
+function NavigationManager:add_obstacle(obstacle_unit, obstacle_obj_name)
+	for i, obs_data in ipairs(self._obstacles) do
+		if obstacle_unit:key() == obs_data.unit_key and obstacle_obj_name == obs_data.obstacle_obj_name then
+			return
+		end
+	end
+
+	local obstacle_obj = obstacle_unit:get_object(obstacle_obj_name)
+	local id = self._quad_field:add_obstacle(obstacle_obj)
+	
+	table.insert(self._obstacles, {
+		unit = obstacle_unit,
+		obstacle_obj_name = obstacle_obj_name,
+		id = id,
+		unit_key = obstacle_unit:key()
+	})
+end
+
+function NavigationManager:remove_obstacle(obstacle_unit, obstacle_obj_name)
+	for i, obs_data in ipairs(self._obstacles) do
+		if not alive(obs_data.unit) then
+			--log("removing bad obstacle")
+			self._quad_field:remove_obstacle(obs_data.id)
+		
+			table.remove(self._obstacles, i)
+		elseif obs_data.unit_key == obstacle_unit:key() and obs_data.obstacle_obj_name == obstacle_obj_name then
+			--log("removing obstacle")
+			self._quad_field:remove_obstacle(obs_data.id)
+
+			table.remove(self._obstacles, i)
+		end
+	end
+end

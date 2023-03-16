@@ -5,7 +5,7 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 	
 	local is_AI_SO = self._is_AI_SO or string.begins(self._values.so_action, "AI")
 	
-	if not is_AI_SO and self._values.path_stance ~= "hos" and self._values.path_stance ~= "cbt" and self._values.path_haste ~= "run" then
+	if not is_AI_SO and self._values.path_stance ~= "hos" and self._values.path_stance ~= "cbt" and (self._values.patrol_path or self._values.position) and self._values.path_style ~= "precise" then
 		self._stealth_patrol = true
 	end
 end)

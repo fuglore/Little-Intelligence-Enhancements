@@ -280,19 +280,9 @@ function CopBrain:search_for_path(search_id, to_pos, prio, access_neg, nav_segs)
 		nav_segs = nav_segs
 	}
 	
-	if not Iter and LIES:_path_is_straight_line(self._unit:movement():nav_tracker():field_position(), to_pos, self._logic_data) then
-		local path = {
-			mvector3.copy(self._unit:movement():nav_tracker():field_position()),
-			mvector3.copy(to_pos)
-		}
-	
-		self:clbk_pathing_results(search_id, path)
-	else
-		self._logic_data.active_searches[search_id] = true
+	self._logic_data.active_searches[search_id] = true
 
-		managers.navigation:search_pos_to_pos(params)
-	end
-
+	managers.navigation:search_pos_to_pos(params)
 
 	return true
 end
@@ -313,18 +303,8 @@ function CopBrain:search_for_path_from_pos(search_id, from_pos, to_pos, prio, ac
 		nav_segs = nav_segs
 	}
 	
-	if not Iter and LIES:_path_is_straight_line(from_pos, to_pos, self._logic_data) then
-		local path = {
-			mvector3.copy(from_pos),
-			mvector3.copy(to_pos)
-		}
-	
-		self:clbk_pathing_results(search_id, path)
-	else
-		self._logic_data.active_searches[search_id] = true
-
-		managers.navigation:search_pos_to_pos(params)
-	end
+	self._logic_data.active_searches[search_id] = true
+	managers.navigation:search_pos_to_pos(params)
 
 	return true
 end
@@ -349,70 +329,11 @@ function CopBrain:search_for_path_to_cover(search_id, cover, offset_pos, access_
 		params.pos_to = mvector3.copy(offset_pos)
 		params.tracker_to = nil
 	end
-	
-	local pos_to = params.pos_to and offset_pos or params.tracker_to:field_position()
-	
-	if not Iter and LIES:_path_is_straight_line(params.tracker_from:field_position(), pos_to, self._logic_data) then
-		local path = {
-			mvector3.copy(params.tracker_from:field_position()),
-			mvector3.copy(pos_to)
-		}
-	
-		self:clbk_pathing_results(search_id, path)
-	else
-		self._logic_data.active_searches[search_id] = true
-		managers.navigation:search_pos_to_pos(params)
-	end
-	
+
 	self._logic_data.active_searches[search_id] = true
 	managers.navigation:search_pos_to_pos(params)
 
 	return true
-end
-
-
-if not Iter then
-
-local orig_clbk_pathing_results = CopBrain.clbk_pathing_results 
-
-function CopBrain:clbk_pathing_results(search_id, path)
-	if path then
-		--local line = Draw:brush(Color.yellow:with_alpha(0.25), 3)
-		
-		if line then
-			for i = 1, #path do
-				if path[i + 1] then
-					local cur_nav_point = path[i]
-					
-					if not cur_nav_point.z then
-						if alive(cur_nav_point) then
-							cur_nav_point = CopActionWalk._nav_point_pos(cur_nav_point:script_data())
-						end
-					end
-					
-					if cur_nav_point.z then
-						local next_nav_point = path[i + 1]
-						
-						if not next_nav_point.z then
-							if alive(next_nav_point) then
-								next_nav_point = CopActionWalk._nav_point_pos(next_nav_point:script_data())
-							end
-						end
-						
-						if next_nav_point.z then
-							line:cylinder(cur_nav_point, next_nav_point, 20)
-						end
-					end
-				end
-			end
-		end
-
-		path = LIES:_optimize_path(path, self._logic_data)
-	end
-	
-	orig_clbk_pathing_results(self, search_id, path)
-end
-
 end
 
 Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, search_id, path)

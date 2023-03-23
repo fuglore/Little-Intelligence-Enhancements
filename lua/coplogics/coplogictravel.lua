@@ -320,9 +320,9 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 	local to_pos = CopLogicTravel._get_exact_move_pos(data, my_data.coarse_path_index + 1)	
 	my_data.processing_advance_path = true
 	local prio = CopLogicTravel.get_pathing_prio(data)
-	local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
+	--local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
 
-	data.unit:brain():search_for_path(my_data.advance_path_search_id, to_pos, prio, nil, nav_segs)
+	data.unit:brain():search_for_path(my_data.advance_path_search_id, to_pos, prio, nil, nil)
 end
 
 function CopLogicTravel.chk_group_ready_to_move(data, my_data)
@@ -976,12 +976,24 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 		local my_areas = managers.groupai:state():get_areas_from_nav_seg_id(my_nav_seg_id)
 		local follow_unit_nav_seg_id = follow_unit:movement():nav_tracker():nav_segment()
 		local should_try_stop = nil
+		
+		if my_nav_seg_id == follow_unit_nav_seg_id then
+			if mvector3.distance_sq(data.m_pos, follow_unit:movement():nav_tracker():field_position()) < 40000 then
+				objective.in_place = true
 
-		for _, area in ipairs(my_areas) do
-			if area.nav_segs[follow_unit_nav_seg_id] then
-				should_try_stop = true
+				data.logic.on_new_objective(data)
 				
-				break
+				return
+			end
+		
+			should_try_stop = true
+		else
+			for _, area in ipairs(my_areas) do
+				if area.nav_segs[follow_unit_nav_seg_id] then
+					should_try_stop = true
+					
+					break
+				end
 			end
 		end
 		
@@ -1188,7 +1200,8 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	else
 		local nav_seg = coarse_path[nav_index][1]
 		local area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg)
-		local door_pos = CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg, area)	
+		local door_pos = not data.cool and CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)	
+		
 		local cover = CopLogicTravel._find_cover(data, nav_seg, door_pos)
 
 		if my_data.moving_to_cover then
@@ -1206,8 +1219,27 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 			to_pos = cover[1]
 			wants_reservation = true
 		else
-			to_pos = coarse_path[nav_index][2] or area.pos
-			to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
+			if door_pos then
+				to_pos = door_pos
+			else
+				to_pos = coarse_path[nav_index][2] or area.pos
+				
+				if not data.cool then
+					to_pos = CopLogicTravel._get_pos_on_wall(to_pos)
+				end
+			end
+			
+			local rsrv_desc = {
+				filter = data.pos_rsrv_id,
+				radius = 60,
+				position = to_pos
+			}
+			
+			if not managers.navigation:is_pos_free(rsrv_desc) then
+				to_pos = CopLogicTravel._get_pos_on_wall(to_pos, nil, nil, nil, nil, data.pos_rsrv_id)
+			end
+			
+			
 			wants_reservation = true
 		end
 		
@@ -1224,34 +1256,23 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 	return to_pos
 end
 
-function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg, area)
-	local nav_seg = managers.navigation._nav_segments[nav_seg]
-	
+function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)
+	local nav_seg_data = managers.navigation._nav_segments[nav_seg]
 	local next_pos = coarse_path[nav_index + 1][2]
+	local best_dis, best_door
+	local all_doors = managers.navigation._room_doors
+	local mvec3_dis = mvector3.distance
 	
-	if not next_pos then --this is stupid. this won't happen without iter.
-		next_pos = mvector3.copy(area.pos) 
-	end
-
-	local best_dis, best_pos
-	
-	for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
-		if neighbour_nav_seg_id == coarse_path[nav_index + 1][1] then
-			for i = 1, #door_list do
-				local pos = nil
-				local door_id = door_list[i]
-				
-				if type(door_id) == "number" then
-					pos = managers.navigation._room_doors[door_id].center
-				else
-					pos = door_id:script_data().element:nav_link_end_pos()
-				end
-				
-				if pos then --there is apparently cases where this can happen, i'm interested.
-					local dis = mvector3.distance_sq(pos, next_pos)
-				
+	for neighbour_nav_seg_id, door_list in pairs(nav_seg_data.neighbours) do
+		for _, i_door in ipairs(door_list) do
+			local door = all_doors[i_door]
+			
+			if door then
+				if door.seg_1 == nav_seg or door.seg_2 == nav_seg then
+					local dis = mvec3_dis(door.center, next_pos)
+					
 					if not best_dis or dis < best_dis then
-						best_pos = pos
+						best_door = door
 						best_dis = dis
 					end
 				end
@@ -1259,8 +1280,65 @@ function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path,
 		end
 	end
 	
-	if best_pos then
-		return best_pos
+	if best_door then
+		local door_pos = best_door.center
+		local accross_vec = door_pos - next_pos
+		local rot_angle = 90
+		mvector3.rotate_with(accross_vec, Rotation(rot_angle))
+		
+		local max_dis = 700
+
+		mvector3.set_length(accross_vec, max_dis)
+
+		local door_tracker = managers.navigation:create_nav_tracker(mvector3.copy(door_pos))
+		local accross_positions = managers.navigation:find_walls_accross_tracker(door_tracker, accross_vec)
+		
+		if accross_positions then
+			local optimal_dis = math.lerp(max_dis * 0.6, max_dis, math.random())
+			local best_error_dis, best_pos, best_is_hit, best_is_miss, best_has_too_much_error = nil
+
+			for _, accross_pos in ipairs(accross_positions) do
+				local error_dis = math.abs(mvector3.distance(accross_pos[1], door_pos) - optimal_dis)
+				local too_much_error = error_dis / optimal_dis > 0.3
+				local is_hit = accross_pos[2]
+
+				if best_is_hit then
+					if is_hit then
+						if error_dis < best_error_dis then
+							best_pos = accross_pos[1]
+							best_error_dis = error_dis
+							best_has_too_much_error = too_much_error
+						end
+					elseif best_has_too_much_error then
+						best_pos = accross_pos[1]
+						best_error_dis = error_dis
+						best_is_miss = true
+						best_is_hit = nil
+					end
+				elseif best_is_miss then
+					if not too_much_error then
+						best_pos = accross_pos[1]
+						best_error_dis = error_dis
+						best_has_too_much_error = nil
+						best_is_miss = nil
+						best_is_hit = true
+					end
+				else
+					best_pos = accross_pos[1]
+					best_is_hit = is_hit
+					best_is_miss = not is_hit
+					best_has_too_much_error = too_much_error
+					best_error_dis = error_dis
+				end
+			end
+
+			managers.navigation:destroy_nav_tracker(door_tracker)
+			
+			return best_pos
+		end
+
+		managers.navigation:destroy_nav_tracker(door_tracker)
+		
 	end
 end
 

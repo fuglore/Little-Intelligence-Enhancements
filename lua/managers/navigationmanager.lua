@@ -1072,7 +1072,9 @@ function NavigationManager:_strip_nav_field_for_gameplay()
 			all_doors[i_door] = nil
 		else
 			local stripped_door = {
-				center = door.pos
+				center = door.pos,
+				seg_1 = seg_1,
+				seg_2 = seg_2
 			}
 
 			mvector3.lerp(stripped_door.center, door.pos, door.pos1, 0.5)

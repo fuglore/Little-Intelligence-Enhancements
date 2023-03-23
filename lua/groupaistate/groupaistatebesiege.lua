@@ -2624,12 +2624,14 @@ function GroupAIStateBesiege:_upd_recon_sweep_task()
 	end
 	
 	if search_complete then
-		if t - task_data.start_t > 90 then
+		if t - task_data.start_t > 180 then
 			self._task_data.recon.sweep_task = nil
 		
 			for u_key, u_data in pairs(self._char_criminals) do
 				self:criminal_spotted(u_data.unit, true)
 			end
+			
+			return
 		else
 			local all_areas = self._area_data
 			local valid_criminal_pos = {}

@@ -26,15 +26,23 @@ function SpoocLogicIdle._chk_exit_hiding(data)
 			if attention_data.dis < 1500 and (attention_data.verified or attention_data.nearly_visible) then
 				SpoocLogicIdle._exit_hiding(data)
 			elseif attention_data.dis < 700 then
-				local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
-				local enemy_areas = managers.groupai:state():get_areas_from_nav_seg_id(attention_data.nav_tracker:nav_segment())
+				if attention_data.nav_tracker then
+					local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
+					local enemy_areas = managers.groupai:state():get_areas_from_nav_seg_id(attention_data.nav_tracker:nav_segment())
 
-				for _, area in ipairs(enemy_areas) do
-					if area.nav_segs[my_nav_seg_id] then
-						SpoocLogicIdle._exit_hiding(data)
+					for _, area in ipairs(enemy_areas) do
+						if area.nav_segs[my_nav_seg_id] then
+							SpoocLogicIdle._exit_hiding(data)
 
-						break
+							break
+						end
 					end
+				end
+				
+				if math.abs(attention_data.m_pos.z - data.m_pos.z) < 250 and attention_data.dis < 400 then
+					SpoocLogicIdle._exit_hiding(data)
+					
+					break
 				end
 			end
 		end

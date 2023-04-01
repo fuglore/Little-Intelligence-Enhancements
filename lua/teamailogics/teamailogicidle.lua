@@ -33,7 +33,7 @@ function TeamAILogicIdle._on_player_slow_pos_rsrv_upd(data)
 				end
 			end
 		end
-	elseif not data.path_fail_t or data.t - data.path_fail_t > 3 then
+	elseif not data.path_fail_t or data.t - data.path_fail_t > 1 then
 		managers.groupai:state():on_criminal_jobless(data.unit)
 		
 		if my_data ~= data.internal_data then
@@ -115,7 +115,7 @@ end
 function TeamAILogicIdle.is_available_for_assignment(data, new_objective)
 	if data.internal_data.exiting then
 		return
-	elseif data.path_fail_t and data.t < data.path_fail_t + 6 then
+	elseif data.path_fail_t and data.t < data.path_fail_t + 1 then
 		return
 	elseif data.unit:movement()._should_stay and (not new_objective or not new_objective.type ~= "stop") then
 		return

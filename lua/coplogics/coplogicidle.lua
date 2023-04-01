@@ -431,7 +431,6 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 	for u_key, attention_data in pairs(attention_objects) do
 		local att_unit = attention_data.unit
 		local crim_record = attention_data.criminal_record
-		local detected = crim_record and crim_record.det_t and data.t - crim_record.det_t < 9
 
 		if not attention_data.identified then
 			if data.cool then
@@ -596,7 +595,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					end
 
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
-				elseif detected or alert_dt < 9 or dmg_dt < 9 or attention_data.verified_t and attention_data.verified_t < 9 then
+				else
 					target_priority_slot = 10
 					
 					if not has_damaged then
@@ -995,4 +994,28 @@ function CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
 			return my_data.advancing
 		end
 	end
+end
+
+function CopLogicIdle.is_available_for_assignment(data, objective)
+	if objective and objective.forced then
+		return true
+	end
+
+	local my_data = data.internal_data
+
+	if data.objective and data.objective.action then
+		if my_data.action_started then
+			if not data.unit:anim_data().act_idle then
+				return
+			end
+		else
+			return
+		end
+	end
+
+	if my_data.exiting or data.path_fail_t and data.t < data.path_fail_t + 3 then
+		return
+	end
+
+	return true
 end

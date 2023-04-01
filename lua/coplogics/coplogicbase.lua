@@ -64,7 +64,7 @@ function CopLogicBase._report_detections(enemies)
 
 	for key, data in pairs(enemies) do
 		if data.verified and data.criminal_record and AIAttentionObject.REACT_SUSPICIOUS <= data.reaction then
-			group:criminal_spotted(data.unit, true)
+			group:criminal_spotted(data.unit)
 		end
 	end
 end
@@ -125,46 +125,44 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 	end
 	
-	if not data.cool and (data.unit:base()._tweak_table == "marshal_marksman" or data.unit:base()._tweak_table == "heavy_swat_sniper") and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and not objective.in_place and objective.type == "defend_area" and (not objective.grp_objective or objective.grp_objective.type ~= "retire") then --this is unit is fucking ballin, its almost like i know what im doing
-		local weapon = data.unit:inventory():equipped_unit()
-		local usage = weapon and weapon:base():weapon_tweak_data().usage
-		local range_entry = usage and (data.char_tweak.weapon[usage] or {}).range or {}
-		local engage_range = range_entry.optimal or 2000
-
-		if attention.verified then
-			engage_range = engage_range * 1.2
+	if not data.cool and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and not objective.in_place and objective.type == "defend_area" and (not objective.grp_objective or objective.grp_objective.type ~= "retire") then
+		if data.unit:base():has_tag("spooc") or data.unit:base()._tweak_table == "shadow_spooc" then
+			data.spooc_attack_timeout_t = data.spooc_attack_timeout_t or 0
+		
+			if attention.nav_tracker and attention.is_person and attention.criminal_record and not attention.criminal_record.status and not my_data.spooc_attack and AIAttentionObject.REACT_SHOOT <= attention.reaction and data.spooc_attack_timeout_t < data.t and attention.verified_dis < (my_data.want_to_take_cover and 1500 or 2500) and not data.unit:movement():chk_action_forbidden("walk") and not SpoocLogicAttack._is_last_standing_criminal(attention) and not attention.unit:movement():zipline_unit() and attention.unit:movement():is_SPOOC_attack_allowed() then
+				return true, true
+			end
 		end
-
-		if attention.dis < engage_range then
-			return true, true
+		
+		if data.unit:base():has_tag("taser") then
+			if AIAttentionObject.REACT_SPECIAL_ATTACK <= attention.reaction then
+				return true, true
+			end
+		
+			local reaction = TaserLogicAttack._chk_reaction_to_attention_object(data, attention) 
+			
+			if reaction == AIAttentionObject.REACT_SPECIAL_ATTACK then
+				return true, true
+			end
+		end
+		
+		if data.unit:inventory():shield_unit() then
+			local shield_base = data.unit:inventory():shield_unit():base()
+			local use_data = shield_base and shield_base.get_use_data and shield_base:get_use_data()
+			
+			if use_data then
+				if shield_base:is_charging() then
+					return true, true
+				end
+			end
 		end
 	end
 	
 	if objective.interrupt_on_contact and not objective.in_place then
 		if attention and AIAttentionObject.REACT_COMBAT <= attention.reaction then
-			if data.unit:base():has_tag("spooc") or data.unit:base()._tweak_table == "shadow_spooc" then
-				data.spooc_attack_timeout_t = data.spooc_attack_timeout_t or 0
-			
-				if attention.nav_tracker and attention.is_person and attention.criminal_record and not attention.criminal_record.status and not my_data.spooc_attack and AIAttentionObject.REACT_SHOOT <= attention.reaction and data.spooc_attack_timeout_t < data.t and attention.verified_dis < (my_data.want_to_take_cover and 1500 or 2500) and not data.unit:movement():chk_action_forbidden("walk") and not SpoocLogicAttack._is_last_standing_criminal(attention) and not attention.unit:movement():zipline_unit() and attention.unit:movement():is_SPOOC_attack_allowed() then
-					return true, true
-				end
-			end
-			
-			if data.unit:base():has_tag("taser") then
-				if AIAttentionObject.REACT_SPECIAL_ATTACK <= attention.reaction then
-					return true, true
-				end
-			
-				local reaction = TaserLogicAttack._chk_reaction_to_attention_object(data, attention) 
-				
-				if reaction == AIAttentionObject.REACT_SPECIAL_ATTACK then
-					return true, true
-				end
-			end
-		
 			local aggro_level = LIES.settings.enemy_aggro_level
 			
-			if attention.verified_t and data.t - attention.verified_t <= 15 or aggro_level < 3 then
+			if attention.verified_t and data.t - attention.verified_t <= 15 then
 				local z_diff = 0
 				
 				if not data.tactics or not data.tactics.sniper or attention.m_pos.z - data.m_pos.z > -250 then
@@ -603,17 +601,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 				if dis < my_data.detection.dis_max * 1.2 and (not attention_info.settings.max_range or dis < attention_info.settings.max_range * (attention_info.settings.detection and attention_info.settings.detection.range_mul or 1) * 1.2) then
 					local detect_pos = attention_pos
 
-					local in_FOV
-					
-					if attention_info.criminal_record and not attention_info.criminal_record.is_deployable then
-						if attention_info.criminal_record.det_t > 9 then
-							in_FOV = not attention_info.settings.notice_requires_FOV or _angle_chk(attention_pos, dis, 0.8)
-						else
-							in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
-						end
-					else
-						in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
-					end
+					local in_FOV = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) or _angle_chk(attention_pos, dis, 0.8)
 					
 					if in_FOV then
 						vis_ray = World:raycast("ray", my_pos, detect_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision")

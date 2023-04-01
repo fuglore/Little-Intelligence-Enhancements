@@ -132,8 +132,10 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 	
 	if LIES.settings.hhtacs then	
 		if not self._ludicrous_damage_debuff and ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
-			--m4 nerds with spicy tactics on death sentence will deal more or less the same damage as a zeal heavy
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.33)
+			--m4 nerds with spicy tactics on death sentence will deal the same damage as a zeal heavy
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6)
+		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "sg417" and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 		elseif self._ludicrous_damage_debuff then
 			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
 			
@@ -156,8 +158,10 @@ Hooks:PostHook(CopBrain, "on_reload", "lies_on_reload", function(self)
 	
 	if LIES.settings.hhtacs then	
 		if not self._ludicrous_damage_debuff and ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
-			--m4 nerds with spicy tactics on death sentence will deal more or less the same damage as a zeal heavy
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.33)
+			--m4 nerds with spicy tactics on death sentence will deal the same damage as a zeal heavy
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6)
+		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "sg417" and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 		elseif self._ludicrous_damage_debuff then
 			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
 			

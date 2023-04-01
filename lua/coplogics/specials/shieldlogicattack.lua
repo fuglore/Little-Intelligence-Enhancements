@@ -1,3 +1,60 @@
+function ShieldLogicAttack.enter(data, new_logic_name, enter_params)
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	data.internal_data = my_data
+	my_data.detection = data.char_tweak.detection.combat
+	my_data.tmp_vec1 = Vector3()
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+		my_data.firing = old_internal_data.firing
+		my_data.shooting = old_internal_data.shooting
+		my_data.attention_unit = old_internal_data.attention_unit
+	end
+
+	local key_str = tostring(data.key)
+
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	my_data.attitude = data.objective and data.objective.attitude or "avoid"
+
+	data.unit:brain():set_update_enabled_state(false)
+
+	if not data.attack_sound_t or data.t - data.attack_sound_t > 40 then
+		data.attack_sound_t = data.t
+
+		data.unit:sound():play("shield_identification", nil, true)
+	end
+
+	data.unit:movement():set_cool(false)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	data.unit:brain():set_attention_settings({
+		cbt = true
+	})
+	
+	if data.unit:inventory():shield_unit() then
+		local shield_base = data.unit:inventory():shield_unit():base()
+		local use_data = shield_base and shield_base.get_use_data and shield_base:get_use_data()
+		
+		if use_data then
+			my_data.shield_unit = data.unit:inventory():shield_unit()
+			my_data.shield_use_range = use_data.range
+			my_data.shield_use_cooldown = use_data.cooldown
+		end
+	end
+	
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	my_data.update_queue_id = "ShieldLogicAttack.queued_update" .. key_str
+
+	ShieldLogicAttack.queue_update(data, my_data)
+end
+
 function ShieldLogicAttack.chk_should_turn(data, my_data)
 	return not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and not my_data.walking_to_optimal_pos
 end
@@ -168,7 +225,11 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 			mvector3.multiply(optimal_direction, -1)
 			
-			if my_data.attitude == "engage" then
+			if my_data.shield_use_range and my_data.shield_unit:base():is_charging() then
+				local dis = my_data.shield_use_range * 0.7
+				
+				mvector3.multiply(out, mvector3.dot(out, PA) + dis)
+			elseif my_data.attitude == "engage" then
 				mvector3.multiply(out, mvector3.dot(out, PA) + 600)
 			else
 				mvector3.multiply(out, mvector3.dot(out, PA) + 900)
@@ -196,7 +257,11 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 			local optimal_pos = mvector3.copy(optimal_direction)
 			
-			if my_data.attitude == "engage" then
+			if my_data.shield_use_range and my_data.shield_unit:base():is_charging() then
+				local dis = my_data.shield_use_range * 0.7
+				
+				mvector3.multiply(optimal_pos, -(optimal_length + dis))
+			elseif my_data.attitude == "engage" then
 				mvector3.multiply(optimal_pos, -(optimal_length + 600))
 			else
 				mvector3.multiply(optimal_pos, -(optimal_length + 900))
@@ -350,7 +415,7 @@ function ShieldLogicAttack.queued_update(data)
 				local to_pos = my_data.optimal_pos
 				my_data.optimal_pos = nil
 				
-				if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 3 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) then
+				if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 3 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
 					local ray_params = {
 						pos_to = to_pos,
 						trace = true

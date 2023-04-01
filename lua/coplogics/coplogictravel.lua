@@ -212,19 +212,17 @@ function CopLogicTravel._chk_close_to_criminal(data, my_data)
 		local closest_crim_u_data, closest_crim_dis = nil
 
 		for u_key, u_data in pairs(all_criminals) do
-			if not u_data.undetected and u_data.det_t and data.t - u_data.det_t < 15 then
-				if not u_data.status or u_data.status == "electrified" then
-					local u_data_seg = u_data.tracker:nav_segment()
+			if not u_data.status or u_data.status == "electrified" then
+				local u_data_seg = u_data.tracker:nav_segment()
+				
+				if my_area.nav_segs[u_data_seg] then
+					my_data.close_to_criminal = true
 					
-					if my_area.nav_segs[u_data_seg] then
-						my_data.close_to_criminal = true
-						
-						break
-					elseif next_area and next_area.nav_segs[u_data_seg] then
-						my_data.close_to_criminal = true
-						
-						break
-					end
+					break
+				elseif next_area and next_area.nav_segs[u_data_seg] then
+					my_data.close_to_criminal = true
+					
+					break
 				end
 			end
 		end
@@ -317,13 +315,64 @@ function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_rec
 end
 
 function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+	if not data.cool and not CopLogicTravel.chk_group_ready_to_move(data, my_data) then
+		return
+	end
+	
+	local nav_link = my_data.coarse_path[my_data.coarse_path_index + 1][3]
+	
+	if nav_link and alive(my_data.coarse_path[my_data.coarse_path_index + 1][3]) then
+		if nav_link:delay_time() > data.t then
+			my_data.waiting_for_navlink = nav_link:delay_time()
+			
+			return
+		end
+	end
+	
+	my_data.waiting_for_navlink = nil
+
 	local to_pos = CopLogicTravel._get_exact_move_pos(data, my_data.coarse_path_index + 1)	
 	my_data.processing_advance_path = true
 	local prio = CopLogicTravel.get_pathing_prio(data)
-	--local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
+	
+	local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
 
-	data.unit:brain():search_for_path(my_data.advance_path_search_id, to_pos, prio, nil, nil)
+	data.unit:brain():search_for_path(my_data.advance_path_search_id, to_pos, prio, nil, nav_segs)
 end
+
+function CopLogicTravel._check_start_path_ahead(data)
+	local my_data = data.internal_data
+
+	if my_data.processing_advance_path then
+		return
+	end
+
+	local objective = data.objective
+	local coarse_path = my_data.coarse_path
+	local next_index = my_data.coarse_path_index + 2
+	local total_nav_points = #coarse_path
+
+	if next_index > total_nav_points then
+		return
+	end
+	
+	local nav_link = my_data.coarse_path[next_index][3]
+	
+	if nav_link and alive(my_data.coarse_path[next_index][3]) then
+		if nav_link:delay_time() > TimerManager:game():time()  then
+			return
+		end
+	end
+
+	local to_pos = data.logic._get_exact_move_pos(data, next_index)
+	my_data.processing_advance_path = true
+	local prio = data.logic.get_pathing_prio(data)
+	local from_pos = data.pos_rsrv.move_dest.position
+	local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
+
+	data.unit:brain():search_for_path_from_pos(my_data.advance_path_search_id, from_pos, to_pos, prio, nil, nav_segs)
+end
+
 
 function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 	if not data.group then
@@ -344,7 +393,7 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 
 	local can_continue = true
 	
-	local my_dis_soft = my_dis * 1.15 * 1.15
+	my_dis = my_dis * 1.15 * 1.15
 
 	for u_key, u_data in pairs(data.group.units) do
 		if u_key ~= data.key then
@@ -353,11 +402,7 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 			if his_objective and his_objective.grp_objective == my_objective.grp_objective and his_objective.area and not his_objective.in_place then
 				local his_dis = mvector3.distance_sq(his_objective.area.pos, u_data.m_pos)
 				
-				if math.abs(u_data.m_pos.z - data.m_pos.z) > 250 then
-					if my_dis < his_dis then
-						can_continue = nil
-					end
-				elseif my_dis_soft < his_dis then
+				if my_dis < his_dis then
 					can_continue = nil
 				end
 			end
@@ -508,16 +553,28 @@ function CopLogicTravel.upd_advance(data)
 				end
 			elseif my_data.coarse_path and not my_data.advancing then
 				CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+				
+				if my_data.waiting_for_navlink then
+					if data.attention_obj and AIAttentionObject.REACT_SCARED <= data.attention_obj.reaction and (not my_data.best_cover or not my_data.best_cover[4]) and not unit:anim_data().crouch and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
+						CopLogicAttack._chk_request_action_crouch(data)
+					end
+				end
 			end
 		end
 	elseif not data.unit:movement():chk_action_forbidden("walk") then
 		if objective then
 			if objective.nav_seg or objective.type == "follow" then
 				if my_data.coarse_path then
-					if my_data.coarse_path_index == #my_data.coarse_path then
+					if my_data.coarse_path_index == #my_data.coarse_path or CopLogicTravel._chk_coarse_objective_reached(data) then
 						CopLogicTravel._on_destination_reached(data)
 					else
 						CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+						
+						if my_data.waiting_for_navlink then
+							if data.attention_obj and AIAttentionObject.REACT_SCARED <= data.attention_obj.reaction and (not my_data.best_cover or not my_data.best_cover[4]) and not unit:anim_data().crouch and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
+								CopLogicAttack._chk_request_action_crouch(data)
+							end
+						end
 					end
 				else
 					CopLogicTravel._begin_coarse_pathing(data, my_data)
@@ -536,6 +593,34 @@ function CopLogicTravel.upd_advance(data)
 	
 	if data.internal_data == my_data then
 		CopLogicTravel._update_cover(nil, data)
+	end
+end
+
+local precise_objective_types = {
+	act = true,
+	sniper = true,
+	follow = true
+}
+
+function CopLogicTravel._chk_coarse_objective_reached(data)
+	local objective = data.objective
+	
+	if not objective then
+		return
+	end
+
+	if objective.followup_SO or objective.followup_objective and objective.followup_objective.action or objective.action or precise_objective_types[objective.type] or objective.grp_objective and objective.grp_objective.type == "retire" then
+		return
+	end
+	
+	if not objective.nav_seg then
+		return
+	end
+	
+	local my_seg = data.unit:movement():nav_tracker():nav_segment()
+	
+	if objective.nav_seg == my_seg then
+		return true
 	end
 end
 
@@ -805,32 +890,48 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 end
 
 function CopLogicTravel.get_pathing_prio(data)
-	local prio = nil
+	local prio = 0
 	local objective = data.objective
-
-	if objective then
-		prio = 0
-
-		if objective.type == "phalanx" then
-			prio = 4
-		elseif objective.follow_unit then
-			if objective.follow_unit:base().is_local_player or objective.follow_unit:base().is_husk_player or managers.groupai:state():is_unit_team_AI(objective.follow_unit) then
-				prio = 4
-			end
+	
+	if data.is_converted or data.unit:in_slot(16) then
+		if objective and objective.type == "follow" then
+			prio = 11
+		else
+			prio = 10
 		end
-	end
-
-	if prio or data.is_converted or data.internal_data and data.internal_data.criminal or data.unit:in_slot(16) then
-		if data.is_converted or data.internal_data and data.internal_data.criminal or data.unit:in_slot(16) then
-			prio = prio or 0
-
-			prio = prio + 3
-		elseif data.team.id == tweak_data.levels:get_default_team_ID("player") then
-			prio = prio or 0
-
-			prio = prio + 2
+	elseif data.team.id == tweak_data.levels:get_default_team_ID("player") then
+		prio = 9
+	else
+		local is_civilian = CopDamage.is_civilian(data.unit:base()._tweak_table)
+		
+		if is_civilian then
+			if objective then
+				prio = 1
+				
+				if objective.follow_unit then
+					if objective.follow_unit:base().is_local_player or objective.follow_unit:base().is_husk_player or managers.groupai:state():is_unit_team_AI(objective.follow_unit) then	
+						prio = 2
+					end
+				end
+			end
+		elseif objective then
+			prio = 4
+			
+			if objective.type == "phalanx" then
+				prio = 8
+			elseif objective.follow_unit then
+				if objective.follow_unit:base().is_local_player or objective.follow_unit:base().is_husk_player or managers.groupai:state():is_unit_team_AI(objective.follow_unit) then	
+					if data.important then
+						prio = 7
+					else
+						prio = 6
+					end
+				end
+			elseif data.important then
+				prio = 5
+			end
 		elseif data.important then
-			prio = prio + 1
+			prio = 3
 		end
 	end
 
@@ -1105,21 +1206,19 @@ function CopLogicTravel._find_cover(data, search_nav_seg, near_pos)
 		local closest_crim_u_data, closest_crim_dis = nil
 
 		for u_key, u_data in pairs(all_criminals) do
-			if not u_data.undetected and u_data.det_t and data.t - u_data.det_t < 15 then
-				if not u_data.status or u_data.status == "electrified" then
-					local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+			if not u_data.status or u_data.status == "electrified" then
+				local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
 
-					if crim_area == search_area then
+				if crim_area == search_area then
+					threat_pos = u_data.m_pos
+
+					break
+				else
+					local crim_dis = mvector3.distance_sq(near_pos, u_data.m_pos)
+
+					if not closest_crim_dis or crim_dis < closest_crim_dis then
 						threat_pos = u_data.m_pos
-
-						break
-					else
-						local crim_dis = mvector3.distance_sq(near_pos, u_data.m_pos)
-
-						if not closest_crim_dis or crim_dis < closest_crim_dis then
-							threat_pos = u_data.m_pos
-							closest_crim_dis = crim_dis
-						end
+						closest_crim_dis = crim_dis
 					end
 				end
 			end
@@ -1355,7 +1454,11 @@ end
 
 function CopLogicTravel.queue_update(data, my_data, delay)
 	delay = delay or 0.3
-
+	
+	if my_data.waiting_for_navlink then
+		delay = math.min(my_data.waiting_for_navlink, delay)
+	end
+	
 	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CopLogicTravel.queued_update, data, data.t + delay, data.important and true)
 end
 

@@ -186,6 +186,17 @@ function GroupAITweakData:_LIES_setup()
 		0,
 		0
 	}
+	self.skirmish.assault.groups.custom = {
+		0,
+		0,
+		0
+	}
+	self.skirmish.recon.groups.custom = {
+		0,
+		0,
+		0
+	}
+	
 	
 	--spawngroup setups for spicy tacs
 	if LIES.settings.hhtacs then
@@ -1532,9 +1543,9 @@ function GroupAITweakData:_LIES_setup()
 		
 		if level_id ~= "ranc" and level_id ~= "trai" then
 			self.enemy_spawn_groups.marshal_squad = {
-				spawn_cooldown = 60,
+				spawn_cooldown = 90,
 				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 20,
+				initial_spawn_delay = 240,
 				amount = {
 					2,
 					3
@@ -1543,7 +1554,8 @@ function GroupAITweakData:_LIES_setup()
 					{
 						respawn_cooldown = 30,
 						amount_min = 1,
-						rank = 2,
+						amount_max = 1,
+						rank = 1,
 						freq = 1,
 						unit = "marshal_shield",
 						tactics = self._tactics.marshal_shield
@@ -1551,7 +1563,7 @@ function GroupAITweakData:_LIES_setup()
 					{
 						respawn_cooldown = 30,
 						amount_min = 1,
-						rank = 1,
+						rank = 2,
 						freq = 1,
 						unit = "marshal_marksman",
 						tactics = self._tactics.marshal_marksman
@@ -1565,11 +1577,21 @@ function GroupAITweakData:_LIES_setup()
 			}
 			
 			if difficulty_index > 5 then
-				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
-				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
+				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 60
 				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 150
 			end
 		end
+		
+		self.skirmish.assault.groups.marshal_squad = {
+			0,
+			0,
+			0
+		}
+		self.skirmish.recon.groups.marshal_squad = {
+			0,
+			0,
+			0
+		}
 		
 		if level_id == "trai" then
 			self.enemy_spawn_groups.marshal_squad = {
@@ -1584,7 +1606,8 @@ function GroupAITweakData:_LIES_setup()
 					{
 						respawn_cooldown = 30,
 						amount_min = 1,
-						rank = 2,
+						amount_max = 1,
+						rank = 1,
 						freq = 1,
 						unit = "marshal_shield",
 						tactics = self._tactics.marshal_shield
@@ -1592,7 +1615,7 @@ function GroupAITweakData:_LIES_setup()
 					{
 						respawn_cooldown = 30,
 						amount_min = 1,
-						rank = 1,
+						rank = 2,
 						freq = 1,
 						unit = "marshal_marksman",
 						tactics = self._tactics.marshal_marksman
@@ -1655,12 +1678,6 @@ function GroupAITweakData:_LIES_setup()
 						}
 					}
 				end
-			
-				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
-				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
-				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 20
-				self.enemy_spawn_groups.marshal_squad.amount[2] = 3
-				
 			end
 		elseif level_id == "ranc" then
 			self.enemy_spawn_groups.Cowboys = {
@@ -1711,7 +1728,8 @@ function GroupAITweakData:_LIES_setup()
 					{
 						respawn_cooldown = 30,
 						amount_min = 1,
-						rank = 2,
+						amount_max = 1,
+						rank = 1,
 						freq = 1,
 						unit = "marshal_shield",
 						tactics = self._tactics.marshal_shield
@@ -1719,7 +1737,7 @@ function GroupAITweakData:_LIES_setup()
 					{
 						respawn_cooldown = 30,
 						amount_min = 1,
-						rank = 1,
+						rank = 2,
 						freq = 1,
 						unit = "marshal_marksman",
 						tactics = self._tactics.marshal_marksman
@@ -1737,10 +1755,6 @@ function GroupAITweakData:_LIES_setup()
 					self.enemy_spawn_groups.Cowboys.initial_spawn_delay = 10
 					self.enemy_spawn_groups.Cowboys.max_nr_simultaneous_groups = 3
 				end
-			
-				self.enemy_spawn_groups.marshal_squad.max_nr_simultaneous_groups = 3
-				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 45
-				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 20
 			end
 		elseif level_id == "firestarter_1" or level_id == "firestarter_2" or level_id == "firestarter_3" or level_id == "hox_3" then
 			self.enemy_spawn_groups.CS_cops = {
@@ -3291,12 +3305,12 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		}
 	}
 	self.enemy_chatter.contact = {
-		radius = 1000,
+		radius = 1500,
 		max_nr = 1,
 		queue = "c01",
 		group_min = 2,
 		duration = {
-			8,
+			16,
 			16
 		},
 		interval = {

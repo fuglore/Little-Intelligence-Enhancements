@@ -66,7 +66,7 @@ function TeamAILogicAssault.update(data)
 		end
 	end
 
-	if not data.objective and (not data.path_fail_t or data.t - data.path_fail_t > 3) then
+	if not data.objective and (not data.path_fail_t or data.t - data.path_fail_t > 1) then
 		managers.groupai:state():on_criminal_jobless(unit)
 
 		if my_data ~= data.internal_data then
@@ -91,7 +91,7 @@ function TeamAILogicAssault._on_player_slow_pos_rsrv_upd(data)
 			return
 		end
 	elseif not objective then
-		if not data.path_fail_t or data.t - data.path_fail_t > 3 then
+		if not data.path_fail_t or data.t - data.path_fail_t > 1 then
 			managers.groupai:state():on_criminal_jobless(unit)
 
 			if my_data ~= data.internal_data then

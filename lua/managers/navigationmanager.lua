@@ -1094,6 +1094,7 @@ function NavigationManager:_strip_nav_field_for_gameplay()
 	self._covers = {}
 end
 
+
 function NavigationManager:_execute_coarce_search(search_data)
 	local search_id = search_data.id
 	local i = 0
@@ -1124,7 +1125,7 @@ function NavigationManager:_execute_coarce_search(search_data)
 					nav_link_element = nil
 
 					break
-				elseif i_door:check_access(search_data.access_pos, search_data.access_neg) then
+				elseif i_door:delay_time() < TimerManager:game():time() and i_door:check_access(search_data.access_pos, search_data.access_neg) then
 					entry_found = true
 					nav_link_element = i_door
 				end
@@ -1247,9 +1248,9 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 						}
 						ignore_seg[neighbour_seg_id] = true
 					end
-				elseif not i_door or not alive(i_door) then
+				elseif not alive(i_door) then
 					debug_pause("[NavigationManager:_sort_nav_segs_after_pos] dead nav_link! between NavSegments", i_seg, "-", neighbour_seg_id)
-				elseif not i_door:is_obstructed() and i_door:check_access(access_pos, access_neg) then
+				elseif not i_door:is_obstructed() and i_door:delay_time() < TimerManager:game():time() and i_door:check_access(access_pos, access_neg) then
 					local end_pos = i_door:script_data().element:nav_link_end_pos()
 					local my_weight = mvec3_dis(end_pos, to_pos)
 
@@ -1292,38 +1293,4 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 	end
 
 	return found_segs
-end
-
-function NavigationManager:add_obstacle(obstacle_unit, obstacle_obj_name)
-	for i, obs_data in ipairs(self._obstacles) do
-		if obstacle_unit:key() == obs_data.unit_key and obstacle_obj_name == obs_data.obstacle_obj_name then
-			return
-		end
-	end
-
-	local obstacle_obj = obstacle_unit:get_object(obstacle_obj_name)
-	local id = self._quad_field:add_obstacle(obstacle_obj)
-	
-	table.insert(self._obstacles, {
-		unit = obstacle_unit,
-		obstacle_obj_name = obstacle_obj_name,
-		id = id,
-		unit_key = obstacle_unit:key()
-	})
-end
-
-function NavigationManager:remove_obstacle(obstacle_unit, obstacle_obj_name)
-	for i, obs_data in ipairs(self._obstacles) do
-		if not alive(obs_data.unit) then
-			--log("removing bad obstacle")
-			self._quad_field:remove_obstacle(obs_data.id)
-		
-			table.remove(self._obstacles, i)
-		elseif obs_data.unit_key == obstacle_unit:key() and obs_data.obstacle_obj_name == obstacle_obj_name then
-			--log("removing obstacle")
-			self._quad_field:remove_obstacle(obs_data.id)
-
-			table.remove(self._obstacles, i)
-		end
-	end
 end

@@ -60,7 +60,7 @@
 	"menu_lies_teamaihelpers_desc" : "Allows Team AI to help players with escorts and surrendering cops. Not accurate to Vanilla.",
 	
 	"menu_lies_interruptoncontact_title" : "Smart Engagement",
-	"menu_lies_interruptoncontact_desc" : "Minimizes the tendency for enemies to continue moving into danger if engaging at a distance would be viable for their purposes. Not accurate to Vanilla.",
+	"menu_lies_interruptoncontact_desc" : "Minimizes the tendency for enemies to continue moving into danger if starting the engagement at a distance, and moving in slower would be viable for their purposes. Not accurate to Vanilla.",
 	
 	"menu_lies_spawngroupdelays_title" : "Forced Spawn Delays",
 	"menu_lies_spawngroupdelays_desc" : "Prevents enemy spawn group cooldown timers being reset when no other groups can spawn, reducing cases of enemies constantly pouring out of nearby spawn points. Not accurate to Vanilla.",

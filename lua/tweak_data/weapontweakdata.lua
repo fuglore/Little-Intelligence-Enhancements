@@ -3,7 +3,6 @@ function WeaponTweakData:_setup_hhtacs()
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	
 	if difficulty_index > 5 then
-
 		if difficulty_index > 7 then
 			self.dmr_npc.CLIP_AMMO_MAX = 12
 			self.heavy_snp_npc.CLIP_AMMO_MAX = 12

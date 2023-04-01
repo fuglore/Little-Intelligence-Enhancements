@@ -535,10 +535,9 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 					if chase then
 						my_data.chase_pos = nil
 						local chase_pos = focus_enemy.nav_tracker:field_position()
-						local pos_on_wall = CopLogicTravel._get_pos_on_wall(chase_pos, 300, nil, nil)
+						local pos_on_wall = CopLogicAttack._find_charge_pos(data, my_data, focus_enemy.nav_tracker, 400)
 
 						if mvec3_not_equal(chase_pos, pos_on_wall) then
-							pos_on_wall = managers.navigation:pad_out_position(pos_on_wall, 4, data.char_tweak.wall_fwd_offset)
 							my_data.chase_pos = pos_on_wall
 						end
 

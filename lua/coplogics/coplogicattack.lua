@@ -775,7 +775,7 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 		local old_amount = falloff_sim.amount
 		
 		if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-			if focus_enemy.dis > 3000 then
+			if focus_enemy.dis > 2000 then
 				if data.unit:base()._shotgunner then
 					falloff_sim.amount = 0.84
 				else
@@ -787,10 +787,16 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 				end
 			elseif focus_enemy.dis > 1000 then
 				if data.unit:base()._shotgunner then
-					falloff_sim.amount = 0.495
+					falloff_sim.amount = 0.52
 				else
 					falloff_sim.amount = 0.33
 				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif data.unit:base()._shotgunner then
+				falloff_sim.amount = 0.4
 				
 				if falloff_sim.amount ~= old_amount then
 					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)

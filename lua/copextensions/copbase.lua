@@ -31,7 +31,7 @@ function CopBase:default_weapon_name(selection_name)
 				m_weapon_id = "heavy_zeal_sniper"
 			end
 			
-			if m_weapon_id == "m4" or m_weapon_id == "mp5" or m_weapon_id == "ak47_ass" then	
+			if m_weapon_id == "m4" or m_weapon_id == "mp5" or m_weapon_id == "ak47_ass" or m_weapon_id == "g36" then	
 				local zeal_types = {
 					swat = true,
 					heavy_swat = true
@@ -53,7 +53,7 @@ function CopBase:default_weapon_name(selection_name)
 						m_weapon_id = "benelli"
 					end
 					
-					if m_weapon_id == "m4" or m_weapon_id == "ak47_ass" then
+					if m_weapon_id == "m4" or m_weapon_id == "ak47_ass" or m_weapon_id == "g36" then
 						m_weapon_id = "sg417"
 
 						if not self._char_tweak.throwable then
@@ -79,15 +79,19 @@ function CopBase:default_weapon_name(selection_name)
 								self._unit:movement()._action_common_data.char_tweak = char_tweaks
 							end
 						end
+					elseif m_weapon_id == "mp5" then
+						m_weapon_id = "m4"
 					end
 				end
-			elseif tweak_data.group_ai._not_america and m_weapon_id == "r870" then
+			elseif m_weapon_id == "r870" then
 				m_weapon_id = "benelli"
 				self._shotgunner = true
 			end
 		elseif difficulty_index > 6 and m_weapon_id == "r870" then
 			m_weapon_id = "benelli"
 			self._shotgunner = true
+		elseif tweak_data.group_ai._not_america and (difficulty_index < 6 or difficulty_index > 7) and m_weapon_id == "g36" then
+			m_weapon_id = "m4"
 		elseif self._tweak_table == "taser" then
 			m_weapon_id = "m4_yellow"
 		end

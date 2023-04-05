@@ -139,6 +139,10 @@ local important_sounds = {
 }
 
 function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
+	if not sound_name then --shouldn't normally happen.
+		return
+	end
+
 	if important_sounds[sound_name] then
 		important = true
 	end
@@ -189,7 +193,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 				sound_name = "x01a_any_3p"
 				fixed_sound = true
 			elseif sound_name == "x01a_any_3p" then
-				sound_name = "l1n_x02a_any_3p"
+				full_sound = "l1n_x02a_any_3p"
 			end
 		end
 		
@@ -208,8 +212,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 		if self._prefix == "l3d_" then
 			if sound_name == "burnhurt" then
 				full_sound = "l1d_burnhurt"
-			end
-			if sound_name == "burndeath" then
+			elseif sound_name == "burndeath" then
 				full_sound = "l1d_burndeath"
 			end
 		end

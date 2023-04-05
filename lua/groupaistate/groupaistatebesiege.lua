@@ -558,6 +558,37 @@ function GroupAIStateBesiege:_update_criminal_reveal()
 	end
 end
 
+function GroupAIStateBesiege:force_spawn_group(group, group_types, guarantee)
+	local best_groups = {}
+	local total_weight = self:_choose_best_groups(best_groups, group, group_types, self._tweak_data[self._task_data.assault.active and "assault" or "recon"].groups, 1)
+
+	if total_weight > 0 or guarantee then
+		local spawn_group, spawn_group_type = self:_choose_best_group(best_groups, total_weight or 1)
+
+		if spawn_group then
+			local grp_objective = {
+				attitude = "avoid",
+				stance = "hos",
+				pose = "crouch",
+				type = "assault_area",
+				area = spawn_group.area,
+				coarse_path = {
+					{
+						spawn_group.area.pos_nav_seg,
+						spawn_group.area.pos
+					}
+				}
+			}
+
+			self:_spawn_in_group(spawn_group, spawn_group_type, grp_objective)
+			self:_upd_group_spawning(true)
+			
+			return true
+		end
+	end
+end
+
+
 function GroupAIStateBesiege:assign_enemy_to_group_ai(unit, team_id)
 	local u_tracker = unit:movement():nav_tracker()
 	local seg = u_tracker:nav_segment()
@@ -2209,7 +2240,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		self:_set_objective_to_enemy_group(group, grp_objective)
 		self:_voice_open_fire_start(group)
 	elseif approach or push then
-		if LIES.settings.hhtacs and not push and tactics_map and tactics_map.blockade and aggression_level < 4 then
+		local enabled
+		
+		if enabled and not push and tactics_map and tactics_map.blockade and aggression_level < 4 then
 			local occupied_areas = {}
 			local blockade_help_areas = {}
 			local v3_dis_sq = mvector3.distance_sq

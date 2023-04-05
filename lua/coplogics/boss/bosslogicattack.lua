@@ -532,12 +532,12 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 						end
 					end
 
-					if chase then
+					if chase and focus_enemy.nav_tracker then
 						my_data.chase_pos = nil
 						local chase_pos = focus_enemy.nav_tracker:field_position()
-						local pos_on_wall = CopLogicAttack._find_charge_pos(data, my_data, focus_enemy.nav_tracker, 400)
+						local pos_on_wall = CopLogicAttack._find_charge_pos(data, my_data, focus_enemy.nav_tracker, 700)
 
-						if mvec3_not_equal(chase_pos, pos_on_wall) then
+						if pos_on_wall and mvec3_not_equal(chase_pos, pos_on_wall) then
 							my_data.chase_pos = pos_on_wall
 						end
 
@@ -584,6 +584,8 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 						else
 							my_data.chase_path_failed_t = t
 						end
+					else
+						my_data.chase_pos = nil
 					end
 				end
 			end
@@ -693,7 +695,7 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 		return
 	end
 	
-	local last_seen_pos = focus.last_verified_pos
+	local last_seen_pos = mvec3_cpy(focus.last_verified_m_pos)
 	
 	local target_vec = temp_vec3
 	mvec3_dir(target_vec, data.m_pos, last_seen_pos)
@@ -706,8 +708,7 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 	end
 
 	local throw_from = head_pos + mov_ext:m_head_rot():y() * 50
-	
-	
+
 	if throwable == "launcher_frag" then
 		last_seen_pos = focus.last_verified_m_pos:with_z(focus.last_verified_m_pos.z + 1)
 	end
@@ -746,7 +747,10 @@ function BossLogicAttack._chk_use_throwable(data, my_data, focus)
 	data.used_throwable_t = data.t + delay
 
 	if throwable ~= "launcher_frag" and mov_ext:play_redirect("throw_grenade") then
+		data.unit:sound():play("clk_baton_swing", nil, true)
 		managers.network:session():send_to_peers_synched("play_distance_interact_redirect", data.unit, "throw_grenade")
+	else		
+		data.unit:sound():play("grenade_gas_npc_fire", nil, true)
 	end
 
 	ProjectileBase.throw_projectile_npc(throwable, throw_from, throw_dir, data.unit)

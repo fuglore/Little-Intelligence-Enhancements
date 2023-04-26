@@ -1,5 +1,6 @@
 GroupAIStateBase._nr_important_cops = 12 --gets divided in groupaistatebesiege if theres more than 1 player
 
+local math_up = math.UP
 local mvec3_dis_sq = mvector3.distance_sq
 
 function GroupAIStateBase:set_importance_weight(u_key, wgt_report)
@@ -81,6 +82,24 @@ function GroupAIStateBase:set_importance_weight(u_key, wgt_report)
 	end
 end
 
+function GroupAIStateBase:_calculate_difficulty_ratio_hhtacs()
+	local ramp = tweak_data.group_ai.difficulty_curve_points
+	local diff = self._difficulty_value
+	local i = 1
+
+	while diff > (ramp[i] or 1) do
+		i = i + 1
+	end
+		
+	local previous_ramp = ramp[i - 1] and ramp[i - 1] or 0
+	local next_ramp = ramp[i] and ramp[i] or 1
+	local diff_lerp = math.abs(previous_ramp - next_ramp)
+	local diff = (self._difficulty_value - previous_ramp) / diff_lerp
+	
+	self._difficulty_point_index = i
+	self._difficulty_ramp = diff
+end
+
 function GroupAIStateBase:on_unit_pathing_complete(unit)
 	if self._draw_enabled then
 		local draw_pos = unit:movement():m_pos()
@@ -124,6 +143,7 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 				is_default = true,
 				scan = true,
 				type = "free",
+				follow_unit = objective.follow_unit,
 				no_arrest = objective.no_arrest,
 				grp_objective = objective.grp_objective,
 				attitude = objective.attitude or objective.grp_objective and objective.grp_objective.attitude,
@@ -163,6 +183,63 @@ function GroupAIStateBase:report_aggression(unit)
 
 	u_sighting.assault_t = self._t
 	self:criminal_spotted(u_sighting.unit, true)
+end
+
+function GroupAIStateBase:register_criminal(unit)
+	local u_key = unit:key()
+	local ext_mv = unit:movement()
+	local tracker = ext_mv:nav_tracker()
+	local seg = tracker:nav_segment()
+	local is_AI = nil
+
+	if unit:base()._tweak_table then
+		is_AI = true
+	end
+
+	local is_deployable = unit:base().sentry_gun
+	local u_sighting = {
+		arrest_timeout = -100,
+		engaged_force = 0,
+		dispatch_t = 0,
+		undetected = true,
+		unit = unit,
+		ai = is_AI,
+		tracker = tracker,
+		seg = seg,
+		area = self:get_area_from_nav_seg_id(seg),
+		pos = mvector3.copy(ext_mv:m_pos()),
+		m_pos = ext_mv:m_pos(),
+		m_det_pos = ext_mv:m_detect_pos(),
+		det_t = -100,
+		engaged = {},
+		important_enemies = not is_AI and {} or nil,
+		important_dis = not is_AI and {} or nil,
+		is_deployable = is_deployable
+	}
+	self._criminals[u_key] = u_sighting
+
+	if is_AI then
+		self._ai_criminals[u_key] = u_sighting
+		u_sighting.so_access = managers.navigation:convert_access_flag(tweak_data.character[unit:base()._tweak_table].access)
+	elseif not is_deployable then
+		self._player_criminals[u_key] = u_sighting
+	end
+
+	if not is_deployable then
+		self._char_criminals[u_key] = u_sighting
+	end
+
+	if not unit:base().is_local_player then
+		managers.enemy:on_criminal_registered(unit)
+	end
+
+	if is_AI then
+		unit:movement():set_team(self._teams[tweak_data.levels:get_default_team_ID("player")])
+	end
+end
+
+function GroupAIStateBase:on_criminal_nav_seg_change(unit, nav_seg_id)
+	return
 end
 
 function GroupAIStateBase:chk_say_teamAI_combat_chatter(unit)
@@ -293,4 +370,109 @@ function GroupAIStateBase:register_security_camera(unit, state)
 	end
 	
 	self._security_cameras[unit:key()] = state and unit or nil
+end
+
+function GroupAIStateBase:print_objective(objective)
+	if objective then
+		log("objective info:")
+		
+		log(objective.type)
+		
+		if objective.is_default then
+			log("objective is default")
+		end
+		
+		if objective.forced then
+			log("forced objective")
+		end
+		
+		if objective.stance then
+			log(objective.stance)
+		end
+		
+		if objective.attitude then
+			log(objective.attitude)
+		end
+		
+		if objective.path_style then
+			log(objective.path_style)
+		end
+		
+		if objective.action then
+			log("objective has action type " ..tostring(objective.action.type)..":"..tostring(objective.action.variant))
+		end
+		
+		if objective.element then
+			log("objective has element: " .. tostring(objective.element._id))
+		end
+	else
+		log("no objective")
+		
+		return
+	end
+
+	local cmpl_clbk = objective.complete_clbk
+	
+	if cmpl_clbk then
+		log("objective has completion clbk")
+	end
+	
+	local fail_clbk = objective.fail_clbk
+	
+	if fail_clbk then
+		log("objective has fail clbk")
+	end
+	
+	local act_start_clbk = objective.action_start_clbk
+	
+	if act_start_clbk then
+		log("objective has action start clbk")
+	end
+	
+	local ver_clbk = objective.verification_clbk
+	
+	if ver_clbk then
+		log("objective has verification clbk")
+	end
+	
+	local area = objective.area
+	
+	if area then
+		log("objective has area, drawing pillar")
+		
+		local line = Draw:brush(Color.blue:with_alpha(0.5), 5)
+		line:cylinder(area.pos, area.pos + math_up * 1000, 100)
+	end
+	
+	local followup_SO = objective.followup_SO
+	
+	if followup_SO then
+		log("objective has follow up SO")
+		
+		if followup_SO.type then
+			local followup_SO_type_str = followup_SO.type and tostring(followup_SO.type) or "lmao what"
+			
+			log("f. SO has type: " .. followup_SO_type_str .. "")
+		end
+	end
+	
+	local grp_objective = objective.grp_objective
+	
+	if grp_objective then
+		local grp_objective_type_str = grp_objective.type and tostring(grp_objective.type) or "lmao what"
+	
+		log("objective has group objective!!! type: " .. grp_objective_type_str .. "")
+	end
+	
+	local followup_objective = objective.followup_objective
+	
+	if followup_objective then
+		log("objective has followup objective")
+		
+		if followup_objective.type then
+			local followup_objective_type_str = followup_objective.type and tostring(followup_objective.type) or "lmao what"
+			
+			log("f. objective has type: " .. followup_objective_type_str .. "")
+		end
+	end
 end

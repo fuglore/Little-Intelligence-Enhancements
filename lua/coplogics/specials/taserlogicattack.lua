@@ -48,9 +48,13 @@ function TaserLogicAttack.queued_update(data)
 		local shoot = true
 		
 		if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-			if LIES.settings.enemy_reaction_level < 3 and focus_enemy.acquire_t and not data.unit:in_slot(16) then
+			if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) then
+				if not focus_enemy.react_t then
+					focus_enemy.react_t = data.t
+				end
+			
 				if not focus_enemy.verified_t or data.t - focus_enemy.verified_t > 2 then
-					focus_enemy.acquire_t = data.t
+					focus_enemy.react_t = data.t
 				end
 			
 				local react_t = 2
@@ -61,7 +65,7 @@ function TaserLogicAttack.queued_update(data)
 					local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.25, 1)
 					react_t = react_t * lerp
 
-					if data.t - focus_enemy.acquire_t < react_t then
+					if data.t - focus_enemy.react_t < react_t then
 						aim = true
 						shoot = nil
 					end
@@ -88,9 +92,7 @@ function TaserLogicAttack.queued_update(data)
 
 		CopLogicAttack._update_cover(data)
 		
-		if not data.next_mov_time or data.next_mov_time < data.t then
-			CopLogicAttack._upd_combat_movement(data)
-		end
+		CopLogicAttack._upd_combat_movement(data)
 	end
 
 	CopLogicBase.queue_task(my_data, my_data.update_task_key, TaserLogicAttack.queued_update, data, data.t + delay, data.important)
@@ -196,9 +198,13 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 					local shoot = true
 					
 					if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-						if LIES.settings.enemy_reaction_level < 3 and focus_enemy.acquire_t and not data.unit:in_slot(16) then
+						if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) then
+							if not focus_enemy.react_t then
+								focus_enemy.react_t = data.t
+							end
+						
 							if not focus_enemy.verified_t or data.t - focus_enemy.verified_t > 2 then
-								focus_enemy.acquire_t = data.t
+								focus_enemy.react_t = data.t
 							end
 						
 							local react_t = 2
@@ -209,7 +215,7 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 								local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.5, 1)
 								react_t = react_t * lerp
 
-								if data.t - focus_enemy.acquire_t < react_t then
+								if data.t - focus_enemy.react_t < react_t then
 									aim = true
 									shoot = nil
 								end
@@ -416,15 +422,19 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 		end
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data)
-			data.logic._update_cover(data)
-			data.logic._upd_combat_movement(data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "act" then
 		if not my_data.advancing and action:expired() then
-			data.logic._upd_aim(data, my_data)
-			data.logic._update_cover(data)
-			data.logic._upd_combat_movement(data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
@@ -438,13 +448,21 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 		if action:expired() then
 			CopLogicAttack._cancel_cover_pathing(data, my_data)
 		
-			data.logic._upd_aim(data, my_data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "hurt" or action_type == "healed" then
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 
 		if data.is_converted or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
-			data.logic._upd_aim(data, my_data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "dodge" then
 		local timeout = action:timeout()

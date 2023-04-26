@@ -97,6 +97,8 @@ function BossLogicAttack.enter(data, new_logic_name, enter_params)
 	local key_str = tostring(data.key)
 
 	CopLogicIdle._chk_has_old_action(data, new_internal_data)
+	
+	CopLogicTravel._chk_say_clear(data)
 
 	if objective and (objective.action_duration or objective.action_timeout_t and data.t < objective.action_timeout_t) then
 		new_internal_data.action_timeout_clbk_id = "CopLogicIdle_action_timeout" .. key_str
@@ -453,15 +455,19 @@ function BossLogicAttack._upd_aim(data, my_data)
 	end
 	
 	if reaction and AI_REACT_COMBAT <= reaction then
-		if LIES.settings.enemy_reaction_level < 3 and focus.acquire_t and not data.unit:in_slot(16) then
+		if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) then
+			if not focus.react_t then
+				focus.react_t = data.t
+			end
+			
 			if not focus.verified_t or data.t - focus.verified_t > 2 then
-				focus.acquire_t = data.t
+				focus.react_t = data.t
 			end
 		
 			local react_t = 2 / LIES.settings.enemy_reaction_level
 		
 			if shoot then
-				if data.t - focus.acquire_t < react_t then
+				if data.t - focus.react_t < react_t then
 					aim = true
 					shoot = nil
 				end

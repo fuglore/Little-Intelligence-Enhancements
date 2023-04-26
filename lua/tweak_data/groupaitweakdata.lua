@@ -163,14 +163,14 @@ function GroupAITweakData:_LIES_setup()
 					"flash_grenade"
 				}
 			end
-
-			self._tactics.tazer_charge = {
-				"charge",
-				"flash_grenade",
-				"provide_coverfire",
-				"murder"
-			}
 		end
+		
+		self._tactics.tazer_charge = {
+			"charge",
+			"flash_grenade",
+			"provide_coverfire",
+			"murder"
+		}
 		
 		--chad wuz here
 	end
@@ -401,7 +401,7 @@ function GroupAITweakData:_LIES_setup()
 		if difficulty_index < 6 then
 			self.unit_categories.FBI_heavy_R870.unit_types = {
 				america = {
-					Idstring("units/payday2/characters/ene_city_heavy_r870/ene_city_heavy_r870")
+					Idstring("units/payday2/characters/ene_fbi_heavy_r870/ene_fbi_heavy_r870")
 				},
 				russia = {
 					Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_heavy_r870/ene_akan_fbi_heavy_r870")
@@ -452,9 +452,7 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
 				}
 			}
-		end
-
-		
+		end	
 		
 		if difficulty_index <= 2 then
 			self.enemy_spawn_groups.tac_swat_rifle_flank = {
@@ -1511,8 +1509,7 @@ function GroupAITweakData:_LIES_setup()
 		
 		self.unit_categories.tank_refless = clone(self.unit_categories.FBI_tank)
 		self.unit_categories.tank_refless.special_type = nil
-		
-		
+
 		self.unit_categories.tank_r870 = {
 			unit_types = {
 				america = {
@@ -3353,7 +3350,25 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 		}
 	end
 	
-	--the only positive of being in hh tacs mode, assault breaks...actually give you a break
+	if difficulty_index < 8 then
+		self.besiege.assault.force = {
+			10,
+			14,
+			18
+		}
+	else
+		self.besiege.assault.force = {
+			8,
+			10,
+			14
+		}
+	end
+	
+	self.besiege.assault.force_pool = {
+		32,
+		48,
+		64
+	}
 	self.besiege.assault.delay = { 
 		60,
 		45,

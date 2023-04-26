@@ -50,27 +50,18 @@ function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
 	end
 
 	local follow_unit = objective.follow_unit
-
-	local max_allowed_dis_xy = 700
-	local max_allowed_dis_z = 250
-
-	mvector3.set(tmp_vec1, follow_unit:movement():m_pos())
-	mvector3.subtract(tmp_vec1, data.m_pos)
-
-	local too_far = nil
-
-	if max_allowed_dis_z < math.abs(mvector3.z(tmp_vec1)) then
-		too_far = true
-	else
-		mvector3.set_z(tmp_vec1, 0)
-
-		if max_allowed_dis_xy < mvector3.length(tmp_vec1) then
-			too_far = true
-		end
-	end
-
-	if too_far then
+	local follow_pos = follow_unit:movement():m_pos()
+	local max_allowed_dis = 700
+	local z_diff = math.abs(data.m_pos.z - follow_pos.z)
+	
+	if z_diff > 250 then
 		return true
+	else
+		max_allowed_dis = math.lerp(max_allowed_dis, 0, z_diff / 250)
+		
+		if mvector3.distance(data.m_pos, follow_pos) > max_allowed_dis then
+			return true
+		end
 	end
 end
 
@@ -191,7 +182,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 				local dmg_dt = attention_data.dmg_t and data.t - attention_data.dmg_t or 10000
 				local mark_dt = attention_data.mark_t and data.t - attention_data.mark_t or 10000
 				local target_priority = distance
-				local close_threshold = ranges.optimal
+				local close_threshold = 2000
 
 				if data.attention_obj and data.attention_obj.u_key == u_key then
 					alert_dt = alert_dt * 0.8
@@ -236,9 +227,10 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 									target_priority_slot = 7
 								end
 							elseif attention_unit:base():has_tag("spooc") then
-								if distance < 1500 then
+								local trying_to_kick_criminal = attention_unit:brain()._logic_data and attention_unit:brain()._logic_data.internal_data and attention_unit:brain()._logic_data.internal_data.spooc_attack
+							
+								if distance < 1500 or trying_to_kick_criminal then
 									dangerous_special = true
-									local trying_to_kick_criminal = attention_unit:brain()._logic_data and attention_unit:brain()._logic_data.internal_data and attention_unit:brain()._logic_data.internal_data.spooc_attack
 
 									if trying_to_kick_criminal then
 										target_priority_slot = 1
@@ -263,10 +255,11 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 									target_priority_slot = 6
 								end
 							elseif attention_unit:base():has_tag("taser") then
-								if distance < 1500 then
+								local trying_to_tase_criminal = att_unit:brain()._logic_data and att_unit:brain()._logic_data.internal_data and att_unit:brain()._logic_data.internal_data.tasing
+								
+								if trying_to_tase_criminal or distance < 1500 then
 									dangerous_special = true
-									local trying_to_tase_criminal = att_unit:brain()._logic_data and att_unit:brain()._logic_data.internal_data and att_unit:brain()._logic_data.internal_data.tasing
-
+									
 									if trying_to_tase_criminal then
 										target_priority_slot = 1 --try to stagger the taser
 

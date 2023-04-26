@@ -1,4 +1,41 @@
+local adjust_ids = {
+	wwh = { --use comments to keep track of what im modifying here so i dont forget what i did or why
+		[100796] = { --superduper broken anim for climbing up near the alaskan deal sheds
+			new_pos = Vector3(5552.89, 2805.31, 1153),
+			new_search_pos = Vector3(5992, 2749, 1568),
+			new_rotation = Rotation(-137, 0, -0),
+			new_action = "e_nl_up_4m"
+		}
+	}
+}
+
 Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_element", function(self)
+	if adjust_ids[Global.level_data.level_id] then
+		local to_adjust = adjust_ids[Global.level_data.level_id]
+		
+		if to_adjust[self._id] then
+			local params = to_adjust[self._id]
+			
+			if params.new_pos then
+				self._values.position = params.new_pos
+			end
+			
+			if params.new_rotation then
+				self._values.rotation = mrotation.yaw(params.new_rotation)
+			end
+			
+			if params.new_search_pos then
+				self._values.search_position = params.new_search_pos
+			end
+			
+			if params.new_action then
+				self._values.so_action = params.new_action
+			end
+			
+			--log("SCRONGBONGLED")
+		end
+	end
+
 	if self:_is_nav_link() then
 		managers.navigation._LIES_navlink_elements[self._id] = self
 	end
@@ -13,17 +50,11 @@ end)
 function ElementSpecialObjective:nav_link_delay()
 	local original_value = self:_get_default_value_if_nil("interval")
 	
-	if original_value <= 0 or LIES.settings.nav_link_interval < 2 then
-		return original_value
+	if original_value > 3 then
+		original_value = 3
 	end
-
-	if LIES.settings.nav_link_interval > 3 then
-		return -1
-	else	
-		local divide_by = LIES.settings.nav_link_interval
-		
-		return original_value / divide_by
-	end
+	
+	return original_value
 end
 
 function ElementSpecialObjective:clbk_verify_administration(unit)

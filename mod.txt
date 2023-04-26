@@ -196,5 +196,9 @@
 			"hook_id": "lib/units/civilians/logics/civilianlogicsurrender",
 			"script_path": "lua/civlogics/civilianlogicsurrender.lua"
 		},
+		{
+		  "hook_id": "core/lib/utils/dev/editor/coreworlddefinition",
+		  "script_path": "lua/managers/core/coreworlddefinition.lua"
+		}
 	]
 }

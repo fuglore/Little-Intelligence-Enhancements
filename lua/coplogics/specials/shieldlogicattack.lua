@@ -256,7 +256,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			end
 
 			local optimal_pos = mvector3.copy(optimal_direction)
-			
+
 			if my_data.shield_use_range and my_data.shield_unit:base():is_charging() then
 				local dis = my_data.shield_use_range * 0.7
 				
@@ -266,8 +266,15 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			else
 				mvector3.multiply(optimal_pos, -(optimal_length + 900))
 			end
-
-			mvector3.add(optimal_pos, threat_epicenter)
+			
+			if data.objective and data.objective.follow_unit then
+				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
+				local follow_unit_pos = advance_pos or data.objective.follow_unit:movement():nav_tracker():field_position()
+				
+				mvector3.add(optimal_pos, follow_unit_pos)
+			else
+				mvector3.add(optimal_pos, threat_epicenter)
+			end
 
 			my_data.optimal_pos = optimal_pos
 		end
@@ -309,8 +316,15 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 					ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
 				end
 			end
-
-			if AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker and my_data.attitude == "engage" then
+			
+			if data.objective and data.objective.follow_unit then
+				local dis = data.objective and data.objective.distance and data.objective.distance * 0.7 or 700
+				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
+				local follow_unit_pos = advance_pos or data.objective.follow_unit:movement():nav_tracker():field_position()
+				
+				my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(follow_unit_pos, dis)
+				mvector3.set_z(my_data.optimal_pos, follow_unit_pos.z)
+			elseif AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker and my_data.attitude == "engage" then
 				my_data.optimal_pos = CopLogicAttack._find_flank_pos(data, my_data, new_attention.nav_tracker)
 			end
 		elseif old_att_obj and not data.unit:movement():chk_action_forbidden("walk") then
@@ -326,8 +340,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 	ShieldLogicAttack._upd_aim(data, my_data)
 
-	if my_data.optimal_pos and focus_enemy then
-		mvector3.set_z(my_data.optimal_pos, focus_enemy.m_pos.z)
+	if my_data.optimal_pos then	
 		my_data.optimal_pos = managers.navigation:clamp_position_to_field(my_data.optimal_pos)
 	end
 end
@@ -415,23 +428,25 @@ function ShieldLogicAttack.queued_update(data)
 				local to_pos = my_data.optimal_pos
 				my_data.optimal_pos = nil
 				
-				if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 3 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
-					local ray_params = {
-						pos_to = to_pos,
-						trace = true
-					}
-				
-					local enemy_tracker = focus_enemy.unit:movement():nav_tracker()
+				if not data.objective or not data.objective.follow_unit then
+					if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 3 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
+						local ray_params = {
+							pos_to = to_pos,
+							trace = true
+						}
 					
-					if enemy_tracker:lost() then
-						ray_params.tracker_from = nil
-						ray_params.pos_from = enemy_tracker:field_position()
-					else
-						ray_params.tracker_from = enemy_tracker
+						local enemy_tracker = focus_enemy.unit:movement():nav_tracker()
+						
+						if enemy_tracker:lost() then
+							ray_params.tracker_from = nil
+							ray_params.pos_from = enemy_tracker:field_position()
+						else
+							ray_params.tracker_from = enemy_tracker
+						end
+						
+						local ray_res = managers.navigation:raycast(ray_params)
+						to_pos = ray_params.trace[1]
 					end
-					
-					local ray_res = managers.navigation:raycast(ray_params)
-					to_pos = ray_params.trace[1]
 				end
 
 				local fwd_bump = nil

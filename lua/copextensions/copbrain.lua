@@ -145,6 +145,10 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 end)
 
 Hooks:PostHook(CopBrain, "on_reload", "lies_on_reload", function(self)
+	if not Network:is_server() then
+		return
+	end
+	
 	self._logic_data.char_tweak = self._unit:base()._char_tweak or tweak_data.character[self._unit:base()._tweak_table]
 	
 	local weap_name = self._unit:base():default_weapon_name()
@@ -214,6 +218,10 @@ end
 
 function CopBrain:set_objective(new_objective, params)
 	local old_objective = self._logic_data.objective
+	
+	--if new_objective and self._logic_data.char_tweak.is_escort then
+		--managers.groupai:state():print_objective(new_objective)
+	--end
 	
 	if new_objective and self._logic_data.char_tweak.buddy then
 		local level = Global.level_data and Global.level_data.level_id

@@ -366,7 +366,7 @@ function NavigationManager:register_cover_units()
 
 					local location_script_data = self._quad_field:get_script_data(tracker, true)
 
-					if not location_script_data.covers or #location_script_data.covers < 8 then
+					if not location_script_data.covers or #location_script_data.covers < 12 then
 						if not location_script_data.covers then
 							location_script_data.covers = {}
 						end
@@ -441,7 +441,7 @@ function NavigationManager:register_cover_units()
 								t_ins(location_script_data.covers, cover)
 								t_ins(covers, cover)
 								
-								if #location_script_data.covers >= 8 or #covers >= max_cover_points then
+								if #location_script_data.covers >= 12 or #covers >= max_cover_points then
 									break
 								end
 							elseif c_tracker then
@@ -1073,8 +1073,6 @@ function NavigationManager:_strip_nav_field_for_gameplay()
 		else
 			local stripped_door = {
 				center = door.pos,
-				seg_1 = seg_1,
-				seg_2 = seg_2
 			}
 
 			mvector3.lerp(stripped_door.center, door.pos, door.pos1, 0.5)
@@ -1117,17 +1115,26 @@ function NavigationManager:_execute_coarce_search(search_data)
 		local neighbours = all_nav_segments[next_search_i_seg].neighbours
 
 		if neighbours[search_data.end_i_seg] then
-			local entry_found, nav_link_element
+			local entry_found, nav_link_element, has_multiple_navlink_elements
 
 			for _, i_door in ipairs(neighbours[search_data.end_i_seg]) do
 				if type(i_door) == "number" then
 					entry_found = true
 					nav_link_element = nil
+					has_multiple_navlink_elements = nil
 
 					break
-				elseif i_door:delay_time() < TimerManager:game():time() and i_door:check_access(search_data.access_pos, search_data.access_neg) then
+				elseif i_door:check_access(search_data.access_pos, search_data.access_neg) and not i_door:is_obstructed() then
 					entry_found = true
-					nav_link_element = i_door
+					
+					if not has_multiple_navlink_elements then
+						if nav_link_element then
+							has_multiple_navlink_elements = true
+							nav_link_element = nil
+						else
+							nav_link_element = i_door
+						end
+					end
 				end
 			end
 
@@ -1139,14 +1146,16 @@ function NavigationManager:_execute_coarce_search(search_data)
 					{
 						search_data.end_i_seg,
 						search_data.to_pos,
-						nav_link_element
+						nav_link_element,
+						has_multiple_navlink_elements
 					}
 				}
 
 				table.insert(path, 1, {
 					next_search_i_seg,
 					next_search_seg.pos,
-					next_search_seg.nav_link
+					next_search_seg.nav_link,
+					next_search_seg.multiple_nav_links
 				})
 
 				local searched = search_data.seg_searched
@@ -1158,7 +1167,8 @@ function NavigationManager:_execute_coarce_search(search_data)
 					table.insert(path, 1, {
 						i_seg,
 						this_seg.pos,
-						this_seg.nav_link
+						this_seg.nav_link,
+						this_seg.multiple_nav_links
 					})
 				end
 
@@ -1220,7 +1230,7 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then
-							if weight < found_segs[neighbour_seg_id].weight then
+							if weight < found_segs[neighbour_seg_id].weight or found_segs[neighbour_seg_id].nav_link or found_segs[neighbour_seg_id].multiple_nav_links then
 								found_segs[neighbour_seg_id] = {
 									weight = weight,
 									from = i_seg,
@@ -1250,20 +1260,35 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 					end
 				elseif not alive(i_door) then
 					debug_pause("[NavigationManager:_sort_nav_segs_after_pos] dead nav_link! between NavSegments", i_seg, "-", neighbour_seg_id)
-				elseif not i_door:is_obstructed() and i_door:delay_time() < TimerManager:game():time() and i_door:check_access(access_pos, access_neg) then
+				elseif not i_door:is_obstructed() and i_door:check_access(access_pos, access_neg) then
 					local end_pos = i_door:script_data().element:nav_link_end_pos()
 					local my_weight = mvec3_dis(end_pos, to_pos)
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then
-							if my_weight < found_segs[neighbour_seg_id].weight then
-								found_segs[neighbour_seg_id] = {
-									weight = my_weight,
-									from = i_seg,
-									i_seg = neighbour_seg_id,
-									pos = end_pos,
-									nav_link = i_door
-								}
+							if found_segs[neighbour_seg_id].nav_link or found_segs[neighbour_seg_id].multiple_nav_links then
+								if my_weight < found_segs[neighbour_seg_id].weight then
+									found_segs[neighbour_seg_id] = {
+										weight = my_weight,
+										from = i_seg,
+										i_seg = neighbour_seg_id,
+										pos = end_pos,
+										multiple_nav_links = true
+									}
+								end
+							else
+								if my_weight < found_segs[neighbour_seg_id].weight then
+									local had_nav_links = found_segs[neighbour_seg_id].multiple_nav_links
+								
+									found_segs[neighbour_seg_id] = {
+										weight = my_weight,
+										from = i_seg,
+										i_seg = neighbour_seg_id,
+										pos = end_pos,
+										nav_link = not had_nav_links and i_door or nil,
+										multiple_nav_links = had_nav_links
+									}
+								end
 							end
 						else
 							found_segs[neighbour_seg_id] = {

@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.1",
+		version = "V7.2",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -452,18 +452,51 @@ if RequiredScript == "lib/managers/menumanager" then
 			self._last_upd_t = self._t
 		end
 
-		if primary_target_area then
-			if not task_data.old_target_area then
-				task_data.old_target_area = primary_target_area
-				task_data.old_target_area_t = 0
-			end
+		if not task_data.old_target_pos then
+			local target_pos
+			
+			local target_pos = primary_target_area.pos
+			local nearest_pos, nearest_dis = nil
 
-			if primary_target_area.pos_nav_seg ~= task_data.old_target_area.pos_nav_seg then
-				task_data.old_target_area = primary_target_area
-				task_data.old_target_area_t = 0
-			else
+			for criminal_key, criminal_data in pairs(self._player_criminals) do
+				if not criminal_data.status or criminal_data.status == "electrified" then
+					local dis = mvector3.distance_sq(target_pos, criminal_data.m_pos)
+
+					if not nearest_dis or dis < nearest_dis then
+						nearest_dis = dis
+						nearest_pos = criminal_data.m_pos
+					end
+				end
+			end
+			
+			if nearest_pos then
+				task_data.old_target_pos = mvec3_cpy(nearest_pos)
+				task_data.old_target_pos_t = 0
+			end
+		else		
+			local target_pos = task_data.old_target_pos
+			local nearest_pos, nearest_dis = nil
+
+			for criminal_key, criminal_data in pairs(self._player_criminals) do
+				if not criminal_data.status or criminal_data.status == "electrified" then
+					local dis = mvector3.distance(target_pos, criminal_data.m_pos)
+
+					if not nearest_dis or dis < nearest_dis then
+						nearest_dis = dis
+						nearest_pos = criminal_data.m_pos
+					end
+				end
+			end
+			
+			if nearest_pos and mvector3.distance(nearest_pos, target_pos) > 700 then
+				task_data.old_target_pos = mvec3_cpy(nearest_pos)
+				task_data.old_target_pos_t = 0
+			elseif nearest_pos then
 				local t_since_upd = self._t - self._last_upd_t
-				task_data.old_target_area_t = task_data.old_target_area_t and task_data.old_target_area_t + t_since_upd or t_since_upd
+				task_data.old_target_pos_t = task_data.old_target_pos_t and task_data.old_target_pos_t + t_since_upd or t_since_upd
+			else --all players invalid for this, so lets empty it
+				task_data.old_target_pos = nil
+				task_data.old_target_pos_t = nil
 			end
 		end
 

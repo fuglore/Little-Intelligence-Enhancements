@@ -153,6 +153,34 @@ function CivilianLogicTravel.update(data)
 
 				return
 			else
+				if coarse_path[cur_index + 1][3] and alive(coarse_path[cur_index + 1][3]) and coarse_path[cur_index + 1][3]:delay_time() > data.t then
+					return
+				elseif coarse_path[cur_index + 1][4] then
+					local entry_found
+					local all_nav_segments = managers.navigation._nav_segments
+					local target_seg_id = coarse_path[cur_index + 1][1]
+					local my_seg = all_nav_segments[coarse_path[cur_index][1]]
+					local neighbours = my_seg.neighbours
+
+					for neighbour_nav_seg_id, door_list in pairs(neighbours) do
+						for _, i_door in ipairs(door_list) do
+							if neighbour_nav_seg_id == target_seg_id then					
+								if type(i_door) == "number" then
+									entry_found = true
+								elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then
+									entry_found = true
+									
+									break
+								end
+							end
+						end
+					end
+						
+					if not entry_found then
+						return
+					end
+				end
+			
 				data.brain:rem_pos_rsrv("path")
 
 				local to_pos = nil

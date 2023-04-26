@@ -11,6 +11,17 @@ Hooks:PostHook(CharacterTweakData, "init", "lies_fix_nosup", function(self, twea
 	self.security_mex_no_pager.chatter.criminalhasgun = true
 	self.gensec.chatter.contact = nil
 	self.gensec.chatter.criminalhasgun = true
+	
+	self.medic.spawn_sound_event = nil
+	
+	self.medic.chatter.entrance = "entrance"
+	
+	self.taser.chatter.entrance = "entrance"
+	
+	self.tank.chatter.entrance = "entrance"
+	self.tank_hw.chatter.entrance = "entrance"
+	self.tank_mini.chatter.entrance = "entrance"
+	self.tank_medic.chatter.entrance = "entrance"
 end)
 
 function CharacterTweakData:fix_no_supress()

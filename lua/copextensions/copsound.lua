@@ -282,4 +282,6 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 	end
 
 	self._speak_expire_t = TimerManager:game():time() + 2
+	
+	return true
 end

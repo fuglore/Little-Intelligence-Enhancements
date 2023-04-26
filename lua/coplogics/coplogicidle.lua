@@ -145,7 +145,7 @@ function CopLogicIdle.queued_update(data)
 	local delay = data.logic._upd_enemy_detection(data)
 
 	if data.internal_data ~= my_data then
-		--CopLogicBase._report_detections(data.detected_attention_objects)
+		CopLogicBase._report_detections(data.detected_attention_objects)
 
 		return
 	end
@@ -202,7 +202,7 @@ function CopLogicIdle.queued_update(data)
 	end
 
 	if data.internal_data ~= my_data then
-		--CopLogicBase._report_detections(data.detected_attention_objects)
+		CopLogicBase._report_detections(data.detected_attention_objects)
 
 		return
 	end
@@ -569,7 +569,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				local target_priority = distance
 				local target_priority_slot = 0
 
-				if visible then	
+				if visible then
 					if distance < 500 then
 						target_priority_slot = 2
 					elseif distance < 1500 then
@@ -578,36 +578,28 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						target_priority_slot = 6
 					end
 					
-					if assault_reaction then
-						target_priority_slot = target_priority_slot - 1
-					end
-
-					if has_damaged then
+					if free_status and assault_reaction then
+						target_priority_slot = 4
+					elseif has_damaged then
 						target_priority_slot = target_priority_slot - 2
 					elseif has_alerted then
 						target_priority_slot = target_priority_slot - 1
-					elseif not free_status then
-						target_priority_slot = target_priority_slot + 1
 					end
 
-					if free_status and old_enemy then
+					if old_enemy then
 						target_priority_slot = target_priority_slot - 3
 					end
 
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
-				else
+				elseif free_status then
 					target_priority_slot = 10
 					
-					if not has_damaged then
-						target_priority_slot = target_priority_slot + 1
-					end
-					
-					if not has_alerted then
-						target_priority_slot = target_priority_slot + 1
-					end
-					
-					if not free_status then
-						target_priority_slot = target_priority_slot + 1
+					if old_enemy then
+						target_priority_slot = target_priority_slot - 3
+					elseif has_damaged then
+						target_priority_slot = target_priority_slot - 2
+					elseif has_alerted then
+						target_priority_slot = target_priority_slot - 1
 					end
 				end
 
@@ -910,10 +902,6 @@ function CopLogicIdle.on_alert(data, alert_data)
 			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
 				new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
 			end
-		end
-		
-		if not action_data and alert_type == "bullet" and data.logic.should_duck_on_alert(data, alert_data) then
-			action_data = CopLogicAttack._chk_request_action_crouch(data)
 		end
 
 		if att_obj_data.criminal_record then

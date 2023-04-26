@@ -69,6 +69,10 @@ function CopLogicBase._report_detections(enemies)
 	end
 end
 
+function CopLogicBase.should_duck_on_alert(data, alert_data)
+	return --let other things tell to crouch
+end
+
 function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	local my_data = data.internal_data
 	attention = attention or data.attention_obj
@@ -128,6 +132,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	if not data.cool and attention and AIAttentionObject.REACT_COMBAT <= attention.reaction and not objective.in_place and objective.type == "defend_area" and (not objective.grp_objective or objective.grp_objective.type ~= "retire") then
 		if data.unit:base():has_tag("spooc") or data.unit:base()._tweak_table == "shadow_spooc" then
 			data.spooc_attack_timeout_t = data.spooc_attack_timeout_t or 0
+			SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, attention)
 		
 			if attention.nav_tracker and attention.is_person and attention.criminal_record and not attention.criminal_record.status and not my_data.spooc_attack and AIAttentionObject.REACT_SHOOT <= attention.reaction and data.spooc_attack_timeout_t < data.t and attention.verified_dis < (my_data.want_to_take_cover and 1500 or 2500) and not data.unit:movement():chk_action_forbidden("walk") and not SpoocLogicAttack._is_last_standing_criminal(attention) and not attention.unit:movement():zipline_unit() and attention.unit:movement():is_SPOOC_attack_allowed() then
 				return true, true
@@ -135,6 +140,8 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		end
 		
 		if data.unit:base():has_tag("taser") then
+			TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, attention)
+		
 			if AIAttentionObject.REACT_SPECIAL_ATTACK <= attention.reaction then
 				return true, true
 			end
@@ -170,13 +177,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 				end
 				
 				local enemy_dis = attention.dis * (1 - strictness)
-				local interrupt_dis = nil
-				
-				if aggro_level > 2 then
-					interrupt_dis = my_data.weapon_range and my_data.weapon_range.close or 1000
-				else
-					interrupt_dis = my_data.weapon_range and my_data.weapon_range.optimal or 2000
-				end
+				local interrupt_dis = data.tactics and data.tactics.ranged_fire and 3000 or data.tactics and data.tactics.sniper and 4000 or 1500
 				
 				interrupt_dis = interrupt_dis * (1 - strictness)
 				
@@ -264,15 +265,13 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 				if new_crim_rec then
 					managers.groupai:state():on_enemy_engaging(data.unit, new_att_obj.u_key)
 				end
-
-				contact_chatter_time_ok = new_crim_rec and data.t - new_crim_rec.det_t > 15
 			end
 		else
+			contact_chatter_time_ok = new_crim_rec and data.t - new_crim_rec.det_t > 15
+		
 			if new_crim_rec then
 				managers.groupai:state():on_enemy_engaging(data.unit, new_att_obj.u_key)
-			end
-
-			contact_chatter_time_ok = new_crim_rec and data.t - new_crim_rec.det_t > 15
+			end			
 		end
 
 		if not is_same_obj then
@@ -280,15 +279,31 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 				new_att_obj.stare_expire_t = data.t + math.lerp(new_att_obj.settings.duration[1], new_att_obj.settings.duration[2], math.random())
 				new_att_obj.pause_expire_t = nil
 			end
+			
+			if new_att_obj.acquire_t then
+				if not new_att_obj.verified_t or data.t - new_att_obj.verified_t > 2 then
+					new_att_obj.react_t = data.t
+				else
+					local t_since_last_pick = math.clamp(data.t - new_att_obj.acquire_t, 0, 2)
+					
+					new_att_obj.react_t = data.t - t_since_last_pick
+				end
+				
+			elseif not new_att_obj.react_t then
+				new_att_obj.react_t = data.t
+			end
+				
 
 			new_att_obj.acquire_t = data.t
 		end
 
-		if AIAttentionObject.REACT_SHOOT <= new_reaction and new_att_obj.verified and contact_chatter_time_ok and (data.unit:anim_data().idle or data.unit:anim_data().move) and new_att_obj.is_person then
-			if data.char_tweak.chatter.contact then
+		if data.char_tweak.chatter and AIAttentionObject.REACT_SHOOT <= new_reaction and new_att_obj.verified and new_att_obj.is_person then
+			if data.char_tweak.chatter.contact and contact_chatter_time_ok then
 				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "contact")
-			elseif not new_crim_rec.gun_called_out and data.char_tweak.chatter.criminalhasgun then
-				new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
+			elseif new_crim_rec then
+				if not new_crim_rec.gun_called_out and data.char_tweak.chatter.criminalhasgun then
+					new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
+				end
 			end
 		end
 	elseif old_att_obj and old_att_obj.criminal_record then
@@ -664,10 +679,6 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 	if player_importance_wgt then
 		managers.groupai:state():set_importance_weight(data.key, player_importance_wgt)
-	end
-	
-	if data.group then
-		CopLogicBase._report_detections(detected_obj)
 	end
 
 	return delay

@@ -193,14 +193,13 @@ end
 function TeamAILogicAssault.find_enemy_to_mark(data)
 	if data.attention_obj and data.attention_obj.unit and alive(data.attention_obj.unit) and data.attention_obj.is_alive then
 		if AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction and data.attention_obj.verified then
-		
 			local my_head_pos = data.unit:movement():m_head_pos()
 			local my_look_vec = data.unit:movement():m_rot():y()
-			local max_marking_angle = 90
+			local max_marking_angle = 30
 			local vec = data.attention_obj.m_head_pos - my_head_pos
 			local angle = vec:normalized():angle(my_look_vec)
 
-			if angle < max_marking_angle then
+			if angle < max_marking_angle and data.attention_obj.dis <= tweak_data.player.long_dis_interaction.highlight_range then
 				if data.attention_obj.is_person then
 					if data.attention_obj.char_tweak.priority_shout and (not data.attention_obj.char_tweak.priority_shout_max_dis or data.attention_obj.dis < data.attention_obj.char_tweak.priority_shout_max_dis) then
 						return data.attention_obj.unit

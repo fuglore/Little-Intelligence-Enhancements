@@ -116,14 +116,18 @@ function SpoocLogicAttack.update(data)
 	local do_spooc_attack = true
 
 	if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
-		if LIES.settings.enemy_reaction_level < 3 and data.attention_obj.acquire_t and not data.unit:in_slot(16) then
+		if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) then
+			if not data.attention_obj.react_t then
+				data.attention_obj.react_t = data.t
+			end
+		
 			if not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 2 then
-				data.attention_obj.acquire_t = data.t
+				data.attention_obj.react_t = data.t
 			end
 		
 			local react_t = 2 / LIES.settings.enemy_reaction_level
 		
-			if data.t - data.attention_obj.acquire_t < react_t then
+			if data.t - data.attention_obj.react_t < react_t then
 				do_spooc_attack = nil
 			end
 		end
@@ -234,26 +238,34 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		end
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data)
-			data.logic._update_cover(data)
-			data.logic._upd_combat_movement(data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "act" then
 		if not my_data.advancing and action:expired() then
-			data.logic._upd_aim(data, my_data)
-			data.logic._update_cover(data)
-			data.logic._upd_combat_movement(data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
 	elseif action_type == "act" then	
-		if action:expired() then
+		if not my_data.advancing and action:expired() then
 			if my_data.reacting then
 				my_data.has_played_warning = data.t
 				my_data.reacting = nil
 			end
 		
-			SpoocLogicAttack._upd_aim(data, my_data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "turn" then
 		my_data.turning = nil
@@ -278,7 +290,11 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 
 		if action:expired() then
-			SpoocLogicAttack._upd_aim(data, my_data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._update_cover(data)
+				data.logic._upd_combat_movement(data)
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	end
 end

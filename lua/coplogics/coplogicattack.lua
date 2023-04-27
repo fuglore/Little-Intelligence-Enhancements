@@ -2078,10 +2078,10 @@ function CopLogicAttack._update_cover(data)
 						my_data.flank_cover = nil
 					end
 				end
-			elseif data.objective and data.objective.type == "follow" or data.objective and data.objective.follow_unit then
+			elseif data.objective and data.objective.follow_unit and alive(data.objective.follow_unit) then
 				my_data.flank_cover = nil
 				
-				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
+				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing() --this is fucking crashing
 				local near_pos = advance_pos or data.objective.follow_unit:movement():m_pos()
 				local dis = data.objective.distance and data.objective.distance * 0.6 or 450
 				

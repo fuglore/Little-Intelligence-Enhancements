@@ -145,6 +145,7 @@ function CopLogicTravel.enter(data, new_logic_name, enter_params)
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
 	my_data.path_safely = my_data.attitude == "avoid" and data.team.foes[tweak_data.levels:get_default_team_ID("player")]
 	my_data.path_ahead = data.objective.path_ahead or data.team.id == tweak_data.levels:get_default_team_ID("player")
+	my_data.allow_long_path = my_data.path_ahead and true or LIES.settings.enemy_travel_level > 3
 
 	data.unit:brain():set_update_enabled_state(false)
 end
@@ -361,14 +362,82 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 	end
 	
 	my_data.waiting_for_navlink = nil
-
-	local to_pos = CopLogicTravel._get_exact_move_pos(data, my_data.coarse_path_index + 1)	
+	
+	local index_to_go_to = my_data.coarse_path_index + 1
+	
+	if my_data.allow_long_path then
+		for i = index_to_go_to + 1, #my_data.coarse_path do
+			if my_data.coarse_path[i][3] or my_data.coarse_path[i][4] then
+				index_to_go_to = i - 1
+				
+				break
+			end
+			
+			if i == #my_data.coarse_path then
+				index_to_go_to = i
+				
+				break
+			end
+		end
+	end
+	
+	local to_pos = CopLogicTravel._get_exact_move_pos(data, index_to_go_to)
 	my_data.processing_advance_path = true
+	my_data.going_to_index = index_to_go_to
 	local prio = CopLogicTravel.get_pathing_prio(data)
 	
 	local nav_segs = CopLogicTravel._get_allowed_travel_nav_segs(data, my_data, to_pos)
 
 	data.unit:brain():search_for_path(my_data.advance_path_search_id, to_pos, prio, nil, nav_segs)
+end
+
+function CopLogicTravel._upd_pathing(data, my_data)
+	if data.pathing_results then
+		local pathing_results = data.pathing_results
+		data.pathing_results = nil
+		local path = pathing_results[my_data.advance_path_search_id]
+
+		if path and my_data.processing_advance_path then
+			my_data.processing_advance_path = nil
+
+			if path ~= "failed" then
+				my_data.advance_path = path
+				
+				if my_data.path_ahead or LIES.settings.enemy_travel_level > 3 then
+					my_data.allow_long_path = true
+				end
+			elseif my_data.allow_long_path or LIES.settings.enemy_travel_level > 3 then
+				my_data.allow_long_path = nil
+			else
+				data.path_fail_t = data.t
+
+				data.objective_failed_clbk(data.unit, data.objective)
+
+				return
+			end
+		end
+
+		local path = pathing_results[my_data.coarse_path_search_id]
+
+		if path and my_data.processing_coarse_path then
+			my_data.processing_coarse_path = nil
+
+			if path ~= "failed" then
+				my_data.coarse_path = path
+				my_data.coarse_path_index = 1
+			elseif my_data.path_safely then
+				my_data.path_safely = nil
+			else
+				print("[CopLogicTravel:_upd_pathing] coarse_path failed unsafe", data.unit, my_data.coarse_path_index)
+
+				data.path_fail_t = data.t
+
+				data.objective_failed_clbk(data.unit, data.objective)
+
+				return
+			end
+		end
+	end
 end
 
 function CopLogicTravel._check_start_path_ahead(data)
@@ -380,7 +449,7 @@ function CopLogicTravel._check_start_path_ahead(data)
 
 	local objective = data.objective
 	local coarse_path = my_data.coarse_path
-	local next_index = my_data.coarse_path_index + 2
+	local next_index = my_data.going_to_index + 1
 	local total_nav_points = #coarse_path
 
 	if next_index > total_nav_points then
@@ -419,7 +488,6 @@ function CopLogicTravel._check_start_path_ahead(data)
 			return
 		end
 	end
-	
 
 	local to_pos = data.logic._get_exact_move_pos(data, next_index)
 	my_data.processing_advance_path = true
@@ -642,10 +710,6 @@ function CopLogicTravel.upd_advance(data)
 	elseif my_data.advance_path then
 		if data.cool or CopLogicTravel.chk_group_ready_to_move(data, my_data) then --to-do, make chk_close_to_criminal make more sense...
 			CopLogicTravel._chk_begin_advance(data, my_data)
-
-			if my_data.advancing and my_data.path_ahead then
-				CopLogicTravel._check_start_path_ahead(data)
-			end
 		end
 	elseif my_data.processing_advance_path or my_data.processing_coarse_path then
 		local was_processing_advance_path = my_data.processing_advance_path
@@ -661,10 +725,6 @@ function CopLogicTravel.upd_advance(data)
 				if my_data.advance_path and not my_data.advancing then
 					if data.cool or CopLogicTravel.chk_group_ready_to_move(data, my_data) then
 						CopLogicTravel._chk_begin_advance(data, my_data)
-
-						if my_data.advancing and my_data.path_ahead then
-							CopLogicTravel._check_start_path_ahead(data)
-						end
 					end
 				end
 			elseif my_data.coarse_path and not my_data.advancing then
@@ -1041,7 +1101,7 @@ function CopLogicTravel.get_pathing_prio(data)
 				
 				if objective.type == "escort" then
 					prio = 10
-				elseif objective.follow_unit then
+				elseif objective.follow_unit and alive(objective.follow_unit) then
 					if objective.follow_unit:base().is_local_player or objective.follow_unit:base().is_husk_player or managers.groupai:state():is_unit_team_AI(objective.follow_unit) then	
 						prio = 2
 					end
@@ -1052,7 +1112,7 @@ function CopLogicTravel.get_pathing_prio(data)
 			
 			if objective.type == "phalanx" then
 				prio = 8
-			elseif objective.follow_unit then
+			elseif objective.follow_unit and alive(objective.follow_unit) then
 				if objective.follow_unit:base().is_local_player or objective.follow_unit:base().is_husk_player or managers.groupai:state():is_unit_team_AI(objective.follow_unit) then	
 					if data.important then
 						prio = 7
@@ -1077,14 +1137,18 @@ function CopLogicTravel.action_complete_clbk(data, action)
 
 	if action_type == "walk" then
 		if action:expired() and not my_data.starting_advance_action and my_data.coarse_path_index and not my_data.has_old_action and not my_data.old_action_advancing and my_data.advancing then
-			local coarse_index_increment = my_data.path_elongated and 2 or 1
-			my_data.coarse_path_index = my_data.coarse_path_index + coarse_index_increment
+			if my_data.going_to_index then
+				my_data.coarse_path_index = my_data.going_to_index
+			else
+				my_data.coarse_path_index = my_data.coarse_path_index + 1
+			end
 
 			if my_data.coarse_path_index > #my_data.coarse_path then
 				my_data.coarse_path_index = my_data.coarse_path_index - 1
 			end
 		end
-
+		
+		my_data.going_to_index = nil
 		my_data.advancing = nil
 		my_data.old_action_advancing = nil
 
@@ -1436,10 +1500,16 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 		end
 	else
 		local nav_seg = coarse_path[nav_index][1]
-		local area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg)
-		local door_pos = not data.cool and CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path, nav_index, nav_seg)	
+		local area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg)	
+		local cover
 		
-		local cover = CopLogicTravel._find_cover(data, nav_seg, door_pos)
+		if not data.cool then
+			local end_pos = coarse_path[nav_index + 1][2]
+			local walk_dir = end_pos - data.m_pos
+			local walk_dis = mvector3.normalize(walk_dir)
+			local cover_range = math.min(700, math.max(0, walk_dis - 100))
+			cover = managers.navigation:find_cover_near_pos_1(end_pos, end_pos + walk_dir * 700, cover_range, cover_range)
+		end
 
 		if my_data.moving_to_cover then
 			managers.navigation:release_cover(my_data.moving_to_cover[1])
@@ -1502,6 +1572,7 @@ function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path,
 	
 	for neighbour_nav_seg_id, door_list in pairs(nav_seg_data.neighbours) do
 		if neighbour_nav_seg_id == nav_seg then
+			
 			for _, i_door in ipairs(door_list) do
 				local door_pos
 				
@@ -1524,15 +1595,23 @@ function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path,
 	end
 	
 	if best_door then
+		log("help")
 		local door_pos = best_door.center
 		local accross_vec = door_pos - next_pos
 		local rot_angle = 90
 		mvector3.rotate_with(accross_vec, Rotation(rot_angle))
-		
 		local max_dis = 500
 
 		mvector3.set_length(accross_vec, max_dis)
-
+		
+		
+		local line = Draw:brush(Color.blue:with_alpha(0.5), 5)
+		
+		local across_vec_pos = mvector3.copy(accross_vec)
+		mvector3.add(across_vec_pos, door_pos)
+		
+		line:cylinder(door_pos, across_vec_pos, 5)
+		
 		local door_tracker = managers.navigation:create_nav_tracker(mvector3.copy(door_pos))
 		local accross_positions = managers.navigation:find_walls_accross_tracker(door_tracker, accross_vec)
 		
@@ -1581,7 +1660,6 @@ function CopLogicTravel.find_door_pos_nearest_to_next_nav_seg(data, coarse_path,
 		end
 
 		managers.navigation:destroy_nav_tracker(door_tracker)
-		
 	end
 end
 

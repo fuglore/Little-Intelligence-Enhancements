@@ -1175,9 +1175,10 @@ function NavigationManager:_execute_coarce_search(search_data)
 				return path
 			end
 		end
-
+		
+		local from_pos = next_search_seg.pos
 		local to_pos = search_data.to_pos
-		local new_segments = self:_sort_nav_segs_after_pos(to_pos, next_search_i_seg, search_data.discovered_seg, search_data.verify_clbk, search_data.access_pos, search_data.access_neg)
+		local new_segments = self:_sort_nav_segs_after_pos(to_pos, from_pos, next_search_i_seg, search_data.discovered_seg, search_data.verify_clbk, search_data.access_pos, search_data.access_neg)
 
 		if new_segments then
 			if search_data.access_pos then
@@ -1212,12 +1213,13 @@ function NavigationManager:_execute_coarce_search(search_data)
 	end
 end
 
-function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, verify_clbk, access_pos, access_neg)
+function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ignore_seg, verify_clbk, access_pos, access_neg)
 	local all_segs = self._nav_segments
 	local all_doors = self._room_doors
 	local all_rooms = self._rooms
 	local seg = all_segs[i_seg]
 	local neighbours = seg.neighbours
+	from_pos = from_pos or seg.pos
 	local found_segs = nil
 
 	for neighbour_seg_id, door_list in pairs(neighbours) do
@@ -1226,7 +1228,7 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 				if type(i_door) == "number" then
 					local door = all_doors[i_door]
 					local door_pos = door.center
-					local weight = mvec3_dis(door_pos, to_pos)
+					local weight = mvec3_dis(from_pos, door_pos) + mvec3_dis(door_pos, to_pos)
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then
@@ -1262,7 +1264,8 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, i_seg, ignore_seg, v
 					debug_pause("[NavigationManager:_sort_nav_segs_after_pos] dead nav_link! between NavSegments", i_seg, "-", neighbour_seg_id)
 				elseif not i_door:is_obstructed() and i_door:check_access(access_pos, access_neg) then
 					local end_pos = i_door:script_data().element:nav_link_end_pos()
-					local my_weight = mvec3_dis(end_pos, to_pos)
+					local my_weight = mvec3_dis(from_pos, end_pos) + mvec3_dis(end_pos, to_pos)
+					my_weight = my_weight * 1.15 * 1.15
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then

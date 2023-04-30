@@ -283,7 +283,6 @@ function CivilianLogicFlee._find_hide_cover(data)
 	end
 end
 
-
 function CivilianLogicFlee.update(data)
 	local exit_state = nil
 	local unit = data.unit

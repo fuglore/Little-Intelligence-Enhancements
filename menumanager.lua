@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.21",
+		version = "V7.22",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -475,21 +475,25 @@ if RequiredScript == "lib/managers/menumanager" then
 			end
 		else		
 			local target_pos = task_data.old_target_pos
-			local nearest_pos, nearest_dis = nil
+			local nearest_pos, nearest_dis, best_z = nil
 
 			for criminal_key, criminal_data in pairs(self._player_criminals) do
 				if not criminal_data.status or criminal_data.status == "electrified" then
 					local dis = mvector3.distance(target_pos, criminal_data.m_pos)
-
-					if not nearest_dis or dis < nearest_dis then
-						nearest_dis = dis
-						nearest_pos = criminal_data.m_pos
+					local z_dis = math.abs(criminal_data.m_pos.z - target_pos.z)
+					
+					if not best_z or best_z <= 350 and z_dis <= 350 or z_dis < best_z then
+						if not nearest_dis or dis < nearest_dis then
+							nearest_dis = dis
+							nearest_pos = criminal_data.m_pos
+							best_z = z_dis
+						end
 					end
 				end
 			end
 			
-			if nearest_pos and mvector3.distance(nearest_pos, target_pos) > 700 then
-				task_data.old_target_pos = mvec3_cpy(nearest_pos)
+			if nearest_pos and (best_z > 250 or nearest_dis > 600) then
+				task_data.old_target_pos = mvector3.copy(nearest_pos)
 				task_data.old_target_pos_t = 0
 			elseif nearest_pos then
 				local t_since_upd = self._t - self._last_upd_t

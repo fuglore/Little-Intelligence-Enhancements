@@ -285,10 +285,10 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 					new_att_obj.react_t = data.t
 				else
 					local t_since_last_pick = math.clamp(data.t - new_att_obj.acquire_t, 0, 2)
+					local t_since_verified = new_att_obj.verified_t and math.clamp(data.t - new_att_obj.verified_t, 0, 2) or 0
 					
-					new_att_obj.react_t = data.t - t_since_last_pick
+					new_att_obj.react_t = data.t - math.max(t_since_last_pick, t_since_verified)
 				end
-				
 			elseif not new_att_obj.react_t then
 				new_att_obj.react_t = data.t
 			end
@@ -694,5 +694,40 @@ function CopLogicBase.death_clbk(data, damage_info)
 		end
 		
 		data.enrage_data.played_warning = nil
+	end
+end
+
+function CopLogicBase.on_new_objective(data, old_objective)
+	if old_objective and old_objective.follow_unit and alive(old_objective.follow_unit) then
+		if old_objective.destroy_clbk_key then
+			old_objective.follow_unit:base():remove_destroy_listener(old_objective.destroy_clbk_key)
+
+			old_objective.destroy_clbk_key = nil
+		end
+
+		if old_objective.death_clbk_key then
+			old_objective.follow_unit:character_damage():remove_listener(old_objective.death_clbk_key)
+
+			old_objective.death_clbk_key = nil
+		end
+	end
+
+	local new_objective = data.objective
+
+	if new_objective and new_objective.follow_unit and not new_objective.destroy_clbk_key then
+		local ext_brain = data.unit:brain()
+		local destroy_clbk_key = "objective_" .. new_objective.type .. tostring(data.unit:key())
+		new_objective.destroy_clbk_key = destroy_clbk_key
+
+		new_objective.follow_unit:base():add_destroy_listener(destroy_clbk_key, callback(ext_brain, ext_brain, "on_objective_unit_destroyed"))
+
+		if new_objective.follow_unit:character_damage() then
+			new_objective.death_clbk_key = destroy_clbk_key
+
+			new_objective.follow_unit:character_damage():add_listener(destroy_clbk_key, {
+				"death",
+				"hurt"
+			}, callback(ext_brain, ext_brain, "on_objective_unit_damaged"))
+		end
 	end
 end

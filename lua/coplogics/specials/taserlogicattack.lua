@@ -413,12 +413,17 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 				my_data.in_cover = my_data.moving_to_cover
 				my_data.cover_enter_t = data.t
 				my_data.cover_test_step = 1
+				my_data.flank_cover = nil
 			end
 
 			my_data.moving_to_cover = nil
 		elseif my_data.walking_to_cover_shoot_pos then
 			my_data.walking_to_cover_shoot_pos = nil
-			my_data.at_cover_shoot_pos = true
+			my_data.charging = nil
+			
+			if action:expired() then
+				my_data.at_cover_shoot_pos = true
+			end
 		end
 		
 		if action:expired() then
@@ -442,25 +447,19 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 		my_data.turning = nil
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data)
+			data.logic._upd_aim(data, my_data) --check if i need to turn again
 		end
 	elseif action_type == "heal" then
-		if action:expired() then
-			CopLogicAttack._cancel_cover_pathing(data, my_data)
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
 		
-			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
-				data.logic._update_cover(data)
-				data.logic._upd_combat_movement(data)
-				data.logic._upd_aim(data, my_data)
-			end
+		if action:expired() then
+			data.logic._upd_aim(data, my_data)
 		end
 	elseif action_type == "hurt" or action_type == "healed" then
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 
-		if data.is_converted or data.important and action:expired() and not CopLogicBase.chk_start_action_dodge(data, "hit") then
-			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
-				data.logic._update_cover(data)
-				data.logic._upd_combat_movement(data)
+		if action:expired() then
+			if data.is_converted or not CopLogicBase.chk_start_action_dodge(data, "hit") then
 				data.logic._upd_aim(data, my_data)
 			end
 		end

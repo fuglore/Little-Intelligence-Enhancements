@@ -470,8 +470,14 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 			if data.cool and AIAttentionObject.REACT_SCARED <= reaction then
 				data.unit:movement():set_cool(false, managers.groupai:state().analyse_giveaway(data.unit:base()._tweak_table, att_unit))
 				
-				if crim_record and not crim_record.is_deployable then
-					data.unit:sound():say("a08", true)
+				if data.char_tweak.chatter and data.unit:base():has_tag("law") then
+					if crim_record and not crim_record.is_deployable then
+						if not crim_record.det_t or data.t - crim_record.det_t > 15 or crim_record.gun_called_out then
+							data.unit:sound():say("a08", true)
+						elseif not crim_record.gun_called_out and data.char_tweak.chatter.criminalhasgun then
+							crim_record.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
+						end
+					end
 				end
 			end
 

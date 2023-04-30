@@ -630,6 +630,76 @@ function GroupAIStateBesiege:force_spawn_group(group, group_types, guarantee)
 	end
 end
 
+function GroupAIStateBesiege:_verify_group_objective(group)
+	local is_objective_broken = nil
+	local grp_objective = group.objective
+	local coarse_path = grp_objective.coarse_path
+	local nav_segments = managers.navigation._nav_segments
+
+	if coarse_path then
+		for i_node, node in ipairs(coarse_path) do
+			local nav_seg_id = node[1]
+
+			if nav_segments[nav_seg_id].disabled then
+				is_objective_broken = true
+
+				break
+			end
+		end
+	end
+	
+	if grp_objective.follow_unit and not alive(grp_objective.follow_unit) then
+		is_objective_broken = true
+	end
+
+	if not is_objective_broken then
+		return
+	end
+
+	local new_area = nil
+	local tested_nav_seg_ids = {}
+
+	for u_key, u_data in pairs(group.units) do
+		u_data.tracker:move(u_data.m_pos)
+
+		local nav_seg_id = u_data.tracker:nav_segment()
+
+		if not tested_nav_seg_ids[nav_seg_id] then
+			tested_nav_seg_ids[nav_seg_id] = true
+			local areas = self:get_areas_from_nav_seg_id(nav_seg_id)
+
+			for _, test_area in pairs(areas) do
+				for test_nav_seg, _ in pairs(test_area.nav_segs) do
+					if not nav_segments[test_nav_seg].disabled then
+						new_area = test_area
+
+						break
+					end
+				end
+
+				if new_area then
+					break
+				end
+			end
+		end
+
+		if new_area then
+			break
+		end
+	end
+
+	if not new_area then
+		print("[GroupAIStateBesiege:_verify_group_objective] could not find replacement area to", grp_objective.area)
+
+		return
+	end
+
+	group.objective = {
+		moving_out = false,
+		type = grp_objective.type,
+		area = new_area
+	}
+end
 
 function GroupAIStateBesiege:assign_enemy_to_group_ai(unit, team_id)
 	local u_tracker = unit:movement():nav_tracker()
@@ -935,20 +1005,24 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 			end
 		else		
 			local target_pos = task_data.old_target_pos
-			local nearest_pos, nearest_dis = nil
+			local nearest_pos, nearest_dis, best_z = nil
 
 			for criminal_key, criminal_data in pairs(self._player_criminals) do
 				if not criminal_data.status or criminal_data.status == "electrified" then
-					local dis = mvector3.distance_sq(target_pos, criminal_data.m_pos)
-
-					if not nearest_dis or dis < nearest_dis then
-						nearest_dis = dis
-						nearest_pos = criminal_data.m_pos
+					local dis = mvector3.distance(target_pos, criminal_data.m_pos)
+					local z_dis = math.abs(criminal_data.m_pos.z - target_pos.z)
+					
+					if not best_z or best_z <= 250 and z_dis <= 250 or z_dis < best_z then
+						if not nearest_dis or dis < nearest_dis then
+							nearest_dis = dis
+							nearest_pos = criminal_data.m_pos
+							best_z = z_dis
+						end
 					end
 				end
 			end
 			
-			if nearest_pos and mvector3.distance(nearest_pos, target_pos) > 700 then
+			if nearest_pos and (best_z > 250 or nearest_dis > 600) then
 				task_data.old_target_pos = mvector3.copy(nearest_pos)
 				task_data.old_target_pos_t = 0
 			elseif nearest_pos then
@@ -1989,11 +2063,12 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					current_objective.tactic = nil
 				end
 			end
-		
+			
+			current_objective.interrupt_on_contact = nil
 			needs_reassignment = not current_objective.tactic
 		end
 		
-		if not current_objective.tactic then
+		if not needs_reassignment and not current_objective.tactic then
 			for i_tactic, tactic_name in ipairs(group_leader_u_data.tactics) do
 				if LIES.settings.hhtacs and tactic_name == "shield" then
 					local chosen_escort_u_data
@@ -2167,7 +2242,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	if obstructed_area then
 		if phase_is_anticipation then
 			pull_back = true
-		elseif tactics_map and tactics_map.ranged_fire then
+		elseif tactics_map and tactics_map.ranged_fire or tactics_map and tactics_map.sniper then
 			pull_back = true
 		elseif charge and not current_objective.charge then
 			push = true
@@ -2175,6 +2250,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			push = true
 		else
 			open_fire = true
+			target_area = obstructed_area
 		end
 	else
 		if current_objective.moving_out then
@@ -2321,8 +2397,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			end
 		end
 	end
-
-	objective_area = obstructed_area or objective_area or current_objective.area
+	
+	if not objective_area then
+		objective_area = obstructed_area or objective_area or current_objective.area
+	end
 
 	if open_fire then
 		local grp_objective = {
@@ -2359,7 +2437,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				
 				if old_target_pos then	
 					for c_key, c_data in pairs(target_area.criminal.units) do
-						if mvector3.distance(c_data.m_pos, old_target_pos) <= 700 then
+						if math.abs(c_data.m_pos.z - old_target_pos.z) <= 250 and mvector3.distance(c_data.m_pos, old_target_pos) <= 600 then
 							detonate_pos = c_data.unit:movement():m_pos()
 						end
 					end
@@ -2652,7 +2730,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			local can_push = used_grenade
 			
 			if not can_push then
-				if not tactics_map or not tactics_map.ranged_fire or charge then
+				if not tactics_map or not tactics_map.ranged_fire or not tactics_map.sniper or charge then
 					can_push = true
 				elseif self._task_data.assault.cs_grenade_active_t and self._task_data.assault.cs_grenade_active_t < self._t or self._drama_data.amount <= tweak_data.drama.low and aggression_level > 2 then
 					can_push = charge or self._drama_data.amount <= tweak_data.drama.low

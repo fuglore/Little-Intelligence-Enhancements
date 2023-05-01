@@ -580,8 +580,10 @@ function CopLogicTravel._chk_begin_advance(data, my_data)
 	end
 
 	local end_rot = nil
-
-	if my_data.coarse_path_index >= #my_data.coarse_path - 1 then
+	
+	local to_index = my_data.going_to_index or my_data.coarse_path_index + 1
+	
+	if to_index >= #my_data.coarse_path then
 		end_rot = objective and objective.rot
 	end
 

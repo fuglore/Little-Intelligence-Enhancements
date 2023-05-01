@@ -97,6 +97,10 @@
 			"script_path": "lua/copactions/copactionwalk.lua"
 		},
 		{
+			"hook_id": "lib/units/enemies/cop/logics/coplogicintimidated",
+			"script_path": "lua/coplogics/coplogicintimidated.lua"
+		},
+		{
 			"hook_id": "lib/units/enemies/cop/logics/coplogicbase",
 			"script_path": "lua/coplogics/coplogicbase.lua"
 		},

@@ -77,6 +77,10 @@
 			"script_path": "lua/copextensions/copdamage.lua"
 		},
 		{
+			"hook_id": "lib/units/enemies/tank/tankcopdamage",
+			"script_path": "lua/copextensions/tankcopdamage.lua"
+		},
+		{
 			"hook_id": "lib/units/enemies/cop/copbase",
 			"script_path": "lua/copextensions/copbase.lua"
 		},

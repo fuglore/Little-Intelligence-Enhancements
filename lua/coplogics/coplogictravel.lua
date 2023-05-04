@@ -329,28 +329,26 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 			return
 		end
 	elseif my_data.coarse_path[my_data.coarse_path_index + 1][4] then
-		local entry_found
+		local entry_found = true
 		local all_nav_segments = managers.navigation._nav_segments
 		local target_seg_id = my_data.coarse_path[my_data.coarse_path_index + 1][1]
 		local my_seg = all_nav_segments[my_data.coarse_path[my_data.coarse_path_index][1]]
 		local neighbours = my_seg.neighbours
+		local target_door_list = neighbours[target_seg_id]
 		local best_delay_t
 		
-		for neighbour_nav_seg_id, door_list in pairs(neighbours) do
-			for _, i_door in ipairs(door_list) do
-				if neighbour_nav_seg_id == target_seg_id then					
-					if type(i_door) == "number" then
-						entry_found = true
-					elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then
-						entry_found = true
-						
-						break
-					elseif alive(i_door) then
-						if not best_delay_t or i_door:delay_time() < best_delay_t then
-							best_delay_t = i_door:delay_time()
-						end
+		if target_door_list then
+			for _, i_door in ipairs(target_door_list) do
+				if type(i_door) == "number" then
+					break
+				elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then					
+					break
+				elseif alive(i_door) then
+					if not best_delay_t or i_door:delay_time() < best_delay_t then
+						entry_found = nil
+						best_delay_t = i_door:delay_time()
 					end
-				end
+				end	
 			end
 		end
 			
@@ -406,7 +404,7 @@ function CopLogicTravel._upd_pathing(data, my_data)
 				if my_data.path_ahead or LIES.settings.enemy_travel_level > 3 then
 					my_data.allow_long_path = true
 				end
-			elseif my_data.allow_long_path or LIES.settings.enemy_travel_level > 3 then
+			elseif my_data.allow_long_path then
 				my_data.allow_long_path = nil
 			else
 				data.path_fail_t = data.t
@@ -700,6 +698,8 @@ function CopLogicTravel.upd_advance(data)
 		
 			if not data.cool and not data.unit:in_slot(16) then
 				CopLogicTravel._chk_say_clear(data)
+			elseif data.cool and LIES.settings.extra_chatter then
+				CopLogicTravel._chk_report_in(data)
 			end
 	
 			--[[if my_data.advance_path and my_data.advancing and CopLogicTravel.chk_group_ready_to_move(data, my_data) then
@@ -799,6 +799,18 @@ function CopLogicTravel._chk_coarse_objective_reached(data)
 	
 	if objective.nav_seg == my_seg then
 		return true
+	end
+end
+
+function CopLogicTravel._chk_report_in(data)
+	if data.last_calm_chatter_t and data.t - data.last_calm_chatter_t < 120 then
+		return
+	end
+
+	if data.char_tweak.chatter and data.char_tweak.chatter.criminalhasgun then
+		if data.unit:sound():say("a05", true) then
+			data.last_calm_chatter_t = data.t - math.lerp(0, 30, math.random())
+		end
 	end
 end
 

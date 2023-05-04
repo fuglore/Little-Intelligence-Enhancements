@@ -5,6 +5,10 @@ function GroupAITweakData:_LIES_setup()
 	
 	local faction = tweak_data.levels:get_ai_group_type()
 	self._not_america = faction ~= "america"
+	
+	if LIES.settings.extra_chatter then
+		tweak_data.character:_setup_extra_chatter_tweak()
+	end
 
 	if self.enemy_spawn_groups["tac_swat_shotgun_rush"] and not self._LIES_fix or not self.unit_categories["medic_M4"] and not self._LIES_fix then
 		log("LIES: Another mod has already changed spawn groups and tactics. Ignoring tweakdata setup.")
@@ -3550,6 +3554,20 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		max_nr = 1,
 		queue = "t01",
 		group_min = 0,
+		duration = {
+			8,
+			16
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.sentry = {
+		radius = 700,
+		max_nr = 1,
+		queue = "ch2",
+		group_min = 2,
 		duration = {
 			8,
 			16

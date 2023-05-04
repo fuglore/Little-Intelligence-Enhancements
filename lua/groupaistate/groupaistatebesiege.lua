@@ -1242,6 +1242,70 @@ function GroupAIStateBesiege:_voice_movedin_civs(group)
 	end
 end
 
+function GroupAIStateBesiege:_assign_group_to_retire(group)
+	local group_leader_u_key, group_leader_u_data = self._determine_group_leader(group.units)
+	
+	if not group_leader_u_data then
+		return
+	end
+	
+	local retire_area, retire_pos = nil
+	local to_search_areas = {
+		group.objective.area
+	}
+	local found_areas = {
+		[group.objective.area] = true
+	}
+	
+	local retreat_path
+
+	repeat
+		local search_area = table.remove(to_search_areas, 1)
+
+		if search_area.flee_points and next(search_area.flee_points) then
+			local search_params = {
+				id = "GroupAI_retire",
+				from_tracker = group_leader_u_data.unit:movement():nav_tracker(),
+				to_seg = search_area.pos_nav_seg,
+				access_pos = self._get_group_acces_mask(group)
+			}
+			local coarse_path = managers.navigation:search_coarse(search_params)
+			
+			if coarse_path then
+				retire_area = search_area
+				local flee_point_id, flee_point = next(search_area.flee_points)
+				retire_pos = flee_point.pos
+				retreat_path = coarse_path
+				
+				break
+			end
+		else
+			for other_area_id, other_area in pairs(search_area.neighbours) do
+				if not found_areas[other_area] then
+					table.insert(to_search_areas, other_area)
+
+					found_areas[other_area] = true
+				end
+			end
+		end
+	until #to_search_areas == 0
+
+	if not retire_area then
+		Application:error("[GroupAIStateBesiege:_assign_group_to_retire] flee point not found. from area:", inspect(group.objective.area), "group ID:", group.id)
+
+		return
+	end
+
+	local grp_objective = {
+		type = "retire",
+		area = retire_area or group.objective.area,
+		coarse_path = retreat_path,
+		pos = retire_pos
+	}
+
+	self:_set_objective_to_enemy_group(group, grp_objective)
+end
+
 function GroupAIStateBesiege:_assign_assault_groups_to_retire()
 	if LIES.settings.copsretire then
 		local function suitable_grp_func(group)
@@ -2460,8 +2524,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			if not used_grenade then
 				local first_chk = math.random() < 0.5 and self._chk_group_use_flash_grenade or self._chk_group_use_smoke_grenade
 				local second_chk = first_chk == self._chk_group_use_flash_grenade and self._chk_group_use_smoke_grenade or self._chk_group_use_flash_grenade
-				used_grenade = first_chk(self, group, self._task_data.assault, detonate_pos, assault_area)
-				used_grenade = used_grenade or second_chk(self, group, self._task_data.assault, detonate_pos, assault_area)
+				used_grenade = first_chk(self, group, self._task_data.assault, detonate_pos, target_area)
+				used_grenade = used_grenade or second_chk(self, group, self._task_data.assault, detonate_pos, target_area)
 			end
 		end
 
@@ -2512,7 +2576,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 									
 									if not occupied_areas[seg_area.id] and v3_dis_sq(seg_area.pos, other_group.objective.target_area.pos) <= 2250000 then
 										if not current_assault_target_area or v3_dis_sq(current_assault_target_area.pos, seg_area.pos) <= 36000000 then
-											occupied_areas[seg_area.id] = seg_area
+											blockade_help_areas[seg_area.id] = seg_area
 										end
 									end
 								end
@@ -3378,8 +3442,7 @@ function GroupAIStateBesiege:_chk_group_area_presence(group, area_to_chk)
 	return group_in_area
 end
 
-
---if a detonate_pos gets set, the function doesn't complete because shooter_u_data doesn't get set, this fixes that
+--if a detonate_pos gets set, the function doesn't complete because shooter_u_data doesn't get set, this fixes that, and optimizes various factors
 --this also fixes enemies not announcing flash grenades but being able to announce smokes 
 --if they can announce smokes, they should naturally be able to announce flashes too
 
@@ -3391,41 +3454,40 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 		if not target_area then
 			target_area = task_data.target_areas[1]
 		end
+		
+		local target_area_seg = target_area.pos_nav_seg
+		
+		local mvec3_dis = mvector3.distance_sq
 
 		for u_key, u_data in pairs(group.units) do
 			if u_data.tactics_map and u_data.tactics_map.smoke_grenade then
 				if not u_data.unit:movement():chk_action_forbidden("action") then
 					if not detonate_pos then
-						local nav_seg_id = u_data.tracker:nav_segment()
-						local nav_seg = managers.navigation._nav_segments[nav_seg_id]
-
-						for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
-							if target_area.nav_segs[neighbour_nav_seg_id] then
-								local random_door_id = door_list[math.random(#door_list)]
-
+						local m_nav_seg_id = u_data.tracker:nav_segment()
+						local nav_seg_neighbours = managers.navigation:get_nav_seg_neighbours(m_nav_seg_id)
+						
+						if nav_seg_neighbours[target_area_seg] then
+							local door_list = nav_seg_neighbours[target_area_seg]
+							
+							for _, random_door_id in ipairs(door_list) do
 								if type(random_door_id) == "number" then
 									detonate_pos = managers.navigation._room_doors[random_door_id].center
 								else
 									detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
 								end
-
-								shooter_pos = mvector3.copy(u_data.m_pos)
-								shooter_u_data = u_data
-
-								break
-							elseif managers.navigation._nav_segments[neighbour_nav_seg_id] then 
-								local neighbour_seg_data = managers.navigation._nav_segments[neighbour_nav_seg_id]
 								
-								for over_neighbour_nav_seg_id, over_door_list in pairs(neighbour_seg_data.neighbours) do
-									if target_area.nav_segs[over_neighbour_nav_seg_id] then
-										local random_door_id = over_door_list[math.random(#over_door_list)]
+								u_data.tracker:move(u_data.m_pos)
+								
+								if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
+									shooter_pos = mvector3.copy(u_data.m_pos)
+									shooter_u_data = u_data
 
-										if type(random_door_id) == "number" then
-											detonate_pos = managers.navigation._room_doors[random_door_id].center
-										else
-											detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
-										end
-
+									break
+								else
+									local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
+									local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
+									
+									if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
 										shooter_pos = mvector3.copy(u_data.m_pos)
 										shooter_u_data = u_data
 
@@ -3433,10 +3495,30 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 									end
 								end
 							end
+							
+							if shooter_pos and shooter_u_data then
+								break
+							end
 						end
 					else
-						shooter_u_data = u_data
-						shooter_pos = mvector3.copy(u_data.m_pos)
+						u_data.tracker:move(u_data.m_pos)
+					
+						if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
+							shooter_pos = mvector3.copy(u_data.m_pos)
+							shooter_u_data = u_data
+
+							break
+						else
+							local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
+							local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
+							
+							if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+								shooter_pos = mvector3.copy(u_data.m_pos)
+								shooter_u_data = u_data
+
+								break
+							end
+						end
 					end
 				end
 
@@ -3470,40 +3552,39 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 			target_area = task_data.target_areas[1]
 		end
 		
+		local target_area_seg = target_area.pos_nav_seg
+		
+		local mvec3_dis = mvector3.distance_sq
+		
 		for u_key, u_data in pairs(group.units) do
 			if u_data.tactics_map and u_data.tactics_map.flash_grenade then
 				if not u_data.unit:movement():chk_action_forbidden("action") then
 					if not detonate_pos then
-						local nav_seg_id = u_data.tracker:nav_segment()
-						local nav_seg = managers.navigation._nav_segments[nav_seg_id]
-
-						for neighbour_nav_seg_id, door_list in pairs(nav_seg.neighbours) do
-							if target_area.nav_segs[neighbour_nav_seg_id] then
-								local random_door_id = door_list[math.random(#door_list)]
-
+						local m_nav_seg_id = u_data.tracker:nav_segment()
+						local nav_seg_neighbours = managers.navigation:get_nav_seg_neighbours(m_nav_seg_id)
+						
+						if nav_seg_neighbours[target_area_seg] then
+							local door_list = nav_seg_neighbours[target_area_seg]
+							
+							for _, random_door_id in ipairs(door_list) do
 								if type(random_door_id) == "number" then
 									detonate_pos = managers.navigation._room_doors[random_door_id].center
 								else
 									detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
 								end
-
-								shooter_pos = mvector3.copy(u_data.m_pos)
-								shooter_u_data = u_data
-
-								break
-							elseif managers.navigation._nav_segments[neighbour_nav_seg_id] then 
-								local neighbour_seg_data = managers.navigation._nav_segments[neighbour_nav_seg_id]
 								
-								for over_neighbour_nav_seg_id, over_door_list in pairs(neighbour_seg_data.neighbours) do
-									if target_area.nav_segs[over_neighbour_nav_seg_id] then
-										local random_door_id = over_door_list[math.random(#over_door_list)]
+								u_data.tracker:move(u_data.m_pos)
+								
+								if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
+									shooter_pos = mvector3.copy(u_data.m_pos)
+									shooter_u_data = u_data
 
-										if type(random_door_id) == "number" then
-											detonate_pos = managers.navigation._room_doors[random_door_id].center
-										else
-											detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
-										end
-
+									break
+								else
+									local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
+									local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
+									
+									if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
 										shooter_pos = mvector3.copy(u_data.m_pos)
 										shooter_u_data = u_data
 
@@ -3511,10 +3592,30 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 									end
 								end
 							end
+							
+							if shooter_pos and shooter_u_data then
+								break
+							end
 						end
 					else
-						shooter_pos = mvector3.copy(u_data.m_pos)
-						shooter_u_data = u_data
+						u_data.tracker:move(u_data.m_pos)
+					
+						if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
+							shooter_pos = mvector3.copy(u_data.m_pos)
+							shooter_u_data = u_data
+
+							break
+						else
+							local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
+							local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
+							
+							if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+								shooter_pos = mvector3.copy(u_data.m_pos)
+								shooter_u_data = u_data
+
+								break
+							end
+						end
 					end
 				end
 

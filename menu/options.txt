@@ -19,6 +19,14 @@
 		},
 		{
 			"type" : "toggle",
+			"id" : "lies_extra_chatter",
+			"title" : "menu_lies_extra_chatter_title",
+			"description" : "menu_lies_extra_chatter_desc",
+			"callback" : "callback_lies_extra_chatter",
+			"value" : "extra_chatter"
+		},
+		{
+			"type" : "toggle",
 			"id" : "lies_jokerhurts",
 			"title" : "menu_lies_jokerhurts_title",
 			"description" : "menu_lies_jokerhurts_desc",

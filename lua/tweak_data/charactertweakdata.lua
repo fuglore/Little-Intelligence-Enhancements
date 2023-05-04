@@ -44,6 +44,17 @@ function CharacterTweakData:fix_no_supress()
 	end
 end
 
+function CharacterTweakData:_setup_extra_chatter_tweak()
+	self.tank_mini.chatter.entrance = "entrance_elite"
+	self.tank_medic.chatter.entrance = "entrance_elite"
+	
+	self.sniper.spawn_sound_event = "mga_deploy_snipers"
+	
+	self.marshal_marksman.die_sound_event = "mga_death_scream"
+	self.marshal_shield.die_sound_event = "mga_death_scream"
+	self.marshal_shield_break.die_sound_event = "mga_death_scream"
+end
+
 function CharacterTweakData:setup_hhtacs()
 	self.tank_mini.throwable = "frag"
 	self.drug_lord_boss.throwable = "launcher_frag"

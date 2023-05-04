@@ -10,6 +10,9 @@
 	"menu_lies_jokerhurts_title" : "No Joker Stagger",
 	"menu_lies_jokerhurts_desc" : "Makes Jokers unable to be staggered by enemy attacks which allows them to follow players better. Not accurate to Vanilla.",
 	
+	"menu_lies_extra_chatter_title" : "Extra Chatter",
+	"menu_lies_extra_chatter_desc" : "Adds some additional voicelines for guards when they are not alerted in stealth, and various other little sound tweaks. Not accurate to Vanilla.",
+	
 	"menu_lies_fixed_spawngroups_title" : "Spawngroup Tweaks",
 	"menu_lies_fixed_spawngroups_desc" : "Fix missing spawns, and reduce spawning RNG to force more consistent behavior. Settings other than *Vanilla* are not accurate to Vanilla...obviously. NOTE: Requires a heist restart to take effect.",
 	"menu_lies_spawngroups_off" : "Vanilla",

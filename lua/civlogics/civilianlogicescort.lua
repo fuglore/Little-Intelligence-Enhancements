@@ -58,13 +58,10 @@ function CivilianLogicEscort.too_scared_to_move(data)
 	local m_com = data.unit:movement():m_com()
 	local m_head_pos = data.unit:movement():m_head_pos()
 	
-	if not data.unit:raycast("ray", m_com, m_head_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report") then
+	if data.unit:raycast("ray", m_com, m_head_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report") then
 		my_data.commanded_to_move = "temp"
 		
 		return
-	elseif my_data.commanded_to_move == "temp" then
-		my_data.commanded_to_move = nil
-		return "abandoned"
 	end
 
 	local nobody_close = true

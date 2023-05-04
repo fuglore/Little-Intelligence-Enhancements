@@ -1265,7 +1265,7 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ign
 				elseif not i_door:is_obstructed() and i_door:check_access(access_pos, access_neg) then
 					local end_pos = i_door:script_data().element:nav_link_end_pos()
 					local my_weight = mvec3_dis(from_pos, end_pos) + mvec3_dis(end_pos, to_pos)
-					my_weight = my_weight * 1.15 * 1.15
+					my_weight = my_weight * 1.15
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then

@@ -139,7 +139,7 @@ local important_sounds = {
 }
 
 function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
-	if not sound_name then --shouldn't normally happen.
+	if not sound_name or type(sound_name) ~= "string" then --shouldn't normally happen.
 		return
 	end
 

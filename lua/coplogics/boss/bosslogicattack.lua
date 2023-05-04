@@ -124,7 +124,7 @@ function BossLogicAttack._pathing_complete_clbk(data)
 	if my_data.pathing_to_chase_pos then
 		BossLogicAttack._process_pathing_results(data, my_data)
 	
-		if data.attention_obj and data.attention_obj.reaction >= AI_REACT_COMBAT then
+		if data.attention_obj and AI_REACT_COMBAT <= data.attention_obj.reaction then
 			BossLogicAttack._upd_combat_movement(data, my_data)
 		end
 	end
@@ -238,10 +238,11 @@ function BossLogicAttack.update(data)
 
 		data.unit:brain():action_request(new_action)
 	end
-
-	if not data.logic.action_taken then
-		BossLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
-	end
+	
+	--this isn't even working anyways lol
+	--if not data.logic.action_taken then
+		--BossLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
+	--end
 
 	if not my_data.update_queue_id then
 		data.brain:set_update_enabled_state(false)
@@ -253,6 +254,11 @@ function BossLogicAttack.update(data)
 end
 
 function BossLogicAttack._upd_aim(data, my_data)
+	do 
+		return CopLogicAttack._upd_aim(data, my_data) --just...for now
+	end
+
+
 	local shoot, aim, expected_pos = nil
 	local focus = data.attention_obj
 	local reaction = focus and focus.reaction
@@ -490,44 +496,106 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 	local chase = nil
 
 	if not action_taken then
-		if not my_data.chase_path_failed_t or t - my_data.chase_path_failed_t > 1 then
-			if my_data.chase_path then
-				local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
-				local run_dist = enemy_visible and 800 or 400
-				local speed = "run"
+		if my_data.chase_path then
+			local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
+			local run_dist = enemy_visible and 800 or 400
+			local speed = "run"
+		
+			if not data.enrage_data or not data.enrage_data.enraged then
+				speed = enemy_dis < run_dist and "walk" or speed
+			end
 			
-				if not data.enrage_data or not data.enrage_data.enraged then
-					speed = enemy_dis < run_dist and "walk" or speed
-				end
+			my_data.at_shoot_pos = nil
 
-				BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
-			elseif not my_data.chase_path_search_id and focus_enemy.nav_tracker then
-				if data.unit:anim_data().reload then
-					if focus_enemy.verified and focus_enemy.aimed_at and focus_enemy.dis < 800 and CopLogicAttack._can_move(data) then
-						local from_pos = mvec3_cpy(data.m_pos)
-						local threat_tracker = focus_enemy.nav_tracker
-						local threat_head_pos = focus_enemy.m_head_pos
-						local max_walk_dis = 800
-						local vis_required = engage
-						local retreat_to = CopLogicAttack._find_retreat_position(from_pos, focus_enemy.m_pos, threat_head_pos, threat_tracker, max_walk_dis, nil)
+			BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
+		elseif not my_data.chase_path_search_id and focus_enemy.nav_tracker then
+			if data.unit:anim_data().reload or data._visor_broken then
+				if focus_enemy.verified and (focus_enemy.dis < 1400 or data._visor_broken and focus_enemy.aimed_at) and CopLogicAttack._can_move(data) then
+					local from_pos = mvec3_cpy(data.m_pos)
+					local threat_tracker = focus_enemy.nav_tracker
+					local threat_head_pos = focus_enemy.m_head_pos
+					local max_walk_dis = 400
+					local vis_required = nil
+					local retreat_to, is_fail = CopLogicAttack._find_retreat_position(data, from_pos, focus_enemy.m_pos, threat_head_pos, threat_tracker, max_walk_dis, nil)
 
-						if retreat_to then
-							retreat_to = managers.navigation:pad_out_position(retreat_to, 4, data.char_tweak.wall_fwd_offset)
-							my_data.chase_path = {
-								mvec3_cpy(from_pos),
+					if retreat_to then
+						local to_pos = retreat_to
+						local second_retreat_pos, retry_is_fail
+						
+						if is_fail then
+							second_retreat_pos, retry_is_fail = CopLogicAttack._find_retreat_position(data, retreat_to, focus_enemy.m_pos, threat_head_pos, threat_tracker, max_walk_dis, vis_required)
+							
+							to_pos = second_retreat_pos
+						end
+					
+						local dis = mvec3_dis_sq(from_pos, to_pos)
+						
+						if dis > 10000 then
+							local retreat_path = {
 								retreat_to
 							}
+							
+							if second_retreat_pos then
+								retreat_path[#retreat_path + 1] = second_retreat_pos
+							end
 
-							BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, "run")
+							my_data.chase_path = retreat_path
+							
+							if BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, "run") then
+								my_data.defensive_move = true
+								my_data.cover_test_step = 0
+								my_data.at_shoot_pos = nil
+								
+								return
+							end
 						end
 					end
-				else
+				end
+			end
+			
+			if not data.unit:anim_data().reload then
+				if not my_data.at_shoot_pos then
+					if my_data.chase_path_failed_t and data.t - my_data.chase_path_failed_t < 1 or data._visor_broken then
+						if not enemy_visible and focus_enemy.verified_t and t - focus_enemy.verified_t < 4 then
+							local my_tracker = data.unit:movement():nav_tracker()
+							local aim_pos = focus_enemy.verified_pos
+							
+							if not my_data.cover_test_step then
+								my_data.cover_test_step = 0
+							end
+							
+							while my_data.cover_test_step < 3 do
+								local shoot_from_pos = CopLogicAttack._peek_for_pos_sideways(data, my_data, my_tracker, aim_pos, 165, true)
+								
+								if shoot_from_pos then
+									local path = {
+										shoot_from_pos
+									}
+								
+									my_data.chase_path = path
+									
+									if BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, "run") then
+										my_data.defensive_move = true
+										my_data.walking_to_shoot_pos = true										
+										return
+									end
+									
+									break
+								else
+									my_data.cover_test_step = my_data.cover_test_step + 1
+								end
+							end
+						end
+					end
+				end
+				
+				if not my_data.chase_path_failed_t or data.t - my_data.chase_path_failed_t > 1 then
 					local height_diff = math_abs(data.m_pos.z - focus_enemy.m_pos.z)
 
 					if height_diff < 300 then
 						chase = true
 					else
-						local engage = my_data.attitude == "engage"
+						local engage = my_data.attitude == "engage" and not data._visor_broken
 
 						if enemy_visible then
 							if focus_enemy.dis > 1000 or engage and focus_enemy.dis > 500 then
@@ -596,7 +664,15 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 				end
 			end
 		end
-	elseif my_data.walking_to_chase_pos and not my_data.use_flank_pos_when_chasing then
+	elseif my_data.walking_to_chase_pos and not my_data.use_flank_pos_when_chasing and not my_data.defensive_move and not my_data.moving_out_of_the_way then
+		if data._visor_broken then
+			if focus_enemy.verified and focus_enemy.dis < 700 then
+				BossLogicAttack._cancel_chase_attempt(data, my_data)
+				
+				return
+			end
+		end
+	
 		local current_haste = my_data.advancing and my_data.advancing:haste()
 
 		if current_haste then
@@ -640,10 +716,78 @@ function BossLogicAttack._upd_combat_movement(data, my_data)
 						mvec3_cpy(my_pos),
 						moving_to_pos
 					}
+					
+					my_data.at_shoot_pos = nil
 
 					BossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, change_speed)
 				end
 			end
+		end
+	end
+end
+
+function BossLogicAttack._confirm_retreat_position_visless(retreat_pos, threat_pos, threat_head_pos, threat_tracker)
+	local retreat_head_pos = mvector3.copy(retreat_pos)
+
+	mvector3.add(retreat_head_pos, Vector3(0, 0, 160))
+
+	local slotmask = managers.slot:get_mask("bullet_blank_impact_targets")
+	local ray_res = World:raycast("ray", retreat_head_pos, threat_head_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
+
+	if ray_res then
+		return true
+	end
+
+	return false
+end
+
+function BossLogicAttack.action_complete_clbk(data, action)
+	local action_type = action:type()
+	local my_data = data.internal_data
+
+	if action_type == "walk" then
+		my_data.advancing = nil
+
+		if my_data.walking_to_chase_pos then
+			my_data.walking_to_chase_pos = nil
+		end
+
+		if my_data.moving_out_of_the_way then
+			my_data.moving_out_of_the_way = nil
+		end
+		
+		if my_data.defensive_move then
+			my_data.defensive_move = nil
+		end
+		
+		if action:expired() then
+			if my_data.walking_to_shoot_pos then
+				my_data.at_shoot_pos = true
+			end
+		end
+		
+		my_data.walking_to_shoot_pos = nil
+
+		TankCopLogicAttack._cancel_chase_attempt(data, my_data)
+	elseif action_type == "shoot" then
+		my_data.shooting = nil
+	elseif action_type == "reload" or action_type == "heal" or action_type == "healed" then
+		if action:expired() then
+			BossLogicAttack._upd_aim(data, my_data)
+		end
+	elseif action_type == "act" then
+		if my_data.gesture_arrest then
+			my_data.gesture_arrest = nil
+		elseif action:expired() then
+			BossLogicAttack._upd_aim(data, my_data)
+		end
+	elseif action_type == "turn" then
+		my_data.turning = nil
+	elseif action_type == "hurt" then
+		TankCopLogicAttack._cancel_chase_attempt(data, my_data)
+
+		if action:expired() and action:hurt_type() ~= "death" then
+			BossLogicAttack._upd_aim(data, my_data)
 		end
 	end
 end

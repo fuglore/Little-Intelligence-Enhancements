@@ -1245,7 +1245,7 @@ end
 function GroupAIStateBesiege:_assign_group_to_retire(group)
 	local group_leader_u_key, group_leader_u_data = self._determine_group_leader(group.units)
 	
-	if not group_leader_u_data then
+	if not group_leader_u_data or not alive(group_leader_u_data.unit) then
 		return
 	end
 	

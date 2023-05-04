@@ -186,7 +186,7 @@ end
 
 function CopBrain:get_movement_delay()
 	if LIES.settings.enemy_travel_level < 4 then
-		local base_delay = 0.6 + 1.5 * math.random()
+		local base_delay = 0.2 + 0.7 * math.random()
 		
 		if self._logic_data.important then
 			base_delay = base_delay / 1 + math.random()
@@ -440,15 +440,6 @@ function CopBrain:action_complete_clbk(action)
 	if walk_blocked_actions[action_type] then
 		if action_type ~= "walk" then
 			self._unit:movement():upd_m_head_pos()
-		end
-
-		local stand_rsrv = self:get_pos_rsrv("stand")
-
-		if not stand_rsrv or mvector3.distance_sq(stand_rsrv.position, self._unit:movement():m_pos()) > 400 then
-			self:add_pos_rsrv("stand", {
-				radius = 30,
-				position = mvector3.copy(self._unit:movement():m_pos())
-			})
 		end
 		
 		if not self:is_criminal() then

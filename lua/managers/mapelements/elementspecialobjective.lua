@@ -6,6 +6,40 @@ local adjust_ids = {
 			new_rotation = Rotation(-137, 0, -0),
 			new_action = "e_nl_up_4m"
 		}
+	},
+	bph = {
+		[102181] = { --some badly set access filters result in team ai and jokers climbing up a specific window in the washing machine room, but not being able to climb down
+			override_access_filter = {
+				"cop",
+				"security_patrol",
+				"shield",
+				"tank",
+				"security",
+				"gangster",
+				"swat",
+				"fbi",
+				"taser",
+				"sniper",
+				"murky",
+				"spooc"
+			}
+		},
+		[102373] = {
+			override_access_filter = {
+				"cop",
+				"security_patrol",
+				"shield",
+				"tank",
+				"security",
+				"gangster",
+				"swat",
+				"fbi",
+				"taser",
+				"sniper",
+				"murky",
+				"spooc"
+			}
+		}
 	}
 }
 
@@ -30,6 +64,10 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 			
 			if params.new_action then
 				self._values.so_action = params.new_action
+			end
+			
+			if params.override_access_filter then
+				self._values.SO_access = managers.navigation:convert_access_filter_to_number(params.override_access_filter)
 			end
 			
 			--log("SCRONGBONGLED")

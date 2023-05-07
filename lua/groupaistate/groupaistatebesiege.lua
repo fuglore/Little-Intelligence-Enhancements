@@ -1,3 +1,4 @@
+local mvec3_dis_sq = mvector3.distance_sq
 local temp_vec1 = Vector3()
 
 function GroupAIStateBesiege:_draw_enemy_activity(t)
@@ -990,7 +991,7 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 
 			for criminal_key, criminal_data in pairs(self._player_criminals) do
 				if not criminal_data.status or criminal_data.status == "electrified" then
-					local dis = mvector3.distance_sq(target_pos, criminal_data.m_pos)
+					local dis = mvec3_dis_sq(target_pos, criminal_data.m_pos)
 
 					if not nearest_dis or dis < nearest_dis then
 						nearest_dis = dis
@@ -1785,7 +1786,7 @@ function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
 	local u_key = unit:key()
 	local pos = unit:movement():m_pos()
 	local nearby = 0
-	local mvec3_dis = mvector3.distance_sq
+	local mvec3_dis = mvec3_dis_sq
 	
 	for c_key, c_data in pairs(self._char_criminals) do
 		if c_key ~= u_key then
@@ -1824,7 +1825,7 @@ function GroupAIStateBesiege:_get_group_area(group)
 	for u_key, u_data in pairs(group.units) do 
 		if u_data.unit and alive(u_data.unit) then
 			local nav_seg = managers.navigation:get_nav_seg_from_pos(u_data.unit:movement():m_pos())
-			local my_dis = mvector3.distance_sq(u_data.unit:movement():m_pos(), group.objective.area.pos)
+			local my_dis = mvec3_dis_sq(u_data.unit:movement():m_pos(), group.objective.area.pos)
 			local mine_is_better = not best_distance or my_dis < best_distance
 
 			if mine_is_better then
@@ -1851,7 +1852,7 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, provi
 			local objective = brain:objective()
 
 			if objective and objective.grp_objective == group.objective and group.objective.area  then
-				local dis = mvector3.distance_sq(group.objective.area.pos, u_data.m_pos)
+				local dis = mvec3_dis_sq(group.objective.area.pos, u_data.m_pos)
 				
 				if not best_dis or dis < best_dis then
 					best_dis = dis
@@ -1875,7 +1876,7 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, provi
 					local focus_enemy = logic_data.attention_obj
 					
 					if focus_enemy and focus_enemy.verified_t and logic_data.t - focus_enemy.verified_t <= 15 and focus_enemy.last_verified_m_pos and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-						if mvector3.distance_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dis_to_check / 2 and mvector3.distance_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dis_to_check then
+						if mvec3_dis_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dis_to_check / 2 and mvec3_dis_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dis_to_check then
 							local nav_seg = managers.navigation:get_nav_seg_from_pos(focus_enemy.m_pos, true)
 							local target_area = self:get_area_from_nav_seg_id(nav_seg)
 							
@@ -2134,7 +2135,49 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		
 		if not needs_reassignment and not current_objective.tactic then
 			for i_tactic, tactic_name in ipairs(group_leader_u_data.tactics) do
-				if LIES.settings.hhtacs and tactic_name == "shield" then
+				if tactic_name == "hrt" then
+					if self._rescueable_hostages then
+						local closest_area_dis, closest_area, closest_chosen_u_data
+						
+						for u_key, area in pairs(self._rescueable_hostages) do
+						
+							if not next(area.criminal.units) then
+								local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(area.pos, group.units)
+								
+								if not closest_area_dis or closest_u_dis_sq < closest_area_dis then
+									closest_area = area
+									closest_area_dis = closest_u_dis_sq
+									closest_chosen_u_data = closest_u_data
+								end
+							end
+						end
+						
+						if closest_area then
+							local search_params = {
+								id = "GroupAI_HRTtactic",
+								from_tracker = closest_chosen_u_data.unit:movement():nav_tracker(),
+								to_seg = closest_area.pos_nav_seg,
+								access_pos = self._get_group_acces_mask(group),
+								verify_clbk = callback(self, self, "is_nav_seg_safe")
+							}
+							local coarse_path = managers.navigation:search_coarse(search_params)
+							
+							if coarse_path then							
+								local grp_objective = {
+									type = "assault_area",
+									attitude = "avoid",
+									tactic = "hrt",
+									area = closest_area,
+									coarse_path = coarse_path
+								}
+
+								self:_set_objective_to_enemy_group(group, grp_objective)
+
+								return
+							end
+						end
+					end
+				elseif LIES.settings.hhtacs and tactic_name == "shield" then
 					local chosen_escort_u_data
 				
 					for u_key, u_data in pairs(self._escorts) do
@@ -2320,7 +2363,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		if current_objective.moving_out then
 			if current_objective.blockading then
 				if self._task_data.assault.target_areas and self._task_data.assault.target_areas[1] then --woah, the area we're going to is WAY off, get back on track
-					if current_objective.area and mvector3.distance_sq(current_objective.area.pos, self._task_data.assault.target_areas[1].pos) > 36000000 then
+					if current_objective.area and mvec3_dis_sq(current_objective.area.pos, self._task_data.assault.target_areas[1].pos) > 36000000 then
 						needs_reassignment = true
 					end
 				end
@@ -2336,8 +2379,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				if not current_objective.blockading then
 					local dis = tactics_map and tactics_map.ranged_fire and 2000 or tactics_map and tactics_map.sniper and 4000 or 1250
 					local impatient
-					
-					if tactics_map and tactics_map.sniper then
+
+					if tactics_map and tactics_map.sniper or phase_is_anticipation then
 						impatient = false
 					elseif group.in_place_t then
 						if aggression_level > 2 then
@@ -2353,7 +2396,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						dis = dis / (aggression_level - 1)
 					end
 					
-					local engaging_area
+					local engaging_area, target_area
 					
 					engaging_area, target_area = self:_chk_group_engaging_area(group, dis, tactics_map and tactics_map.provide_support, impatient)
 				end
@@ -2398,7 +2441,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				local dis = tactics_map and tactics_map.ranged_fire and 2000 or tactics_map and tactics_map.sniper and 4000 or 1250
 				local impatient
 				
-				if tactics_map and tactics_map.sniper then
+				if tactics_map and tactics_map.sniper or phase_is_anticipation then
 					impatient = false
 				elseif group.in_place_t then
 					if aggression_level > 2 then
@@ -2442,6 +2485,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			--groups that have begun aggressive pushes will chase down players properly, aggression_level 4 chases constantly if the assault is happening
 			if charge then --if a shield group has charge, then it'll still charge
 				push = true
+			elseif engaging and phase_is_anticipation then
+				pull_back = true
+				objective_area = engaging
 			elseif not has_criminals_close and not engaging or not group.in_place_t then
 				approach = true
 			elseif not phase_is_anticipation and not current_objective.open_fire then
@@ -2474,7 +2520,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			stance = "hos",
 			open_fire = true,
 			area = objective_area,
-			interrupt_on_contact = true,
+			--interrupt_on_contact = true,
 			target_area = target_area,
 			coarse_path = {
 				{
@@ -2537,7 +2583,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		if enabled and not push and tactics_map and tactics_map.blockade and aggression_level < 4 then
 			local occupied_areas = {}
 			local blockade_help_areas = {}
-			local v3_dis_sq = mvector3.distance_sq
+			local v3_dis_sq = mvec3_dis_sq
 			local fwd_vec = temp_vec1
 			local current_assault_target_area = self._task_data.assault.target_areas and self._task_data.assault.target_areas[1]
 			
@@ -3044,7 +3090,7 @@ function GroupAIStateBesiege:_upd_recon_sweep_task()
 				end
 			end
 
-			local mvec3_dis = mvector3.distance_sq
+			local mvec3_dis = mvec3_dis_sq
 			local candidate_areas = {}
 			
 			for key, pos in pairs(valid_criminal_pos) do
@@ -3457,7 +3503,7 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 		
 		local target_area_seg = target_area.pos_nav_seg
 		
-		local mvec3_dis = mvector3.distance_sq
+		local mvec3_dis = mvec3_dis_sq
 
 		for u_key, u_data in pairs(group.units) do
 			if u_data.tactics_map and u_data.tactics_map.smoke_grenade then
@@ -3554,7 +3600,7 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 		
 		local target_area_seg = target_area.pos_nav_seg
 		
-		local mvec3_dis = mvector3.distance_sq
+		local mvec3_dis = mvec3_dis_sq
 		
 		for u_key, u_data in pairs(group.units) do
 			if u_data.tactics_map and u_data.tactics_map.flash_grenade then
@@ -3651,7 +3697,7 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 	for u_key, u_data in pairs(group.units) do
 		if u_data.tactics_map and u_data.tactics_map.ranged_fire then
 			if not u_data.unit:movement():chk_action_forbidden("action") then
-				local dis = mvector3.distance_sq(detonate_pos, u_data.m_pos)
+				local dis = mvec3_dis_sq(detonate_pos, u_data.m_pos)
 
 				if not shooter_dis_sq or dis < shooter_dis_sq then
 					shooter_dis_sq = dis
@@ -3688,7 +3734,7 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 			
 			for c_key, c_data in pairs(self._criminals) do
 				if not c_data.is_deployable then
-					local dis = mvector3.distance_sq(c_data.m_pos, detonate_pos)
+					local dis = mvec3_dis_sq(c_data.m_pos, detonate_pos)
 					
 					if dis <= 360000 then
 						if not closest_crim_dis_sq or dis < closest_crim_dis_sq then
@@ -3725,7 +3771,7 @@ end
 
 function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
 	local all_areas = self._area_data
-	local mvec3_dis = mvector3.distance_sq
+	local mvec3_dis = mvec3_dis_sq
 	max_dis = max_dis and max_dis * max_dis
 	local t = self._t
 	local valid_spawn_groups = {}

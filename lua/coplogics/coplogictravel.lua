@@ -364,6 +364,17 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 	local index_to_go_to = my_data.coarse_path_index + 1
 	
 	if my_data.allow_long_path then
+		local max_dis
+		local total_dis
+		local this_dis
+		
+		local mvec3_dis_sq = mvector3.distance_sq
+		
+		if data.group and table.size(data.group.units) > 1 then
+			max_dis = 1322500
+			total_dis = 0
+		end
+	
 		for i = index_to_go_to + 1, #my_data.coarse_path do
 			if my_data.coarse_path[i][3] or my_data.coarse_path[i][4] then
 				index_to_go_to = i - 1
@@ -375,6 +386,24 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 				index_to_go_to = i
 				
 				break
+			end
+			
+			if max_dis then
+				this_dis = mvec3_dis_sq(my_data.coarse_path[i - 1][2], my_data.coarse_path[i][2])
+				
+				if this_dis <= max_dis then
+					total_dis = total_dis + this_dis
+					
+					if total_dis > max_dis then
+						index_to_go_to = i - 1
+						
+						break
+					end
+				else
+					index_to_go_to = i - 1
+					
+					break
+				end
 			end
 		end
 	end
@@ -531,8 +560,6 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 				local z_dis = math.abs(his_pos.z - m_tracker_pos.z)
 				
 				if dis_to_me > 640000 or z_dis >= 250 then
-					local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
-					his_pos = advance_pos or his_pos
 					local his_dis = mvec3_dis(his_objective.area.pos, his_pos)
 					
 					if my_dis < his_dis then

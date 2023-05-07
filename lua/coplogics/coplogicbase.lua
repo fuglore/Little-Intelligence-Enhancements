@@ -188,7 +188,7 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 				end
 
 				if enemy_dis < interrupt_dis then
-					return true, true
+					return true, false
 				end
 			end
 		end

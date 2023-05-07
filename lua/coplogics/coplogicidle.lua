@@ -187,7 +187,10 @@ function CopLogicIdle.queued_update(data)
 	CopLogicIdle._perform_objective_action(data, my_data, objective)
 	CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
 	CopLogicIdle._upd_pathing(data, my_data)
-	CopLogicIdle._upd_scan(data, my_data)
+	
+	if not data.cool then
+		CopLogicIdle._upd_scan(data, my_data) --this is super broken in vanilla afaik, especially in stealth
+	end
 		
 	if my_data.action_started and my_data.action_started == true then
 		if not data.cool then

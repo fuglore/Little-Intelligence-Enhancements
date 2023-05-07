@@ -114,8 +114,19 @@ function CopLogicAttack.queue_update(data, my_data)
 	CopLogicBase.queue_task(my_data, my_data.update_queue_id, data.logic.queued_update, data, data.t + (data.important and 0.2 or 0.7), true)
 end
 
+local safe_dmg_types = {
+	bullet = true,
+	explosion = true,
+	fire = true,
+	melee = true
+}
+
 function CopLogicAttack.damage_clbk(data, damage_info)
 	CopLogicIdle.damage_clbk(data, damage_info)
+	
+	if not safe_dmg_types[damage_info.variant] then
+		return
+	end
 	
 	if data.important and not data.is_converted then
 		if not data.unit:movement():chk_action_forbidden("walk") then
@@ -374,7 +385,7 @@ function CopLogicAttack._upd_combat_movement(data)
 
 	if action_taken then
 		-- Nothing
-	elseif want_to_take_cover then
+	elseif want_to_take_cover or data.is_converted then
 		move_to_cover = true
 	elseif not enemy_visible then --no longer requires a group objective to work, takes into account flank cover and just generally not seeing enemies in a while
 		if not (data.tactics and data.tactics.sniper) and (not enemy_visible_softer or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
@@ -521,7 +532,7 @@ function CopLogicAttack._upd_combat_movement(data)
 		my_data.flank_cover = nil
 	end
 
-	if not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
+	if not data.is_converted and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
 		if data.is_suppressed and data.t - data.unit:character_damage():last_suppression_t() < 0.7 then
 			action_taken = CopLogicBase.chk_start_action_dodge(data, "scared")
 		end
@@ -1337,8 +1348,8 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 
 			my_data.firing = true
 			
-			if not data.unit:in_slot(16) and data.char_tweak.chatter then
-				if focus_enemy and focus_enemy.unit and focus_enemy.unit:base().sentry_gun and data.char_tweak.chatter.ready then
+			if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction and not data.unit:in_slot(16) and data.char_tweak.chatter then
+				if alive(focus_enemy.unit) and focus_enemy.unit:base().sentry_gun and data.char_tweak.chatter.ready then
 					managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "sentry")
 				elseif data.char_tweak.chatter.aggressive then
 					if managers.groupai:state():is_detection_persistent() or data.unit:base().has_tag and not data.unit:base():has_tag("law") then

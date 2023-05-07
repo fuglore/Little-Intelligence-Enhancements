@@ -88,8 +88,7 @@ function GroupAITweakData:_LIES_setup()
 		self._tactics.marshal_shield = {
 			"shield",
 			"charge",
-			"ranged_fire",
-			"sniper"
+			"murder"
 		}
 		
 		if LIES.settings.fixed_spawngroups < 3 then
@@ -174,6 +173,12 @@ function GroupAITweakData:_LIES_setup()
 			"flash_grenade",
 			"provide_coverfire",
 			"murder"
+		}
+		
+		self._tactics.hrt = {
+			"hrt",
+			"ranged_fire",
+			"flank"
 		}
 		
 		--chad wuz here
@@ -414,7 +419,7 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/pd2_dlc_hvh/characters/ene_fbi_heavy_hvh_r870/ene_fbi_heavy_hvh_r870")
 				},
 				murkywater = {
-					Idstring("units/payday2/characters/ene_city_heavy_r870/ene_city_heavy_r870")
+					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_heavy_shotgun/ene_murkywater_heavy_shotgun")
 				},
 				federales = {
 					Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
@@ -432,7 +437,7 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/pd2_dlc_hvh/characters/ene_fbi_heavy_hvh_r870/ene_fbi_heavy_hvh_r870")
 				},
 				murkywater = {
-					Idstring("units/payday2/characters/ene_city_heavy_r870/ene_city_heavy_r870")
+					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_heavy_shotgun/ene_murkywater_heavy_shotgun")
 				},
 				federales = {
 					Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
@@ -450,7 +455,7 @@ function GroupAITweakData:_LIES_setup()
 					Idstring("units/pd2_dlc_hvh/characters/ene_fbi_heavy_hvh_r870/ene_fbi_heavy_hvh_r870")
 				},
 				murkywater = {
-					Idstring("units/payday2/characters/ene_city_heavy_r870/ene_city_heavy_r870")
+					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_heavy_shotgun/ene_murkywater_heavy_shotgun")
 				},
 				federales = {
 					Idstring("units/pd2_dlc_bex/characters/ene_swat_heavy_policia_federale_fbi_r870/ene_swat_heavy_policia_federale_fbi_r870")
@@ -1758,7 +1763,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "CS_cop_all",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -1789,7 +1794,7 @@ function GroupAITweakData:_LIES_setup()
 							rank = 1,
 							freq = 1,
 							unit = "CS_fbi_all",
-							tactics = self._tactics.swat_rifle_flank
+							tactics = self._tactics.hrt
 						}
 					}
 				end
@@ -1811,7 +1816,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "ranc_rangers",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -1887,7 +1892,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "CS_fbi_all",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -1964,7 +1969,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "CS_fbi_all",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					},
 					{
 						respawn_cooldown = 30,
@@ -1973,7 +1978,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "FBI_office",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -2066,7 +2071,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "CS_cop_all",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -2096,7 +2101,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "CS_fbi_all",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				}
 				
@@ -2241,7 +2246,7 @@ function GroupAITweakData:_LIES_setup()
 						rank = 1,
 						freq = 1,
 						unit = "CS_fbi_all",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.hrt
 					}
 				},
 				spawn_point_chk_ref = table.list_to_set({
@@ -2316,7 +2321,7 @@ function GroupAITweakData:_LIES_setup()
 							rank = 1,
 							freq = 1,
 							unit = "CS_cop_all",
-							tactics = self._tactics.swat_rifle_flank
+							tactics = self._tactics.hrt
 						}
 					},
 					spawn_point_chk_ref = table.list_to_set({
@@ -2348,7 +2353,7 @@ function GroupAITweakData:_LIES_setup()
 							rank = 1,
 							freq = 1,
 							unit = "CS_fbi_all",
-							tactics = self._tactics.swat_rifle_flank
+							tactics = self._tactics.hrt
 						}
 					}
 				end

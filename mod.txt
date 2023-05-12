@@ -57,6 +57,10 @@
 			"script_path": "lua/managers/mapelements/elementspawnenemydummy.lua"
 		},
 		{
+			"hook_id": "lib/managers/mission/elementdifficulty",
+			"script_path": "lua/managers/mapelements/elementdifficulty.lua"
+		},
+		{
 			"hook_id": "lib/managers/mission/elementspawnenemygroup",
 			"script_path": "lua/managers/mapelements/elementspawnenemygroup.lua"
 		},

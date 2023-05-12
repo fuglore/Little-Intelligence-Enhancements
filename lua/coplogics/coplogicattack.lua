@@ -1349,7 +1349,7 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 			my_data.firing = true
 			
 			if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction and not data.unit:in_slot(16) and data.char_tweak.chatter then
-				if alive(focus_enemy.unit) and focus_enemy.unit:base().sentry_gun and data.char_tweak.chatter.ready then
+				if alive(focus_enemy.unit) and focus_enemy.unit:base() and focus_enemy.unit:base().sentry_gun and data.char_tweak.chatter.ready then
 					managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "sentry")
 				elseif data.char_tweak.chatter.aggressive then
 					if managers.groupai:state():is_detection_persistent() or data.unit:base().has_tag and not data.unit:base():has_tag("law") then

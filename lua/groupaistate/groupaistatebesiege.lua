@@ -1791,7 +1791,7 @@ function GroupAIStateBesiege:_chk_crimin_proximity_to_unit(unit)
 	for c_key, c_data in pairs(self._char_criminals) do
 		if c_key ~= u_key then
 			if not c_data.status or c_data.status == "electrified" then
-				if mvec3_dis(pos, c_data.unit:movement():m_pos()) < 2500000 then
+				if mvec3_dis(pos, c_data.unit:movement():m_pos()) < 4000000 then
 					nearby = nearby + 1
 				end
 			end

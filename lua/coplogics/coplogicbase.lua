@@ -650,7 +650,15 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					attention_info.verified_dis = dis
 				elseif data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask) then
 					if attention_info.criminal_record and AIAttentionObject.REACT_COMBAT <= attention_info.settings.reaction then
-						if not is_detection_persistent and mvector3.distance(attention_pos, attention_info.criminal_record.pos) > 700 then
+						if data.logic._keep_player_focus_t and attention_info.is_human_player and attention_info.verified_t and data.t - attention_info.verified_t < data.logic._keep_player_focus_t then
+							delay = math.min(0.2, delay)
+							attention_info.verified_pos = attention_info.criminal_record.pos:with_z(attention_pos.z)
+							attention_info.verified_dis = dis
+
+							if data.logic._chk_nearly_visible_chk_needed(data, attention_info, u_key) and attention_info.dis < 2000 then
+								_nearly_visible_chk(attention_info, attention_pos)
+							end
+						elseif not is_detection_persistent and mvector3.distance(attention_pos, attention_info.criminal_record.pos) > 700 then
 							CopLogicBase._destroy_detected_attention_object_data(data, attention_info)
 						else
 							delay = math.min(0.2, delay)

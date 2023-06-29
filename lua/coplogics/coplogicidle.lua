@@ -592,7 +592,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				local target_priority = distance
 				local target_priority_slot = 0
 
-				if visible then
+				if visible or data.logic._keep_player_focus_t and attention_data.is_human_player and attention_data.verified_t and data.t - attention_data.verified_t < data.logic._keep_player_focus_t then
 					if distance < 500 then
 						target_priority_slot = 2
 					elseif distance < 1500 then

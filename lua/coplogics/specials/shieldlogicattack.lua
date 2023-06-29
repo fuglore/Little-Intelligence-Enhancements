@@ -317,7 +317,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 				end
 			end
 			
-			if data.objective and data.objective.follow_unit then
+			if data.objective and data.objective.follow_unit and alive(data.objective.follow_unit) then
 				local dis = data.objective and data.objective.distance and data.objective.distance * 0.7 or 700
 				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
 				local follow_unit_pos = advance_pos or data.objective.follow_unit:movement():nav_tracker():field_position()

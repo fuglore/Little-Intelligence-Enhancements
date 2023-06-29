@@ -2322,7 +2322,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						end
 					end
 				elseif tactic_name == "charge" and not phase_is_anticipation and not LIES.settings.interruptoncontact then
-					if aggression_level > 3 then
+					if aggression_level > 3 or too_campy then
 						charge = true
 					elseif aggression_level > 1 then
 						if group.in_place_t and self._t - group.in_place_t > 4 then
@@ -2493,7 +2493,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			elseif not phase_is_anticipation and not current_objective.open_fire then
 				open_fire = true
 			elseif not phase_is_anticipation and group.in_place_t and (not tactics_map or not tactics_map.shield and not tactics_map.sniper) then
-				if impatient then
+				if impatient or too_campy then
 					push = true
 				elseif engaging and current_objective.area ~= engaging then
 					open_fire = true

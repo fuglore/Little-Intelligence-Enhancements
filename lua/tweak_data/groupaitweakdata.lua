@@ -1658,47 +1658,85 @@ function GroupAITweakData:_LIES_setup()
 		
 		self.unit_categories.medic_shot_refless = clone(self.unit_categories.medic_R870)
 		self.unit_categories.medic_shot_refless.special_type = nil
-
-		local level_id = Global.level_data and Global.level_data.level_id ~= nil and Global.level_data.level_id or Global.game_settings and Global.game_settings.level_id ~= nil and Global.game_settings.level_id
 		
-		if level_id ~= "ranc" and level_id ~= "trai" then
-			self.enemy_spawn_groups.marshal_squad = {
-				spawn_cooldown = 90,
-				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 240,
-				amount = {
-					2,
-					3
-				},
-				spawn = {
-					{
-						respawn_cooldown = 30,
-						amount_min = 1,
-						amount_max = 1,
-						rank = 1,
-						freq = 1,
-						unit = "marshal_shield",
-						tactics = self._tactics.marshal_shield
+		local level_id = Global.level_data and Global.level_data.level_id ~= nil and Global.level_data.level_id or Global.game_settings and Global.game_settings.level_id ~= nil and Global.game_settings.level_id
+		local lvl_tweak_data = tweak_data.levels[level_id]
+		
+		
+		if self.enemy_spawn_groups.marshal_squad then
+			if lvl_tweak_data.ai_marshal_spawns_fast then
+				self.enemy_spawn_groups.marshal_squad = {
+					spawn_cooldown = 60,
+					max_nr_simultaneous_groups = 2,
+					initial_spawn_delay = 90,
+					amount = {
+						2,
+						3
 					},
-					{
-						respawn_cooldown = 30,
-						amount_min = 1,
-						rank = 2,
-						freq = 1,
-						unit = "marshal_marksman",
-						tactics = self._tactics.marshal_marksman
-					}
-				},
-				spawn_point_chk_ref = table.list_to_set({
-					"tac_shield_wall",
-					"tac_shield_wall_ranged",
-					"tac_shield_wall_charge"
-				})
-			}
-			
-			if difficulty_index > 5 then
-				self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 60
-				self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 150
+					spawn = {
+						{
+							respawn_cooldown = 30,
+							amount_min = 1,
+							amount_max = 1,
+							rank = 1,
+							freq = 1,
+							unit = "marshal_shield",
+							tactics = self._tactics.marshal_shield
+						},
+						{
+							respawn_cooldown = 30,
+							amount_min = 1,
+							rank = 2,
+							freq = 1,
+							unit = "marshal_marksman",
+							tactics = self._tactics.marshal_marksman
+						}
+					},
+					spawn_point_chk_ref = table.list_to_set({
+						"tac_shield_wall",
+						"tac_shield_wall_ranged",
+						"tac_shield_wall_charge"
+					})
+				}
+			else
+				self.enemy_spawn_groups.marshal_squad = {
+					spawn_cooldown = 60,
+					max_nr_simultaneous_groups = 2,
+					initial_spawn_delay = 90,
+					amount = {
+						2,
+						3
+					},
+					spawn = {
+						{
+							respawn_cooldown = 30,
+							amount_min = 1,
+							amount_max = 1,
+							rank = 1,
+							freq = 1,
+							unit = "marshal_shield",
+							tactics = self._tactics.marshal_shield
+						},
+						{
+							respawn_cooldown = 30,
+							amount_min = 1,
+							rank = 2,
+							freq = 1,
+							unit = "marshal_marksman",
+							tactics = self._tactics.marshal_marksman
+						}
+					},
+					spawn_point_chk_ref = table.list_to_set({
+						"tac_shield_wall",
+						"tac_shield_wall_ranged",
+						"tac_shield_wall_charge"
+					})
+				}
+				
+				if difficulty_index > 5 then
+					self.enemy_spawn_groups.marshal_squad.spawn_cooldown = 60
+					self.enemy_spawn_groups.marshal_squad.initial_spawn_delay = 150
+				end
 			end
 		end
 		
@@ -1713,93 +1751,7 @@ function GroupAITweakData:_LIES_setup()
 			0
 		}
 		
-		if level_id == "trai" then
-			self.enemy_spawn_groups.marshal_squad = {
-				spawn_cooldown = 60,
-				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
-				amount = {
-					2,
-					3
-				},
-				spawn = {
-					{
-						respawn_cooldown = 30,
-						amount_min = 1,
-						amount_max = 1,
-						rank = 1,
-						freq = 1,
-						unit = "marshal_shield",
-						tactics = self._tactics.marshal_shield
-					},
-					{
-						respawn_cooldown = 30,
-						amount_min = 1,
-						rank = 2,
-						freq = 1,
-						unit = "marshal_marksman",
-						tactics = self._tactics.marshal_marksman
-					}
-				},
-				spawn_point_chk_ref = table.list_to_set({
-					"tac_shield_wall",
-					"tac_shield_wall_ranged",
-					"tac_shield_wall_charge"
-				})
-			}
-
-			self.enemy_spawn_groups.CS_cops = {
-				spawn_cooldown = 30,
-				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
-				amount = {
-					2,
-					4
-				},
-				spawn = {
-					{
-						respawn_cooldown = 20,
-						amount_min = 2,
-						rank = 1,
-						freq = 1,
-						unit = "CS_cop_all",
-						tactics = self._tactics.hrt
-					}
-				},
-				spawn_point_chk_ref = table.list_to_set({
-					"tac_swat_rifle_flank",
-					"tac_swat_rifle"
-				})
-			}
-			
-			self.besiege.assault.groups.CS_cops = {
-				0,
-				0,
-				0
-			}
-			self.besiege.recon.groups.CS_cops = {
-				0,
-				0,
-				0
-			}
-			
-			if difficulty_index > 5 then
-				if self.enemy_spawn_groups.CS_cops then
-					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
-					self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
-					self.enemy_spawn_groups.CS_cops.spawn = {
-						{
-							respawn_cooldown = 10,
-							amount_min = 2,
-							rank = 1,
-							freq = 1,
-							unit = "CS_fbi_all",
-							tactics = self._tactics.hrt
-						}
-					}
-				end
-			end
-		elseif level_id == "ranc" then
+		if level_id == "ranc" then
 			self.enemy_spawn_groups.Cowboys = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,
@@ -1835,41 +1787,7 @@ function GroupAITweakData:_LIES_setup()
 				0,
 				0
 			}
-		
-			self.enemy_spawn_groups.marshal_squad = {
-				spawn_cooldown = 60,
-				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
-				amount = {
-					2,
-					3
-				},
-				spawn = {
-					{
-						respawn_cooldown = 30,
-						amount_min = 1,
-						amount_max = 1,
-						rank = 1,
-						freq = 1,
-						unit = "marshal_shield",
-						tactics = self._tactics.marshal_shield
-					},
-					{
-						respawn_cooldown = 30,
-						amount_min = 1,
-						rank = 2,
-						freq = 1,
-						unit = "marshal_marksman",
-						tactics = self._tactics.marshal_marksman
-					}
-				},
-				spawn_point_chk_ref = table.list_to_set({
-					"tac_shield_wall",
-					"tac_shield_wall_ranged",
-					"tac_shield_wall_charge"
-				})
-			}
-			
+
 			if difficulty_index > 5 then
 				if self.enemy_spawn_groups.Cowboys then
 					self.enemy_spawn_groups.Cowboys.initial_spawn_delay = 10

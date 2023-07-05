@@ -1,3 +1,91 @@
+function CivilianLogicTravel.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+	data.unit:brain():cancel_all_pathing_searches()
+
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	data.internal_data = my_data
+	local is_cool = data.unit:movement():cool()
+
+	if is_cool then
+		my_data.detection = data.char_tweak.detection.ntl
+	else
+		my_data.detection = data.char_tweak.detection.cbt
+	end
+	
+	data.unit:brain():set_update_enabled_state(true)
+	
+	CivilianLogicEscort._get_objective_path_data(data, my_data)
+	
+	local key_str = tostring(data.key)
+
+	if data.is_tied then
+		managers.groupai:state():on_hostage_state(true, data.key, nil, true)
+
+		my_data.is_hostage = true
+	else
+		data.unit:brain():set_update_enabled_state(false)
+		
+		my_data.upd_task_key = "CivilianLogicTravel_queued_update" .. key_str
+	end
+	
+	if not data.been_outlined and data.char_tweak.outline_on_discover then
+		my_data.outline_detection_task_key = "CivilianLogicIdle._upd_outline_detection" .. key_str
+
+		CopLogicBase.queue_task(my_data, my_data.outline_detection_task_key, CivilianLogicIdle._upd_outline_detection, data, data.t + 2)
+	end
+
+	my_data.detection_task_key = "CivilianLogicTravel_upd_detection" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
+
+	my_data.advance_path_search_id = "CivilianLogicTravel_detailed" .. tostring(data.key)
+	my_data.coarse_path_search_id = "CivilianLogicTravel_coarse" .. tostring(data.key)
+
+	if not data.unit:movement():cool() then
+		my_data.registered_as_fleeing = true
+
+		managers.groupai:state():register_fleeing_civilian(data.key, data.unit)
+	end
+
+	if data.objective and data.objective.stance then
+		data.unit:movement():set_stance(data.objective.stance)
+	end
+
+	CivilianLogicTravel._chk_has_old_action(data, my_data)
+
+	local objective = data.objective
+	local path_data = objective.path_data
+
+	if objective.path_style == "warp" then
+		my_data.warp_pos = objective.pos
+	end
+
+	local attention_settings = nil
+
+	if is_cool then
+		attention_settings = {
+			"civ_all_peaceful"
+		}
+	else
+		attention_settings = {
+			"civ_enemy_cbt",
+			"civ_civ_cbt",
+			"civ_murderer_cbt"
+		}
+	end
+
+	data.unit:brain():set_attention_settings(attention_settings)
+
+	my_data.state_enter_t = TimerManager:game():time()
+	
+	if my_data.upd_task_key then
+		CivilianLogicTravel.queued_update(data, my_data)
+	end
+end
+
 function CivilianLogicTravel.update(data)
 	local my_data = data.internal_data
 	local unit = data.unit
@@ -210,5 +298,19 @@ function CivilianLogicTravel.update(data)
 		end
 	else
 		CopLogicBase._exit(data.unit, "idle")
+		
+		return
 	end
+end
+
+function CivilianLogicTravel.queued_update(data)
+	local my_data = data.internal_data
+	
+	CivilianLogicTravel.update(data)
+	
+	if data.internal_data ~= my_data then
+		return
+	end
+	
+	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 0.2)
 end

@@ -182,7 +182,7 @@ function GroupAIStateBase:report_aggression(unit)
 	end
 
 	u_sighting.assault_t = self._t
-	self:criminal_spotted(u_sighting.unit, true)
+	self:criminal_spotted(u_sighting.unit)
 end
 
 function GroupAIStateBase:register_criminal(unit)

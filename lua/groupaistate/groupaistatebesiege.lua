@@ -1,4 +1,6 @@
 local mvec3_dis_sq = mvector3.distance_sq
+local mvec3_dir = mvector3.direction
+local mvec3_set_z = mvector3.set_z
 local temp_vec1 = Vector3()
 
 function GroupAIStateBesiege:_draw_enemy_activity(t)
@@ -125,12 +127,8 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 		if objective then
 			if objective.pos then
 				obj_pos = objective.pos
-			elseif objective.follow_unit then
-				obj_pos = objective.follow_unit:movement():m_head_pos()
-
-				if objective.follow_unit:base().is_local_player then
-					obj_pos = obj_pos + math.UP * -30
-				end
+			elseif objective.follow_unit and alive(objective.follow_unit) then
+				obj_pos = objective.follow_unit:position()
 			elseif objective.nav_seg then
 				obj_pos = managers.navigation._nav_segments[objective.nav_seg].pos
 			elseif objective.area then
@@ -2124,6 +2122,22 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 							end
 						end
 					end
+				elseif current_objective.tactic == "hrt" then
+					if self._rescueable_hostages then
+						if not next(current_objective.area.criminal.units) then
+							for u_key, hos_area in pairs(self._rescueable_hostages) do
+								if current_objective.area.id == hos_area.id then
+									return
+								end
+							end
+							
+							current_objective.tactic = nil
+						else
+							current_objective.tactic = nil
+						end
+					else
+						current_objective.tactic = nil
+					end
 				else
 					current_objective.tactic = nil
 				end
@@ -3494,7 +3508,7 @@ end
 
 function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, detonate_pos, target_area)
 	if task_data.use_smoke and not self:is_smoke_grenade_active() then
-		local shooter_pos, shooter_u_data = nil
+		local shooter_pos, shooter_u_data, best_dis, to_det_pos = nil
 		local duration = tweak_data.group_ai.smoke_grenade_lifetime
 		
 		if not target_area then
@@ -3514,84 +3528,79 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 						
 						if nav_seg_neighbours[target_area_seg] then
 							local door_list = nav_seg_neighbours[target_area_seg]
-							
+
 							for _, random_door_id in ipairs(door_list) do
+								local test_pos 
+								
 								if type(random_door_id) == "number" then
-									detonate_pos = managers.navigation._room_doors[random_door_id].center
+									test_pos = managers.navigation._room_doors[random_door_id].center
 								else
-									detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
+									test_pos = random_door_id:script_data().element:nav_link_end_pos()
 								end
 								
-								u_data.tracker:move(u_data.m_pos)
+								local dis = mvec3_dis(u_data.m_pos, test_pos)
 								
-								if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
-									shooter_pos = mvector3.copy(u_data.m_pos)
-									shooter_u_data = u_data
+								if not best_dis or dis < best_dis then
+									local target_vec = temp_vec1
+									mvec3_dir(target_vec, u_data.m_pos, test_pos)
+									mvec3_set_z(target_vec, 0)
+									local my_fwd = u_data.unit:movement():m_fwd()
+									local dot = mvector3.dot(target_vec, my_fwd)
 
-									break
-								else
-									local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
-									local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
-									
-									if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+									if dot >= 0.6 then
+										to_det_pos = test_pos
 										shooter_pos = mvector3.copy(u_data.m_pos)
 										shooter_u_data = u_data
-
-										break
+										best_dis = dis
 									end
 								end
 							end
-							
-							if shooter_pos and shooter_u_data then
-								break
-							end
 						end
 					else
-						u_data.tracker:move(u_data.m_pos)
-					
-						if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
-							shooter_pos = mvector3.copy(u_data.m_pos)
-							shooter_u_data = u_data
+						local dis = mvec3_dis(u_data.m_pos, detonate_pos)
+								
+						if not best_dis or dis < best_dis then
+							local target_vec = temp_vec1
+							mvec3_dir(target_vec, u_data.m_pos, detonate_pos)
+							mvec3_set_z(target_vec, 0)
+							local my_fwd = u_data.unit:movement():m_fwd()
+							local dot = mvector3.dot(target_vec, my_fwd)
 
-							break
-						else
-							local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
-							local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
-							
-							if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+							if dot >= 0.6 then
 								shooter_pos = mvector3.copy(u_data.m_pos)
 								shooter_u_data = u_data
-
-								break
+								best_dis = dis
 							end
 						end
 					end
 				end
-
-				if detonate_pos and shooter_u_data then
-					self:detonate_smoke_grenade(detonate_pos, shooter_pos, duration, false)
-
-					task_data.use_smoke_timer = self._t + math.lerp(tweak_data.group_ai.smoke_and_flash_grenade_timeout[1], tweak_data.group_ai.smoke_and_flash_grenade_timeout[2], math.rand(0, 1)^0.5)
-					task_data.use_smoke = false
-					
-					if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
-						managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
-					end
-					
-					if shooter_u_data.char_tweak.chatter.smoke and not shooter_u_data.unit:sound():speaking(self._t) then
-						self:chk_say_enemy_chatter(shooter_u_data.unit, shooter_u_data.m_pos, "smoke")
-					end
-
-					return true
-				end
 			end
+		end
+		
+		detonate_pos = detonate_pos or to_det_pos
+		
+		if detonate_pos and shooter_u_data then
+			self:detonate_smoke_grenade(detonate_pos, shooter_pos, duration, false)
+
+			task_data.use_smoke_timer = self._t + math.lerp(tweak_data.group_ai.smoke_and_flash_grenade_timeout[1], tweak_data.group_ai.smoke_and_flash_grenade_timeout[2], math.rand(0, 1)^0.5)
+			task_data.use_smoke = false
+			
+			if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
+				managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
+			end
+			
+			if shooter_u_data.char_tweak.chatter.smoke and not shooter_u_data.unit:sound():speaking(self._t) then
+				self:chk_say_enemy_chatter(shooter_u_data.unit, shooter_u_data.m_pos, "smoke")
+			end
+
+			return true
 		end
 	end
 end
 
 function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, detonate_pos, target_area)
 	if task_data.use_smoke and not self:is_smoke_grenade_active() then
-		local shooter_pos, shooter_u_data = nil
+		local shooter_pos, shooter_u_data, best_dis, to_det_pos = nil
 		local duration = tweak_data.group_ai.flash_grenade_lifetime
 		
 		if not target_area then
@@ -3611,77 +3620,72 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 						
 						if nav_seg_neighbours[target_area_seg] then
 							local door_list = nav_seg_neighbours[target_area_seg]
-							
+
 							for _, random_door_id in ipairs(door_list) do
+								local test_pos 
+								
 								if type(random_door_id) == "number" then
-									detonate_pos = managers.navigation._room_doors[random_door_id].center
+									test_pos = managers.navigation._room_doors[random_door_id].center
 								else
-									detonate_pos = random_door_id:script_data().element:nav_link_end_pos()
+									test_pos = random_door_id:script_data().element:nav_link_end_pos()
 								end
 								
-								u_data.tracker:move(u_data.m_pos)
+								local dis = mvec3_dis(u_data.m_pos, test_pos)
 								
-								if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
-									shooter_pos = mvector3.copy(u_data.m_pos)
-									shooter_u_data = u_data
+								if not best_dis or dis < best_dis then
+									local target_vec = temp_vec1
+									mvec3_dir(target_vec, u_data.m_pos, test_pos)
+									mvec3_set_z(target_vec, 0)
+									local my_fwd = u_data.unit:movement():m_fwd()
+									local dot = mvector3.dot(target_vec, my_fwd)
 
-									break
-								else
-									local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
-									local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
-									
-									if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+									if dot >= 0.6 then
+										to_det_pos = test_pos
 										shooter_pos = mvector3.copy(u_data.m_pos)
 										shooter_u_data = u_data
-
-										break
+										best_dis = dis
 									end
 								end
 							end
-							
-							if shooter_pos and shooter_u_data then
-								break
-							end
 						end
 					else
-						u_data.tracker:move(u_data.m_pos)
-					
-						if LIES:_path_is_straight_line(u_data.tracker:field_position(), detonate_pos, u_data) then
-							shooter_pos = mvector3.copy(u_data.m_pos)
-							shooter_u_data = u_data
+						local dis = mvec3_dis(u_data.m_pos, detonate_pos)
+								
+						if not best_dis or dis < best_dis then
+							local target_vec = temp_vec1
+							mvec3_dir(target_vec, u_data.m_pos, detonate_pos)
+							mvec3_set_z(target_vec, 0)
+							local my_fwd = u_data.unit:movement():m_fwd()
+							local dot = mvector3.dot(target_vec, my_fwd)
 
-							break
-						else
-							local from_pos = u_data.m_pos:with_z(u_data.m_pos.z + 90)
-							local to_pos = detonate_pos:with_z(detonate_pos.z + 90)
-							
-							if not u_data.unit:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+							if dot >= 0.6 then
 								shooter_pos = mvector3.copy(u_data.m_pos)
 								shooter_u_data = u_data
-
-								break
+								best_dis = dis
 							end
 						end
 					end
 				end
-
-				if detonate_pos and shooter_u_data then
-					self:detonate_smoke_grenade(detonate_pos, shooter_pos, duration, true)
-
-					task_data.use_smoke_timer = self._t + math.lerp(tweak_data.group_ai.smoke_and_flash_grenade_timeout[1], tweak_data.group_ai.smoke_and_flash_grenade_timeout[2], math.random()^0.5)
-					task_data.use_smoke = false
-					
-					if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
-						managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
-					end
-
-					if shooter_u_data.char_tweak.chatter.smoke and not shooter_u_data.unit:sound():speaking(self._t) then --if they can shout smoke, they'll shout flash, just in case
-						self:chk_say_enemy_chatter(shooter_u_data.unit, shooter_u_data.m_pos, "flash_grenade")
-					end
-
-					return true
-				end
 			end
+		end
+		
+		detonate_pos = detonate_pos or to_det_pos
+		
+		if detonate_pos and shooter_u_data then
+			self:detonate_smoke_grenade(detonate_pos, shooter_pos, duration, true)
+
+			task_data.use_smoke_timer = self._t + math.lerp(tweak_data.group_ai.smoke_and_flash_grenade_timeout[1], tweak_data.group_ai.smoke_and_flash_grenade_timeout[2], math.random()^0.5)
+			task_data.use_smoke = false
+			
+			if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
+				managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")
+			end
+
+			if shooter_u_data.char_tweak.chatter.smoke and not shooter_u_data.unit:sound():speaking(self._t) then --if they can shout smoke, they'll shout flash, just in case
+				self:chk_say_enemy_chatter(shooter_u_data.unit, shooter_u_data.m_pos, "flash_grenade")
+			end
+
+			return true
 		end
 	end
 end
@@ -3700,9 +3704,17 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 				local dis = mvec3_dis_sq(detonate_pos, u_data.m_pos)
 
 				if not shooter_dis_sq or dis < shooter_dis_sq then
-					shooter_dis_sq = dis
-					shooter_u_data = u_data
-					shooter_pos = mvector3.copy(u_data.m_pos)
+					local target_vec = temp_vec1
+					mvec3_dir(target_vec, u_data.m_pos, detonate_pos)
+					mvec3_set_z(target_vec, 0)
+					local my_fwd = u_data.unit:movement():m_fwd()
+					local dot = mvector3.dot(target_vec, my_fwd)
+					
+					if dot >= 0.6 then
+						shooter_dis_sq = dis
+						shooter_u_data = u_data
+						shooter_pos = mvector3.copy(u_data.m_pos)
+					end
 				end
 			end
 		end
@@ -3710,7 +3722,7 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 
 	if detonate_pos and shooter_u_data then
 		local dir = Vector3()
-		mvector3.direction(dir, shooter_pos, detonate_pos)
+		mvec3_dir(dir, shooter_pos, detonate_pos)
 		local rot = Rotation()
 		mrotation.set_look_at(rot, dir, math.UP)
 		

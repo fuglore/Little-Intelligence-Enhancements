@@ -83,6 +83,7 @@ function GroupAITweakData:_LIES_setup()
 		self._tactics.marshal_marksman = {
 			"ranged_fire",
 			"murder",
+			"hrt",
 			"sniper"
 		}
 		self._tactics.marshal_shield = {
@@ -1661,8 +1662,7 @@ function GroupAITweakData:_LIES_setup()
 		
 		local level_id = Global.level_data and Global.level_data.level_id ~= nil and Global.level_data.level_id or Global.game_settings and Global.game_settings.level_id ~= nil and Global.game_settings.level_id
 		local lvl_tweak_data = tweak_data.levels[level_id]
-		
-		
+
 		if self.enemy_spawn_groups.marshal_squad then
 			if lvl_tweak_data.ai_marshal_spawns_fast then
 				self.enemy_spawn_groups.marshal_squad = {
@@ -1973,7 +1973,7 @@ function GroupAITweakData:_LIES_setup()
 					0
 				}
 			end
-		elseif level_id == "nmh" then
+		elseif level_id == "nmh" or level_id == "election_day_3" or level_id == "election_day_3_skip1" then
 			self.enemy_spawn_groups.CS_cops = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,

@@ -80,7 +80,7 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 	
 	local is_AI_SO = self._is_AI_SO or string.begins(self._values.so_action, "AI")
 	
-	if not is_AI_SO and self._values.path_stance ~= "hos" and self._values.path_stance ~= "cbt" and (self._values.patrol_path or self._values.position) and self._values.path_style ~= "precise" then
+	if not is_AI_SO and self._values.path_stance ~= "hos" and self._values.path_stance ~= "cbt" and (self._values.patrol_path or self._values.position) and self._values.path_style ~= "precise" and not self._values.forced then
 		self._stealth_patrol = true
 	end
 end)
@@ -109,7 +109,7 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 		end
 	end
 	
-	if self._stealth_patrol then
+	if self._stealth_patrol and managers.groupai:state():whisper_mode() then
 		if unit:movement()._nav_tracker and unit:brain():SO_access() then
 			local to_pos = self._values.position
 			
@@ -197,7 +197,7 @@ function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
 				return pool[i].element
 			end
 		end
-	elseif self._stealth_patrol then --we have followup elements...but none of them are accessible...aaaaa repeat!!!
+	elseif self._stealth_patrol and managers.groupai:state():whisper_mode() then --we have followup elements...but none of them are accessible...aaaaa repeat!!!
 		local weight
 		local followup_element = managers.mission:get_element_by_id(self._id)
 		followup_element, weight = followup_element:get_as_followup(unit, {})

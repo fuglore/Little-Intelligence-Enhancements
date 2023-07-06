@@ -804,11 +804,11 @@ function CopLogicIdle._chk_relocate(data)
 		local advance_pos = follow_unit:brain() and follow_unit:brain():is_advancing()
 		local follow_unit_pos = advance_pos or follow_unit:movement():m_pos()
 
-		if data.objective.relocated_to and mvector3.distance_sq(data.objective.relocated_to, follow_unit_pos) < 100 then
+		if data.objective.relocated_to and mvector3.distance_sq(data.objective.relocated_to, follow_unit_pos) < 3600 then
 			return
 		end
 		
-		if data.is_tied and 200 < mvector3.distance(data.m_pos, follow_unit_pos) then
+		if data.is_tied and 60 < mvector3.distance(data.m_pos, follow_unit_pos) then
 			relocate = true
 		elseif data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then
 			relocate = true

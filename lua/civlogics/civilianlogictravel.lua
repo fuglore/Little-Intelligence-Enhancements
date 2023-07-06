@@ -36,10 +36,12 @@ function CivilianLogicTravel.enter(data, new_logic_name, enter_params)
 
 		CopLogicBase.queue_task(my_data, my_data.outline_detection_task_key, CivilianLogicIdle._upd_outline_detection, data, data.t + 2)
 	end
+	
+	if not data.is_tied then
+		my_data.detection_task_key = "CivilianLogicTravel_upd_detection" .. key_str
 
-	my_data.detection_task_key = "CivilianLogicTravel_upd_detection" .. key_str
-
-	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
+		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
+	end
 
 	my_data.advance_path_search_id = "CivilianLogicTravel_detailed" .. tostring(data.key)
 	my_data.coarse_path_search_id = "CivilianLogicTravel_coarse" .. tostring(data.key)
@@ -96,6 +98,14 @@ function CivilianLogicTravel.update(data)
 		CivilianLogicTravel._upd_stop_old_action(data, my_data)
 		
 		if my_data.has_old_action then
+			return
+		end
+	end
+	
+	if not my_data.detection_task_key and data.tied then
+		CivilianLogicTravel._stop_for_criminal(data, my_data)
+		
+		if data.internal_data ~= my_data then
 			return
 		end
 	end
@@ -231,6 +241,19 @@ function CivilianLogicTravel.update(data)
 			local total_nav_points = #coarse_path
 
 			if cur_index >= total_nav_points then
+				if my_data.is_hostage then
+					if CopLogicIdle._chk_relocate(data) then
+						return
+					end
+					
+					if data.objective.relocated_to and mvector3.distance_sq(data.m_pos, data.objective.relocated_to) > 3600 then
+						my_data.coarse_path = nil
+						my_data.coarse_path_index = nil
+						
+						return
+					end
+				end
+				
 				objective.in_place = true
 
 				if objective.type ~= "escort" and objective.type ~= "act" and objective.type ~= "follow" and not objective.action_duration then
@@ -241,34 +264,6 @@ function CivilianLogicTravel.update(data)
 
 				return
 			else
-				if coarse_path[cur_index + 1][3] and alive(coarse_path[cur_index + 1][3]) and coarse_path[cur_index + 1][3]:delay_time() > data.t then
-					return
-				elseif coarse_path[cur_index + 1][4] then
-					local entry_found
-					local all_nav_segments = managers.navigation._nav_segments
-					local target_seg_id = coarse_path[cur_index + 1][1]
-					local my_seg = all_nav_segments[coarse_path[cur_index][1]]
-					local neighbours = my_seg.neighbours
-
-					for neighbour_nav_seg_id, door_list in pairs(neighbours) do
-						for _, i_door in ipairs(door_list) do
-							if neighbour_nav_seg_id == target_seg_id then					
-								if type(i_door) == "number" then
-									entry_found = true
-								elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then
-									entry_found = true
-									
-									break
-								end
-							end
-						end
-					end
-						
-					if not entry_found then
-						return
-					end
-				end
-			
 				data.brain:rem_pos_rsrv("path")
 
 				local to_pos = nil
@@ -313,4 +308,93 @@ function CivilianLogicTravel.queued_update(data)
 	end
 	
 	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 0.2)
+end
+
+function CivilianLogicTravel._stop_for_criminal(data, my_data)
+	local objective = data.objective
+
+	if not objective or objective.type ~= "follow" or data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then
+		return
+	end
+
+	if not my_data.coarse_path_index or my_data.coarse_path and #my_data.coarse_path - 1 == 1 then
+		return
+	end
+	
+	if not objective.follow_unit or not alive(objective.follow_unit) then
+		return
+	end
+	
+	local follow_unit = objective.follow_unit
+	local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
+	local my_areas = managers.groupai:state():get_areas_from_nav_seg_id(my_nav_seg_id)
+	local follow_unit_nav_seg_id = follow_unit:movement():nav_tracker():nav_segment()
+	local should_try_stop = nil
+	
+	if my_nav_seg_id == follow_unit_nav_seg_id then
+		if mvector3.distance_sq(data.m_pos, follow_unit:movement():nav_tracker():field_position()) < 3600 then
+			objective.in_place = true
+
+			data.logic.on_new_objective(data)
+			
+			return
+		end
+	
+		should_try_stop = true
+	else
+		for _, area in ipairs(my_areas) do
+			if area.nav_segs[follow_unit_nav_seg_id] then
+				should_try_stop = true
+				
+				break
+			end
+		end
+	end
+	
+	if not should_try_stop then
+		local obj_nav_seg = my_data.coarse_path[#my_data.coarse_path][1]
+		local obj_areas = managers.groupai:state():get_areas_from_nav_seg_id(obj_nav_seg)
+		local follow_unit_areas = managers.groupai:state():get_areas_from_nav_seg_id(follow_unit_nav_seg_id)
+		local dontcheckdis, dis
+		
+		for _, area in ipairs(obj_areas) do
+			if area.nav_segs[follow_unit_nav_seg_id] then
+				dontcheckdis = true
+				
+				break
+			end
+		end
+		
+		if not dontcheckdis and #obj_areas > 0 and #follow_unit_areas > 0 then
+			if mvector3.distance_sq(obj_areas[1].pos, follow_unit_areas[1].pos) > 10000 or math.abs(obj_areas[1].pos.z - follow_unit:movement():nav_tracker():field_position().z) > 250 then
+				objective.in_place = nil
+				
+				data.logic.on_new_objective(data)
+		
+				return
+			end
+		end
+	end
+end
+
+function CivilianLogicTravel._determine_exact_destination(data, objective)
+	if objective.pos then
+		return objective.pos
+	elseif objective.type == "follow" then
+		local to_pos
+		
+		if not data.tied then
+			local follow_pos, follow_nav_seg = nil
+			follow_pos = objective.follow_unit:movement():nav_tracker():field_position()
+			follow_nav_seg = objective.follow_unit:movement():nav_tracker():nav_segment()
+			local distance = objective.distance and math.lerp(objective.distance * 0.5, objective.distance * 0.9, math.random()) or 700
+			to_pos = CopLogicTravel._get_pos_on_wall(follow_pos, distance)
+		else
+			to_pos = mvector3.copy(objective.follow_unit:movement():nav_tracker():field_position())
+		end
+			
+		return to_pos
+	else
+		return CopLogicTravel._get_pos_on_wall(managers.navigation._nav_segments[objective.nav_seg].pos, 700)
+	end
 end

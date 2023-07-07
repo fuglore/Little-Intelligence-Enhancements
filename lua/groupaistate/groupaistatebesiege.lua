@@ -857,11 +857,6 @@ function GroupAIStateBesiege:_set_objective_to_phalanx_group_LIES(group)
 	local aggression_level = LIES.settings.enemy_aggro_level
 
 	if group.in_place_t and self._t - group.in_place_t < tweak_data.group_ai.phalanx.move_interval then
-		if not group.objective.repositioned_shields then
-			CopLogicPhalanxMinion:chk_should_reposition()
-			group.objective.repositioned_shields = true
-		end
-		
 		return
 	end
 
@@ -888,43 +883,16 @@ function GroupAIStateBesiege:_set_objective_to_phalanx_group_LIES(group)
 				local next_seg_i = 2		
 				local next_seg = path[next_seg_i][1]
 				local area = self:get_area_from_nav_seg_id(next_seg)
-				self._phalanx_center_pos = mvector3.copy(area.pos)
+				local pos_tracker = managers.navigation:create_nav_tracker(area.pos)
+				local pos = mvector3.copy(pos_tracker:field_position())
+				managers.navigation:destroy_nav_tracker(pos_tracker)
+
+				self._phalanx_center_pos = pos
+				group.objective.nav_seg = next_seg
+				group.objective.moving_out = true
 				
-				local grp_objective = {
-					type = "create_phalanx",
-					area = area,
-					nav_seg = next_seg,
-					pos = self._phalanx_center_pos,
-					haste = "walk"
-				}
-
-				self:_set_objective_to_enemy_group(group, grp_objective)
-				
-				self:_verify_group_objective(group)
-				
-				for u_key, u_data in pairs(group.units) do
-					local brain = u_data.unit:brain()
-					local current_objective = brain:objective()
-
-					if (not current_objective or current_objective.is_default or current_objective.grp_objective and current_objective.grp_objective ~= group.objective and not current_objective.grp_objective.no_retry) and (not group.objective.follow_unit or alive(group.objective.follow_unit)) then
-						local objective = self._create_objective_from_group_objective(group.objective, u_data.unit)
-
-						if objective and brain:is_available_for_assignment(objective) then
-							self:set_enemy_assigned(objective.area or group.objective.area, u_key)
-
-							if objective.element then
-								objective.element:clbk_objective_administered(u_data.unit)
-							end
-
-							u_data.unit:brain():set_objective(objective)
-						end
-					end
-				end
-				
-				CopLogicPhalanxMinion._reposition_phalanx(nil)
+				CopLogicPhalanxVip._reposition_VIP_team()
 			end
-			
-			
 		end
 	end
 end

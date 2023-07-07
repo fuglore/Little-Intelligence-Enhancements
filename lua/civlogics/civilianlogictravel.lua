@@ -307,7 +307,7 @@ function CivilianLogicTravel.queued_update(data)
 		return
 	end
 	
-	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 0.2)
+	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 1)
 end
 
 function CivilianLogicTravel._stop_for_criminal(data, my_data)

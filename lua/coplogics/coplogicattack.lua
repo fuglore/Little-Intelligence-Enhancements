@@ -788,6 +788,12 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		return
 	end
 	
+	if data.tactics and data.tactics.sniper then
+		if data.attention_obj.verified_t and data.t - data.attention_obj.verified_t < 2 and data.attention_obj.aimed_at then
+			return true
+		end
+	end
+	
 	local aggro_level = LIES.settings.enemy_aggro_level
 	
 	if aggro_level > 3 then
@@ -2201,7 +2207,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 		look_for_shields = true
 	end
 	
-	local best_pos, best_dis, has_shield, has_medic, has_tank
+	local best_pos, best_dis, has_shield, has_medic, has_tank, chosen_u_data, best_rank
 	local m_tracker = data.unit:movement():nav_tracker()
 	local m_field_pos = m_tracker:field_position()
 	local dis_sq = mvec3_dis_sq
@@ -2217,7 +2223,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 			if is_medic and is_tank or is_shield or is_medic or not has_medic and is_tank then
 				local buddy_logic_data = u_data.unit:brain()._logic_data
 				
-				if buddy_logic_data and buddy_logic_data.name == data.name then
+				if buddy_logic_data and buddy_logic_data.name ~= "inactive" then
 					local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
 					local follow_unit_pos = advance_pos or u_data.unit:movement():nav_tracker():field_position()
 					
@@ -2231,6 +2237,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 							has_medic = is_medic
 							has_tank = is_tank
 							best_rank = u_data.rank
+							chosen_u_data = u_data
 							look_for_shields = not is_medic
 						end
 					end
@@ -2247,6 +2254,14 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 				return true
 			end
 		else
+			if not has_medic then
+				if alive(chosen_u_data.unit) and chosen_u_data.unit:brain() then
+					if chosen_u_data.unit:brain().request_stillness then
+						 chosen_u_data.unit:brain():request_stillness(7.5)
+					end
+				end
+			end
+		
 			return best_pos
 		end
 	end
@@ -2275,10 +2290,10 @@ function CopLogicAttack._update_cover(data)
 			if friend_pos then
 				my_data.flank_cover = nil
 				
-				if not best_cover or mvec3_dis_sq(best_cover[1][1], friend_pos) > 129600 then
+				if not best_cover or mvec3_dis_sq(best_cover[1][1], friend_pos) > 40000 then
 					local nav_seg_id = managers.navigation:get_nav_seg_from_pos(friend_pos, true)
 					local follow_unit_area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg_id)
-					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_area.nav_segs, 360, friend_pos, threat_pos)
+					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_area.nav_segs, 200, friend_pos, threat_pos)
 
 					if found_cover then
 						satisfied = true

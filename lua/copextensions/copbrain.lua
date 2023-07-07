@@ -454,6 +454,10 @@ function CopBrain:action_complete_clbk(action)
 	self._current_logic.action_complete_clbk(self._logic_data, action)
 end
 
+function CopBrain:request_stillness(t)
+	self._logic_data.next_mov_time = self._timer:time() + t
+end
+
 function CopBrain:is_criminal()
 	if self._unit:in_slot(16) or self._logic_data.team.id == tweak_data.levels:get_default_team_ID("player") or self._logic_data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 		return true

@@ -804,7 +804,8 @@ end
 local precise_objective_types = {
 	act = true,
 	sniper = true,
-	follow = true
+	follow = true,
+	phalanx = true
 }
 
 function CopLogicTravel._chk_coarse_objective_reached(data)

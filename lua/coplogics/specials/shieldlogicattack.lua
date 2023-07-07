@@ -234,7 +234,16 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			else
 				mvector3.multiply(out, mvector3.dot(out, PA) + 900)
 			end
-
+			
+			if data.objective and data.objective.follow_unit and alive(data.objective.follow_unit) then
+				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
+				local follow_unit_pos = advance_pos or data.objective.follow_unit:movement():nav_tracker():field_position()
+				
+				my_data.optimal_pos = mvector3.copy(follow_unit_pos)
+			else
+				my_data.optimal_pos = mvector3.copy(data.m_pos)
+			end
+			
 			my_data.optimal_pos = mvector3.copy(data.m_pos)
 
 			mvector3.add(my_data.optimal_pos, out)

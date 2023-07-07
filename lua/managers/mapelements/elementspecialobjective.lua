@@ -141,6 +141,7 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 	return true
 end
 
+
 function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
 	if not self._values.followup_elements then
 		return
@@ -159,8 +160,7 @@ function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
 	if self._values.SO_access and unit and not managers.navigation:check_access(self._values.SO_access, unit:brain():SO_access(), 0) then
 		return
 	end
-	
-	local found_element = true
+
 	local total_weight = 0
 	local pool = {}
 
@@ -183,25 +183,25 @@ function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
 	end
 
 	if not next(pool) or total_weight <= 0 then
-		found_element = nil
-	end
-	
-	if found_element then
-		local lucky_w = math.random() * total_weight
-		local accumulated_w = 0
-
-		for i, followup_data in ipairs(pool) do
-			accumulated_w = accumulated_w + followup_data.weight
-
-			if lucky_w <= accumulated_w then
-				return pool[i].element
-			end
+		if self._stealth_patrol and managers.groupai:state():whisper_mode() then --we have followup elements...but none of them are accessible...aaaaa repeat!!!
+			local weight
+			local followup_element = managers.mission:get_element_by_id(self._id)
+			followup_element, weight = followup_element:get_as_followup(unit, {})
+			
+			return followup_element
 		end
-	elseif self._stealth_patrol and managers.groupai:state():whisper_mode() then --we have followup elements...but none of them are accessible...aaaaa repeat!!!
-		local weight
-		local followup_element = managers.mission:get_element_by_id(self._id)
-		followup_element, weight = followup_element:get_as_followup(unit, {})
-		
-		return followup_element
+
+		return
+	end
+
+	local lucky_w = math.random() * total_weight
+	local accumulated_w = 0
+
+	for i, followup_data in ipairs(pool) do
+		accumulated_w = accumulated_w + followup_data.weight
+
+		if lucky_w <= accumulated_w then
+			return pool[i].element
+		end
 	end
 end

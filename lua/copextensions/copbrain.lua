@@ -106,7 +106,7 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 		local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 		local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 		
-		if not_america and difficulty == "sm_wish" then
+		if not_america and difficulty == "sm_wish" and not self._unit:base()._loudtweakdata then
 			if non_scaling_units[self._unit:base()._tweak_table] then
 				local new_tweak_name = non_scaling_units[self._unit:base()._tweak_table]
 				self._unit:base():change_and_sync_char_tweak(new_tweak_name)
@@ -136,6 +136,8 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6)
 		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "sg417" and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
+		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "g36" and Global.game_settings.difficulty == "sm_wish" then 
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --g36 users deal 75 damage with "good" preset compared to zeal's 90
 		elseif self._ludicrous_damage_debuff then
 			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
 			

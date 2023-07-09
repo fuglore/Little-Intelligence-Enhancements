@@ -2362,7 +2362,10 @@ function CopLogicAttack._update_cover(data)
 				local min_dis, max_dis = nil
 
 				if want_to_take_cover then
-					min_dis = math.max(data.attention_obj.dis * 0.9, data.attention_obj.dis - 200)
+					min_dis = my_data.weapon_range.close
+				else
+					max_dis = my_data.weapon_range.optimal
+					min_dis = 400
 				end
 
 				if not my_data.processing_cover_path and not my_data.charge_path_search_id and (not best_cover or flank_cover or not CopLogicAttack._verify_cover(best_cover[1], threat_pos, min_dis, max_dis)) then
@@ -2374,23 +2377,20 @@ function CopLogicAttack._update_cover(data)
 					end
 
 					local optimal_dis = my_vec:length()
-					local max_dis = nil
 
 					if want_to_take_cover then
-						if optimal_dis < my_data.weapon_range.far then
-							optimal_dis = optimal_dis + 400
+						if optimal_dis < my_data.weapon_range.optimal then
+							optimal_dis = optimal_dis + 500
 
 							mvector3.set_length(my_vec, optimal_dis)
 						end
-
-						max_dis = math.max(optimal_dis + 800, my_data.weapon_range.far)
-					elseif optimal_dis > my_data.weapon_range.optimal * 1.2 then
-						optimal_dis = my_data.weapon_range.optimal
+					elseif optimal_dis > my_data.weapon_range.close then
+						optimal_dis = my_data.weapon_range.close
 
 						mvector3.set_length(my_vec, optimal_dis)
-
-						max_dis = math.min(my_data.weapon_range.far, my_data.weapon_range.optimal * 1.2)
 					end
+					
+					local max_dis = optimal_dis + 800
 
 					local my_side_pos = threat_pos + my_vec
 
@@ -2415,12 +2415,13 @@ function CopLogicAttack._update_cover(data)
 						end
 					end
 
-					local min_threat_dis, cone_angle = nil
+					local min_threat_dis = 750
+					local cone_angle = nil
 
 					if flank_cover then
 						cone_angle = flank_cover.step
 					else
-						cone_angle = math.lerp(90, 60, math.min(1, optimal_dis / 3000))
+						cone_angle = math.lerp(90, 30, math.min(1, optimal_dis / 3000))
 					end
 
 					local search_nav_seg = nil
@@ -2428,8 +2429,28 @@ function CopLogicAttack._update_cover(data)
 					if data.objective and data.objective.type == "defend_area" then
 						search_nav_seg = data.objective.area and data.objective.area.nav_segs or data.objective.nav_seg
 					end
-
-					local found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)
+					
+					local found_cover
+					
+					if search_nav_seg and LIES.settings.lua_cover < 2 then
+						if type(search_nav_seg) == "table" then
+							search_nav_seg = managers.navigation._convert_nav_seg_map_to_vec(search_nav_seg)
+						end
+					
+						local search_params = {
+							near_pos = my_side_pos,
+							threat_pos = threat_pos,
+							cone_angle = cone_angle,
+							cone_base = furthest_side_pos,
+							in_nav_seg = search_nav_seg,
+							min_threat_distance = min_threat_dis,
+							rsrv_filter = data.pos_rsrv_id
+						}
+						
+						found_cover = managers.navigation._quad_field:find_cover(search_params)
+					else
+						found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)
+					end
 
 					if found_cover and (not best_cover or CopLogicAttack._verify_cover(found_cover, threat_pos, min_dis, max_dis)) then
 						satisfied = true

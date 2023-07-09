@@ -242,6 +242,11 @@ function GroupAIStateBase:on_criminal_nav_seg_change(unit, nav_seg_id)
 	return
 end
 
+function GroupAIStateBase:_set_rescue_state(state) --this causes a crash in vanilla randomly
+	return
+end
+
+
 function GroupAIStateBase:chk_say_teamAI_combat_chatter(unit)
 	if not self:is_detection_persistent() then
 		return
@@ -371,6 +376,18 @@ function GroupAIStateBase:register_security_camera(unit, state)
 	
 	self._security_cameras[unit:key()] = state and unit or nil
 end
+
+Hooks:PostHook(GroupAIStateBase, "_clbk_switch_enemies_to_not_cool", "lies_switch_tweaks_for_guards", function(self)
+	if not self._set_altered_tweakdatas then
+		for u_key, unit_data in pairs(self._police) do
+			if unit_data.unit:base()._loudtweakdata then
+				unit_data.unit:base():change_and_sync_char_tweak(unit_data.unit:base()._loudtweakdata)
+			end
+		end
+		
+		self._set_altered_tweakdatas = true
+	end
+end)
 
 Hooks:PostHook(GroupAIStateBase, "register_rescueable_hostage", "lies_hrt_reg", function(self, unit, rescue_area)
 	local u_key = unit:key()

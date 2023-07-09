@@ -25,7 +25,7 @@ function CivilianLogicTravel.enter(data, new_logic_name, enter_params)
 		managers.groupai:state():on_hostage_state(true, data.key, nil, true)
 
 		my_data.is_hostage = true
-	else
+	elseif not data.objective or not data.objective.pos then
 		data.unit:brain():set_update_enabled_state(false)
 		
 		my_data.upd_task_key = "CivilianLogicTravel_queued_update" .. key_str
@@ -283,6 +283,8 @@ function CivilianLogicTravel.update(data)
 
 			if objective.follow_unit then
 				nav_seg = objective.follow_unit:movement():nav_tracker():nav_segment()
+			elseif objective.pos then
+				nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
 			else
 				nav_seg = objective.nav_seg
 			end

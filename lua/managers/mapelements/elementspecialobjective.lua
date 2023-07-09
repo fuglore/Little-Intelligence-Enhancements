@@ -141,7 +141,6 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 	return true
 end
 
-
 function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
 	if not self._values.followup_elements then
 		return

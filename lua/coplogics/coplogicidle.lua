@@ -4,6 +4,9 @@ local AI_REACT_AIM = AIAttentionObject.REACT_AIM
 local AI_REACT_SHOOT = AIAttentionObject.REACT_SHOOT
 local AI_REACT_COMBAT = AIAttentionObject.REACT_COMBAT
 local AI_REACT_SPECIAL_ATTACK = AIAttentionObject.REACT_SPECIAL_ATTACK
+local temp_vec3 = Vector3()
+local mvec3_dir = mvector3.direction
+local mvec3_set_z = mvector3.set_z
 
 function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	CopLogicBase.enter(data, new_logic_name, enter_params)
@@ -59,7 +62,7 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 
 	local objective = data.objective
 	
-	if is_cool then
+	if not is_cool then
 		if objective then
 			if (objective.nav_seg or objective.type == "follow") and not objective.in_place then
 				debug_pause_unit(data.unit, "[CopLogicIdle.enter] wrong logic", data.unit)
@@ -602,20 +605,35 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					end
 					
 					if free_status and assault_reaction then
-						target_priority_slot = 4
+						target_priority_slot = math.min(target_priority_slot, 3)
 					elseif has_damaged then
 						target_priority_slot = target_priority_slot - 2
 					elseif has_alerted then
 						target_priority_slot = target_priority_slot - 1
 					end
-
+					
+					
+					local target_vec = temp_vec3
+					mvec3_dir(target_vec, data.m_pos, attention_data.m_pos)
+					mvec3_set_z(target_vec, 0)
+					local my_fwd = data.unit:movement():m_fwd()
+					local dot = mvector3.dot(target_vec, my_fwd)
+					
+					if dot < 0.6 then
+						target_priority_slot = target_priority_slot + 1
+					end
+					
 					if old_enemy then
 						target_priority_slot = target_priority_slot - 3
+					end
+					
+					if data.logic._keep_player_focus_t and not attention_data.is_human_player then
+						target_priority_slot = target_priority_slot + 3
 					end
 
 					target_priority_slot = math.clamp(target_priority_slot, 1, 10)
 				elseif free_status then
-					target_priority_slot = 10
+					target_priority_slot = 11
 					
 					if old_enemy then
 						target_priority_slot = target_priority_slot - 3
@@ -627,7 +645,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				end
 
 				if reaction < AIAttentionObject.REACT_COMBAT then
-					target_priority_slot = 10 + target_priority_slot + math.max(0, AIAttentionObject.REACT_COMBAT - reaction)
+					target_priority_slot = 11 + target_priority_slot + math.max(0, AIAttentionObject.REACT_COMBAT - reaction)
 				end
 
 				if target_priority_slot ~= 0 then

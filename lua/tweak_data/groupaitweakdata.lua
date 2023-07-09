@@ -3558,9 +3558,9 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 	end
 	
 	self.besiege.assault.force_pool = {
-		32,
-		48,
-		64
+		72,
+		84,
+		108
 	}
 	self.besiege.assault.delay = { 
 		60,

@@ -2495,8 +2495,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			if charge then --if a shield group has charge, then it'll still charge
 				push = true
 			elseif engaging and phase_is_anticipation then
-				pull_back = true
-				objective_area = engaging
+				if current_objective.area ~= engaging then
+					pull_back = true
+					objective_area = engaging
+				end
 			elseif not has_criminals_close and not engaging or not group.in_place_t then
 				approach = true
 			elseif not phase_is_anticipation and not current_objective.open_fire then
@@ -2507,6 +2509,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				elseif engaging and current_objective.area ~= engaging then
 					open_fire = true
 					objective_area = engaging
+				elseif engaging and current_objective.target_area and target_area then
+					current_objective.target_area = target_area
 				end
 			elseif phase_is_anticipation and current_objective.open_fire then
 				pull_back = true
@@ -2628,8 +2632,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 								for nav_seg_id, _ in pairs(navsegs) do
 									local seg_area = self:get_area_from_nav_seg_id(nav_seg_id)
 									
-									if not occupied_areas[seg_area.id] and v3_dis_sq(seg_area.pos, other_group.objective.target_area.pos) <= 2250000 then
-										if not current_assault_target_area or v3_dis_sq(current_assault_target_area.pos, seg_area.pos) <= 36000000 then
+									if not occupied_areas[seg_area.id] and v3_dis_sq(seg_area.pos, other_group.objective.target_area.pos) <= 16000000 then
+										if not current_assault_target_area or v3_dis_sq(current_assault_target_area.pos, seg_area.pos) <= 16000000 then
 											blockade_help_areas[seg_area.id] = seg_area
 										end
 									end
@@ -2649,7 +2653,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						
 						for other_area_id, other_area in pairs(other_group.objective.area.neighbours) do
 							if not occupied_areas[other_area_id] and not blockade_help_areas[other_area_id] then
-								if not current_assault_target_area or v3_dis_sq(current_assault_target_area.pos, other_area.pos) <= 36000000 then
+								if not current_assault_target_area or v3_dis_sq(current_assault_target_area.pos, other_area.pos) <= 16000000 then
 									blockade_help_areas[other_area_id] = other_area
 								end
 							end
@@ -2670,7 +2674,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				end
 			end
 			
-			if current_objective.blockading then
+			if current_objective.blockading and v3_dis_sq(current_assault_target_area.pos, current_objective.area.pos) <= 16000000 then
 				blockade_help_areas[current_objective.area.id] = current_objective.area
 			end
 			

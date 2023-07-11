@@ -372,3 +372,27 @@ function CivilianLogicFlee.update(data)
 		end
 	end
 end
+
+function CivilianLogicFlee._unregister_rescue_SO(data, my_data)
+	if my_data.rescuer then
+		if alive(my_data.rescuer) then
+			local rescuer = my_data.rescuer
+
+			managers.groupai:state():on_objective_failed(rescuer, rescuer:brain():objective())
+		end
+		
+		my_data.rescuer = nil
+	elseif my_data.rescue_SO_id then
+		managers.groupai:state():remove_special_objective(my_data.rescue_SO_id)
+
+		my_data.rescue_SO_id = nil
+
+		managers.groupai:state():unregister_rescueable_hostage(data.key)
+	elseif my_data.delayed_rescue_SO_id then
+		CopLogicBase.chk_cancel_delayed_clbk(my_data, my_data.delayed_rescue_SO_id)
+
+		my_data.delayed_rescue_SO_id = nil
+	end
+
+	my_data.rescue_active = nil
+end

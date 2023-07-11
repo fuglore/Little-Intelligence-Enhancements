@@ -388,7 +388,7 @@ function CopLogicAttack._upd_combat_movement(data)
 	elseif want_to_take_cover or data.is_converted then
 		move_to_cover = true
 	elseif not enemy_visible then --no longer requires a group objective to work, takes into account flank cover and just generally not seeing enemies in a while
-		if not (data.tactics and data.tactics.sniper) and (not enemy_visible_softer or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
+		if not (data.tactics and data.tactics.sniper) and (my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
 			if my_data.charge_path then
 				local path = my_data.charge_path
 				my_data.charge_path = nil
@@ -611,10 +611,10 @@ function CopLogicAttack._pathing_complete_clbk(data)
 
 	if action_taken then
 		-- Nothing
-	elseif want_to_take_cover then
+	elseif want_to_take_cover or data.is_converted then
 		move_to_cover = true
 	elseif not enemy_visible then --no longer requires a group objective to work, takes into account flank cover and just generally not seeing enemies in a while
-		if not (data.tactics and data.tactics.sniper) and (not enemy_visible_softer or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and my_data.charge_path then
+		if not (data.tactics and data.tactics.sniper) and (my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and my_data.charge_path then
 			local path = my_data.charge_path
 			my_data.charge_path = nil
 			action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, data.tactics and data.tactics.charge and "run" or "walk")
@@ -811,8 +811,8 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	end
 	
 	if aggro_level < 3 and data.attention_obj.verified then
-		if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
-			if not (my_data.walking_to_cover_shoot_pos or my_data.at_cover_shoot_pos) and not my_data.in_cover and my_data.firing then
+		if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close * 0.5 < data.attention_obj.verified_dis then
+			if my_data.firing then
 				return true
 			end
 		end

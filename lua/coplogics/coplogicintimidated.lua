@@ -40,11 +40,7 @@ function CopLogicIntimidated.on_rescue_SO_completed(ignore_this, data, good_pig)
 		data.unit:brain():action_request(new_action)
 	end
 
-	if data.objective and (data.objective.nav_seg or data.objective.type == "follow") then
-		data.logic.on_new_objective(data)
-	else
-		CopLogicBase._exit(data.unit, "idle")
-	end
+	CopLogicBase._exit(data.unit, "idle")
 end
 
 function CopLogicIntimidated._start_action_hands_up(data)

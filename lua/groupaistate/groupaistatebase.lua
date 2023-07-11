@@ -156,9 +156,11 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 			end
 		end
 	end
-
-	local fail_clbk = objective.fail_clbk
-	objective.fail_clbk = nil
+	
+	if objective then
+		local fail_clbk = objective.fail_clbk
+		objective.fail_clbk = nil
+	end
 
 	if new_objective then
 		unit:brain():set_objective(new_objective)

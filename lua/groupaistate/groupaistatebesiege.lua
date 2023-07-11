@@ -384,12 +384,8 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._group_type_order.recon.index = math.random(table.size(self._group_type_order.recon.group_types))
 		
 		self._choose_best_groups = LIES._choose_best_groups
-		self._choose_best_group = LIES._choose_best_group
-		self._find_spawn_group_near_area = LIES._find_spawn_group_near_area
 		self._upd_assault_task = LIES._upd_assault_task
 		self._upd_recon_tasks = LIES._upd_recon_tasks
-	elseif LIES.settings.spawngroupdelays then
-		self._find_spawn_group_near_area = self._find_spawn_group_near_area_LIESspawngroupdelays
 	end
 	
 	if LIES.settings.fixed_specialspawncaps then
@@ -2385,10 +2381,11 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			
 			if not needs_reassignment then
 				if not current_objective.blockading then
+					local infinite_patience = tactics_map and tactics_map.sniper or tactics_map and tactics_map.blockade
 					local dis = tactics_map and tactics_map.ranged_fire and 2000 or tactics_map and tactics_map.sniper and 4000 or 1250
 					local impatient
 
-					if tactics_map and tactics_map.sniper or phase_is_anticipation then
+					if infinite_patience or phase_is_anticipation then
 						impatient = false
 					elseif group.in_place_t then
 						if aggression_level > 2 then
@@ -3910,9 +3907,9 @@ local function spawn_group_id(spawn_group)
 	return spawn_group.mission_element:id()
 end
 
-function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
+function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_groups, target_pos, max_dis, verify_clbk, task_data)
 	local all_areas = self._area_data
-	local mvec3_dis = mvec3_dis_sq
+	local mvec3_dis = mvector3.distance_sq
 	max_dis = max_dis and max_dis * max_dis
 	local t = self._t
 	local valid_spawn_groups = {}
@@ -3932,7 +3929,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(ta
 
 		if spawn_groups then
 			for _, spawn_group in ipairs(spawn_groups) do
-				if spawn_group.delay_t <= t and (not verify_clbk or verify_clbk(spawn_group)) then
+				if (task_data == "phalanx" or spawn_group.delay_t <= t) and (not verify_clbk or verify_clbk(spawn_group)) then
 					local dis_id = make_dis_id(spawn_group.nav_seg, target_area.pos_nav_seg)
 
 					if not self._graph_distance_cache[dis_id] then
@@ -3989,7 +3986,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(ta
 	end
 
 	local time = TimerManager:game():time()
-	local timer_can_spawn = false
+	local timer_can_spawn = task_data == "phalanx" or false
 
 	for id in pairs(valid_spawn_groups) do
 		if not self._spawn_group_timers[id] or self._spawn_group_timers[id] <= time then
@@ -3999,10 +3996,18 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(ta
 		end
 	end
 
-	for id in pairs(valid_spawn_groups) do
-		if self._spawn_group_timers[id] and time < self._spawn_group_timers[id] then
-			valid_spawn_groups[id] = nil
-			valid_spawn_group_distances[id] = nil
+	if LIES.settings.spawngroupdelays < 2 then
+		if not timer_can_spawn then
+			self._spawn_group_timers = {}
+		end
+	end
+	
+	if task_data ~= "phalanx" then
+		for id in pairs(valid_spawn_groups) do
+			if self._spawn_group_timers[id] and time < self._spawn_group_timers[id] then
+				valid_spawn_groups[id] = nil
+				valid_spawn_group_distances[id] = nil
+			end
 		end
 	end
 
@@ -4013,14 +4018,14 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(ta
 	local total_weight = 0
 	local candidate_groups = {}
 	self._debug_weights = {}
-	local dis_limit = max_dis and max_dis or 5000 * 5000
+	local dis_limit = max_dis and max_dis or 25000000
 
 	for i, dis in pairs(valid_spawn_group_distances) do
-		local my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit)) * 5
+		local my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit))
 		local my_spawn_group = valid_spawn_groups[i]
 		local my_group_types = my_spawn_group.mission_element:spawn_groups()
 		my_spawn_group.distance = dis
-		total_weight = total_weight + self:_choose_best_groups(candidate_groups, my_spawn_group, my_group_types, allowed_groups, my_wgt)
+		total_weight = total_weight + self:_choose_best_groups(candidate_groups, my_spawn_group, my_group_types, allowed_groups, my_wgt, task_data)
 	end
 
 	if total_weight == 0 then
@@ -4032,4 +4037,88 @@ function GroupAIStateBesiege:_find_spawn_group_near_area_LIESspawngroupdelays(ta
 	end
 
 	return self:_choose_best_group(candidate_groups, total_weight)
+end
+
+function GroupAIStateBesiege:_spawn_phalanx()
+	if not self._phalanx_center_pos then
+		Application:error("self._phalanx_center_pos NOT SET!!!")
+
+		return
+	end
+
+	local phalanx_center_pos = self._phalanx_center_pos
+	local phalanx_center_nav_seg = managers.navigation:get_nav_seg_from_pos(phalanx_center_pos)
+	local phalanx_area = self:get_area_from_nav_seg_id(phalanx_center_nav_seg)
+	local phalanx_group = {
+		Phalanx = {
+			1,
+			1,
+			1
+		}
+	}
+
+	if not phalanx_area then
+		Application:error("Could not get area from phalanx_center_nav_seg!")
+
+		return
+	end
+
+	local spawn_group, spawn_group_type = self:_find_spawn_group_near_area(phalanx_area, phalanx_group, nil, nil, nil, "phalanx")
+
+	if not spawn_group then
+		Application:error("Could not get spawn_group from phalanx_area!")
+
+		return
+	end
+
+	if spawn_group.spawn_pts[1] and spawn_group.spawn_pts[1].pos then
+		local spawn_pos = spawn_group.spawn_pts[1].pos
+		local spawn_nav_seg = managers.navigation:get_nav_seg_from_pos(spawn_pos)
+		local spawn_area = self:get_area_from_nav_seg_id(spawn_nav_seg)
+
+		if spawn_group then
+			local grp_objective = {
+				type = "defend_area",
+				area = spawn_area,
+				nav_seg = spawn_nav_seg
+			}
+
+			print("Phalanx spawn started!")
+
+			self._phalanx_spawn_group = self:_spawn_in_group(spawn_group, spawn_group_type, grp_objective, nil)
+
+			self:set_assault_endless(true)
+			managers.game_play_central:announcer_say("cpa_a02_01")
+			managers.network:session():send_to_peers_synched("group_ai_event", self:get_sync_event_id("phalanx_spawned"), 0)
+		end
+	end
+end
+
+function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
+	local rand_wgt = total_weight * math.random()
+	local best_grp, best_grp_type = nil
+
+	for i, candidate in ipairs(best_groups) do
+		rand_wgt = rand_wgt - candidate.wght
+
+		if rand_wgt <= 0 then
+			if LIES.settings.spawngroupdelays > 1 then
+				local spawn_timers = math.random(15, 20)
+				local div = LIES.settings.spawngroupdelays - 1
+				
+				spawn_timers = spawn_timers / div
+				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + spawn_timers
+			else
+				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + math.random(15, 20)
+			end
+			
+			best_grp = candidate.group
+			best_grp_type = candidate.group_type
+			best_grp.delay_t = self._t + best_grp.interval
+
+			break
+		end
+	end
+
+	return best_grp, best_grp_type
 end

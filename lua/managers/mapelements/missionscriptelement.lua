@@ -5,6 +5,14 @@ local blockade_ids = {
 		[100201] = true,
 		[100289] = false
 	},
+	street_new = { --whurr's heat street edit
+        [100570] = true,
+        [101293] = false,
+        [102736] = true,
+        [102852] = false,
+        [103198] = true,
+        [100271] = false
+    },
 	glace = {
 		[103544] = false,
 		[100533] = true

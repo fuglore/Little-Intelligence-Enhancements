@@ -143,11 +143,17 @@
 			"value" : "interruptoncontact"
 		},
 		{
-			"type" : "toggle",
+			"type" : "multiple_choice",
 			"id" : "lies_spawngroupdelays",
 			"title" : "menu_lies_spawngroupdelays_title",
 			"description" : "menu_lies_spawngroupdelays_desc",
 			"callback" : "callback_lies_spawngroupdelays",
+			"items" : [
+				"menu_lies_spawngroupdelays_vanilla",
+				"menu_lies_spawngroupdelays_long",
+				"menu_lies_spawngroupdelays_medium",
+				"menu_lies_spawngroupdelays_short"
+            ],
 			"value" : "spawngroupdelays"
 		}
 	]

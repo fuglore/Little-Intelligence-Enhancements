@@ -444,7 +444,7 @@ function TeamAILogicIdle._find_intimidateable_civilians(criminal, use_default_sh
 			local unit = u_data.unit
 			
 			if not tweak_data.character[unit:base()._tweak_table].is_escort and tweak_data.character[unit:base()._tweak_table].intimidateable and not unit:base().unintimidateable and not unit:anim_data().unintimidateable and not unit:brain():is_tied() and not unit:unit_data().disable_shout then
-				local unit_is_not_drop = unit:anim_data().run or unit:anim_data().stand or unit:anim_data().halt or unit:anim_data().panic or unit:anim_data().react
+				local unit_is_not_drop = unit:anim_data().run or unit:anim_data().stand or unit:anim_data().halt or unit:anim_data().panic or unit:anim_data().react or unit:anim_data().react_enter
 				
 				local does_not_need_intimidation = not unit_is_not_drop and unit:brain()._logic_data and unit:brain()._logic_data.internal_data and unit:brain()._logic_data.internal_data.submission_meter and unit:brain()._logic_data.internal_data.submission_meter > 20
 

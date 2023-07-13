@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.301",
+		version = "V7.303",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -566,7 +566,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		local total_weight = 0
 		local group_type_order, group_order_index, wanted_group
 		
-		if task_data then
+		if task_data and self._group_type_order[task_data] then
 			group_type_order = self._group_type_order[task_data].group_types			
 			group_order_index = self._group_type_order[task_data].index
 			

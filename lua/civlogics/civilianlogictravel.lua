@@ -102,7 +102,7 @@ function CivilianLogicTravel.update(data)
 		end
 	end
 	
-	if not my_data.detection_task_key and data.tied then
+	if my_data.is_hostage then
 		CivilianLogicTravel._stop_for_criminal(data, my_data)
 		
 		if data.internal_data ~= my_data then
@@ -243,13 +243,6 @@ function CivilianLogicTravel.update(data)
 			if cur_index >= total_nav_points then
 				if my_data.is_hostage then
 					if CopLogicIdle._chk_relocate(data) then
-						return
-					end
-					
-					if data.objective.relocated_to and mvector3.distance_sq(data.m_pos, data.objective.relocated_to) > 3600 then
-						my_data.coarse_path = nil
-						my_data.coarse_path_index = nil
-						
 						return
 					end
 				end

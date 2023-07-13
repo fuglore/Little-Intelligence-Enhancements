@@ -201,6 +201,10 @@
 			"script_path": "lua/civlogics/civilianlogicflee.lua"
 		},
 		{
+			"hook_id": "lib/units/civilians/logics/civilianlogicidle",
+			"script_path": "lua/civlogics/civilianlogicidle.lua"
+		},
+		{
 			"hook_id": "lib/units/civilians/logics/civilianlogictravel",
 			"script_path": "lua/civlogics/civilianlogictravel.lua"
 		},

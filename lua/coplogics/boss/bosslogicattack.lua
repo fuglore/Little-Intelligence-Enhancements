@@ -98,6 +98,10 @@ function BossLogicAttack.enter(data, new_logic_name, enter_params)
 
 	CopLogicIdle._chk_has_old_action(data, new_internal_data)
 	
+	if new_internal_data.advancing then
+		new_internal_data.old_action_advancing = new_internal_data.advancing
+	end
+	
 	CopLogicTravel._chk_say_clear(data)
 
 	if objective and (objective.action_duration or objective.action_timeout_t and data.t < objective.action_timeout_t) then

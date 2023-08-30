@@ -800,7 +800,7 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		return
 	end
 
-	if data.is_suppressed or my_data.attitude ~= "engage" or data.unit:anim_data().reload then
+	if my_data.attitude ~= "engage" or data.unit:anim_data().reload then
 		return true
 	end
 
@@ -1996,7 +1996,7 @@ function CopLogicAttack._chk_request_action_walk_to_cover_offset_pos(data, my_da
 	end
 
 	haste = haste or "walk"
-	pose = pose or data.is_suppressed and "crouch" or "stand"
+	pose = pose or "stand"
 
 	if pose == "crouch" and data.char_tweak.crouch_move ~= true then
 		pose = "stand"
@@ -2063,7 +2063,7 @@ function CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
 	end
 
 	haste = haste or "walk"
-	pose = pose or data.is_suppressed and "crouch" or "stand"
+	pose = pose or "stand"
 
 	if pose == "crouch" and data.char_tweak.crouch_move ~= true then
 		pose = "stand"

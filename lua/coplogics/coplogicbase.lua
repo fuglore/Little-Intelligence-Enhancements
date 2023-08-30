@@ -287,7 +287,7 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 					local t_since_last_pick = math.clamp(data.t - new_att_obj.acquire_t, 0, 2)
 					local t_since_verified = new_att_obj.verified_t and math.clamp(data.t - new_att_obj.verified_t, 0, 2) or 0
 					
-					new_att_obj.react_t = data.t - math.max(t_since_last_pick, t_since_verified)
+					new_att_obj.react_t = data.t + math.max(t_since_last_pick, t_since_verified)
 				end
 			elseif not new_att_obj.react_t then
 				new_att_obj.react_t = data.t

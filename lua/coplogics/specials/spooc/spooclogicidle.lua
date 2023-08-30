@@ -20,29 +20,41 @@ function SpoocLogicIdle._exit_hiding(data)
 	})
 end
 
+function SpoocLogicIdle.damage_clbk(data, damage_info)
+	local res = SpoocLogicIdle.super.damage_clbk(data, damage_info)
+
+	if data.unit:anim_data().hide_loop or data.unit:anim_data().hide then
+		SpoocLogicIdle._exit_hiding(data)
+	end
+
+	return res
+end
+
 function SpoocLogicIdle._chk_exit_hiding(data)
-	for u_key, attention_data in pairs(data.detected_attention_objects) do
-		if AIAttentionObject.REACT_SHOOT <= attention_data.reaction and data.unit:anim_data().hide_loop then
-			if attention_data.dis < 1500 and (attention_data.verified or attention_data.nearly_visible) then
-				SpoocLogicIdle._exit_hiding(data)
-			elseif attention_data.dis < 700 then
-				if attention_data.nav_tracker then
-					local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
-					local enemy_areas = managers.groupai:state():get_areas_from_nav_seg_id(attention_data.nav_tracker:nav_segment())
+	if data.unit:anim_data().hide_loop or data.unit:anim_data().hide then
+		for u_key, attention_data in pairs(data.detected_attention_objects) do
+			if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
+				if attention_data.dis < 1500 and (attention_data.verified or attention_data.nearly_visible) then
+					SpoocLogicIdle._exit_hiding(data)
+				elseif attention_data.dis < 700 then
+					if attention_data.nav_tracker then
+						local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
+						local enemy_areas = managers.groupai:state():get_areas_from_nav_seg_id(attention_data.nav_tracker:nav_segment())
 
-					for _, area in ipairs(enemy_areas) do
-						if area.nav_segs[my_nav_seg_id] then
-							SpoocLogicIdle._exit_hiding(data)
+						for _, area in ipairs(enemy_areas) do
+							if area.nav_segs[my_nav_seg_id] then
+								SpoocLogicIdle._exit_hiding(data)
 
-							break
+								break
+							end
 						end
 					end
-				end
-				
-				if math.abs(attention_data.m_pos.z - data.m_pos.z) < 250 and attention_data.dis < 400 then
-					SpoocLogicIdle._exit_hiding(data)
 					
-					break
+					if math.abs(attention_data.m_pos.z - data.m_pos.z) < 250 then
+						SpoocLogicIdle._exit_hiding(data)
+						
+						break
+					end
 				end
 			end
 		end

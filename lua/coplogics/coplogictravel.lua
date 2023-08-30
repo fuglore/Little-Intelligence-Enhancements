@@ -614,7 +614,7 @@ function CopLogicTravel._chk_begin_advance(data, my_data)
 
 	local no_strafe, end_pose = nil
 
-	if (my_data.moving_to_cover or data.is_suppressed) and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
+	if my_data.moving_to_cover and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.crouch) then
 		end_pose = "crouch"
 	end
 
@@ -1125,7 +1125,9 @@ function CopLogicTravel.get_pathing_prio(data)
 	local prio = 0
 	local objective = data.objective
 	
-	if data.is_converted or data.unit:in_slot(16) then
+	if objective and objective.forced then
+		prio = 12
+	elseif data.is_converted or data.unit:in_slot(16) then
 		if objective and objective.type == "follow" then
 			prio = 11
 		else
@@ -1139,8 +1141,7 @@ function CopLogicTravel.get_pathing_prio(data)
 		if is_civilian then
 			if objective then
 				prio = 1
-				
-				
+
 				if objective.type == "escort" then
 					prio = 10
 				elseif objective.follow_unit and alive(objective.follow_unit) then
@@ -1207,11 +1208,13 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				local high_ray = CopLogicTravel._chk_cover_height(data, my_data.best_cover[1], data.visibility_slotmask)
 				my_data.best_cover[4] = high_ray
 				my_data.in_cover = true
-
-				if CopLogicTravel._chk_close_to_criminal(data, my_data) or LIES.settings.enemy_aggro_level < 3 and data.is_suppressed then
-					local cover_wait_time = my_data.coarse_path_index == #my_data.coarse_path - 1 and 0.3 or 0.6 + 0.4 * math.random()
-					
-					my_data.cover_leave_t = data.t + cover_wait_time
+				
+				if not data.objective.forced then
+					if CopLogicTravel._chk_close_to_criminal(data, my_data) or LIES.settings.enemy_aggro_level < 3 and data.is_suppressed then
+						local cover_wait_time = my_data.coarse_path_index == #my_data.coarse_path - 1 and 0.3 or 0.6 + 0.4 * math.random()
+						
+						my_data.cover_leave_t = data.t + cover_wait_time
+					end
 				end
 			else
 				managers.navigation:release_cover(my_data.moving_to_cover[1])
@@ -1433,7 +1436,7 @@ function CopLogicTravel._find_cover(data, search_nav_seg, near_pos)
 	
 	if data.internal_data.weapon_range then
 		if data.objective.attitude == "engage" then
-			optimal_threat_dis = data.internal_data.weapon_range.optimal
+			optimal_threat_dis = data.internal_data.weapon_range.close
 		else
 			optimal_threat_dis = data.internal_data.weapon_range.far
 		end

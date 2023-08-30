@@ -117,6 +117,7 @@ function GroupAIStateBase:on_unit_pathing_failed(unit)
 end
 
 function GroupAIStateBase:on_objective_failed(unit, objective)
+	local fail_clbk
 	if not unit:brain() then
 		debug_pause_unit(unit, "[GroupAIStateBase:on_objective_failed] error in extension order", unit)
 
@@ -158,7 +159,7 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 	end
 	
 	if objective then
-		local fail_clbk = objective.fail_clbk
+		fail_clbk = objective.fail_clbk
 		objective.fail_clbk = nil
 	end
 

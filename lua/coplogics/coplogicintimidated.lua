@@ -124,5 +124,20 @@ function CopLogicIntimidated.on_intimidated(data, amount, aggressor_unit)
 		if data.unit:anim_data().hands_tied then
 			CopLogicIntimidated._do_tied(data, aggressor_unit)
 		end
+	elseif not data.unit:anim_data().hands_tied then
+		local action_data = {
+			clamp_to_graph = true,
+			type = "act",
+			body_part = 1,
+			variant = "tied_all_in_one",
+			blocks = {
+				heavy_hurt = -1,
+				hurt = -1,
+				action = -1,
+				light_hurt = -1,
+				walk = -1
+			}
+		}
+		data.unit:brain():action_request(action_data)
 	end
 end

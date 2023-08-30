@@ -295,7 +295,7 @@ function CopLogicIdle._upd_enemy_detection(data)
 	local delay = 0
 	
 	if not managers.groupai:state():whisper_mode() then
-		delay = data.important and 0.7 or 1.4
+		delay = (data.unit:anim_data().hide or data.unit:anim_data().hide_loop) and 0.5 or data.important and 0.7 or 1.4
 	end
 	
 	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects)

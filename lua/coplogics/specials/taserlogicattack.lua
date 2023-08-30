@@ -60,7 +60,7 @@ function TaserLogicAttack.queued_update(data)
 				local react_t = 2
 			
 				if shoot then
-					local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
+					local tase_dis = data.char_tweak.weapon.is_rifle.tase_distance
 					local focus_enemy_dis = focus_enemy.dis
 					local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.25, 1)
 					react_t = react_t * lerp
@@ -138,7 +138,7 @@ function TaserLogicAttack._chk_wants_to_take_cover(data, my_data)
 		return
 	end
 
-	if data.is_suppressed or my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
+	if my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
 		return true
 	end
 

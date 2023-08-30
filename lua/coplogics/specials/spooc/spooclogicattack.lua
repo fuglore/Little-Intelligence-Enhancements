@@ -62,7 +62,7 @@ function SpoocLogicAttack.update(data)
 		if action_data._flying_strike_data and not action_data._ext_anim.act and action_data._stroke_t and data.t - action_data._stroke_t > 1 or action_data._beating_end_t and action_data._beating_end_t < TimerManager:game():time() then
 			if action_data._flying_strike_data then
 				SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
-			elseif action_data._beating_end_t and action_data._beating_end_t + 12 < TimerManager:game():time() then
+			elseif action_data._beating_end_t and action_data._beating_end_t + 6 < TimerManager:game():time() then
 				SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
 			else
 				local attention_objects = data.detected_attention_objects
@@ -199,7 +199,7 @@ function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 		return
 	end
 
-	if data.is_suppressed or my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
+	if my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
 		return true
 	end
 

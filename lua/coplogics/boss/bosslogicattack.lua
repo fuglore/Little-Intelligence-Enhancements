@@ -97,11 +97,7 @@ function BossLogicAttack.enter(data, new_logic_name, enter_params)
 	local key_str = tostring(data.key)
 
 	CopLogicIdle._chk_has_old_action(data, new_internal_data)
-	
-	if new_internal_data.advancing then
-		new_internal_data.old_action_advancing = new_internal_data.advancing
-	end
-	
+
 	CopLogicTravel._chk_say_clear(data)
 
 	if objective and (objective.action_duration or objective.action_timeout_t and data.t < objective.action_timeout_t) then
@@ -168,10 +164,10 @@ function BossLogicAttack.update(data)
 	local unit = data.unit
 	local my_data = data.internal_data
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
 
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			if not my_data.update_queue_id then
 				data.brain:set_update_enabled_state(false)
 
@@ -217,16 +213,9 @@ function BossLogicAttack.update(data)
 	end
 
 	BossLogicAttack._process_pathing_results(data, my_data)
+	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 	
-	local can_keep_moving = data.char_tweak.reload_while_moving_tmp or data.unit:anim_data().reload
-	
-	if not can_keep_moving then
-		local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
-		
-		if ammo > 0 then
-			can_keep_moving = true
-		end
-	end
+	local can_keep_moving = data.char_tweak.reload_while_moving_tmp or data.unit:anim_data().reload or ammo > 0
 	
 	if can_keep_moving then
 		if cur_att_obj and AI_REACT_COMBAT <= cur_att_obj.reaction then
@@ -751,6 +740,7 @@ function BossLogicAttack.action_complete_clbk(data, action)
 
 	if action_type == "walk" then
 		my_data.advancing = nil
+		my_data.old_action_advancing = nil
 
 		if my_data.walking_to_chase_pos then
 			my_data.walking_to_chase_pos = nil

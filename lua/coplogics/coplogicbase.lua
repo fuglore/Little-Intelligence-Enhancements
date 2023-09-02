@@ -512,7 +512,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 			attention_info.next_verify_t = t + (attention_info.identified and attention_info.verified and attention_info.settings.verification_interval or attention_info.settings.notice_interval or attention_info.settings.verification_interval)
 			delay = math.min(delay, attention_info.settings.verification_interval)
 			
-			if not data.cool then
+			if not data.cool and is_weapons_hot then
 				if not attention_info.identified then
 					local noticable = nil
 					attention_info.notice_progress = nil
@@ -819,9 +819,7 @@ function CopLogicBase._evaluate_reason_to_surrender(data, my_data, aggressor_uni
 		weapon_down = function (weap_down_surrender)
 			local anim_data = data.unit:anim_data()
 
-			if anim_data.reload then
-				hold_chance = hold_chance * (1 - weap_down_surrender)
-			elseif anim_data.hurt then
+			if anim_data.reload or anim_data.hurt or anim_data.fumble then
 				hold_chance = hold_chance * (1 - weap_down_surrender)
 			elseif data.unit:movement():stance_name() == "ntl" then
 				hold_chance = hold_chance * (1 - weap_down_surrender)

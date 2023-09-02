@@ -1,3 +1,61 @@
+function CopLogicPhalanxVip.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+
+	local my_data = {
+		unit = data.unit
+	}
+	local is_cool = data.unit:movement():cool()
+	my_data.detection = data.char_tweak.detection.combat
+	local old_internal_data = data.internal_data
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+
+		if old_internal_data.firing then
+			data.unit:movement():set_allow_fire(false)
+		end
+
+		if old_internal_data.shooting then
+			data.unit:brain():action_request({
+				body_part = 3,
+				type = "idle"
+			})
+		end
+
+		local lower_body_action = data.unit:movement()._active_actions[2]
+		my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
+	end
+
+	data.internal_data = my_data
+	local key_str = tostring(data.unit:key())
+	my_data.detection_task_key = "CopLogicPhalanxVip.update" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicPhalanxVip.queued_update, data, data.t)
+
+	local objective = data.objective
+
+	CopLogicPhalanxVip._chk_has_old_action(data, my_data)
+
+	if is_cool then
+		data.unit:brain():set_attention_settings({
+			peaceful = true
+		})
+	else
+		data.unit:brain():set_attention_settings({
+			cbt = true
+		})
+	end
+
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+
+	CopLogicPhalanxVip.calc_initial_phalanx_pos(data.m_pos, objective)
+	data.unit:brain():set_update_enabled_state(false)
+	CopLogicPhalanxVip._perform_objective_action(data, my_data, objective)
+	managers.groupai:state():phalanx_damage_reduction_enable()
+	CopLogicPhalanxVip._set_final_health_limit(data)
+	
+end
+
 function CopLogicPhalanxVip.exit(data, new_logic_name, enter_params)
 	CopLogicBase.exit(data, new_logic_name, enter_params)
 

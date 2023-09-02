@@ -77,7 +77,10 @@ local ludicrous_damage = {
 	m4_yellow = true,
 	ak47 = true
 }
-
+local mayhem_rifles = {
+	m4_yellow = true,
+	g36 = true
+}
 local scaling_units = {
 	security = true,
 	shield = true,
@@ -138,6 +141,10 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "g36" and Global.game_settings.difficulty == "sm_wish" then 
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --g36 users deal 75 damage with "good" preset compared to zeal's 90
+		elseif not self._ludicrous_damage_debuff and mayhem_rifles[self._unit:base()._current_weapon_id] and Global.game_settings.difficulty == "easy_wish" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) 
+		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "ak47_ass" and Global.game_settings.difficulty == "easy_wish" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) 
 		elseif self._ludicrous_damage_debuff then
 			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
 			
@@ -176,6 +183,58 @@ Hooks:PostHook(CopBrain, "on_reload", "lies_on_reload", function(self)
 	end
 end)
 
+Hooks:PostHook(CopBrain, "clbk_death", "lies_clbk_death", function(self, unit, dmg_info)
+	self:rem_all_pos_rsrv()
+end)
+
+function CopBrain:add_pos_rsrv(rsrv_name, pos_rsrv)
+	if self._unit:character_damage():dead() then
+		return
+	end
+
+	local pos_reservations = self._logic_data.pos_rsrv
+
+	if pos_reservations[rsrv_name] then
+		managers.navigation:unreserve_pos(pos_reservations[rsrv_name])
+	end
+
+	pos_rsrv.filter = self._logic_data.pos_rsrv_id
+
+	managers.navigation:add_pos_reservation(pos_rsrv)
+
+	pos_reservations[rsrv_name] = pos_rsrv
+
+	if not pos_rsrv.id then
+		debug_pause_unit(self._unit, "[CopBrain:add_pos_rsrv] missing id", inspect(pos_rsrv))
+
+		return
+	end
+end
+
+function CopBrain:set_pos_rsrv(rsrv_name, pos_rsrv)
+	if self._unit:character_damage():dead() then
+		return
+	end
+
+	local pos_reservations = self._logic_data.pos_rsrv
+
+	if pos_reservations[rsrv_name] == pos_rsrv then
+		return
+	end
+
+	if pos_reservations[rsrv_name] then
+		managers.navigation:unreserve_pos(pos_reservations[rsrv_name])
+	end
+
+	if not pos_rsrv.id then
+		debug_pause_unit(self._unit, "[CopBrain:set_pos_rsrv] missing id", inspect(pos_rsrv))
+
+		return
+	end
+
+	pos_reservations[rsrv_name] = pos_rsrv
+end
+
 function CopBrain:_on_player_slow_pos_rsrv_upd()
 	if self:is_criminal() then
 		if not self._logic_data.objective or self._logic_data.objective.type == "free" then
@@ -209,10 +268,6 @@ function CopBrain:on_suppressed(state)
 		if self._logic_data.is_suppressed then
 			if self._current_logic.on_suppressed_state then
 				self._current_logic.on_suppressed_state(self._logic_data)
-
-				if self._logic_data.char_tweak.chatter.suppress then
-					self._unit:sound():say("hlp", true)
-				end
 			end
 		end
 	end

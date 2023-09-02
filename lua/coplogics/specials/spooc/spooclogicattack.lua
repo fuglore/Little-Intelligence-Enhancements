@@ -91,10 +91,10 @@ function SpoocLogicAttack.update(data)
 		end
 	end
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
 
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			return
 		end
 	end

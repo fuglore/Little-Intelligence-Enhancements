@@ -85,11 +85,17 @@ function CopBase:default_weapon_name(selection_name)
 				end
 			elseif m_weapon_id == "r870" then
 				m_weapon_id = "benelli"
-				self._shotgunner = true
+				
+				if self._tweak_table ~= "tank" and self._tweak_table ~= "tank_hw" then
+					self._shotgunner = true
+				end
 			end
 		elseif difficulty_index > 6 and m_weapon_id == "r870" then
 			m_weapon_id = "benelli"
-			self._shotgunner = true
+			
+			if self._tweak_table ~= "tank" and self._tweak_table ~= "tank_hw" then
+				self._shotgunner = true
+			end
 		elseif tweak_data.group_ai._not_america and (difficulty_index < 6 or difficulty_index > 7) and m_weapon_id == "g36" then
 			m_weapon_id = "m4"
 		elseif self._tweak_table == "taser" then

@@ -656,10 +656,10 @@ function CopLogicTravel.upd_advance(data)
 	data.t = t
 	
 	--adding this here prevents a wasted update if the old action was stopped successfully and if the cover_leave_t is gone
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
 
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			return
 		end
 	end
@@ -1209,8 +1209,8 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				my_data.best_cover[4] = high_ray
 				my_data.in_cover = true
 				
-				if not data.objective.forced then
-					if CopLogicTravel._chk_close_to_criminal(data, my_data) or LIES.settings.enemy_aggro_level < 3 and data.is_suppressed then
+				if not data.objective.forced and LIES.settings.enemy_aggro_level < 3 then
+					if CopLogicTravel._chk_close_to_criminal(data, my_data) or data.is_suppressed then
 						local cover_wait_time = my_data.coarse_path_index == #my_data.coarse_path - 1 and 0.3 or 0.6 + 0.4 * math.random()
 						
 						my_data.cover_leave_t = data.t + cover_wait_time

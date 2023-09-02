@@ -578,6 +578,18 @@ function CivilianLogicFlee.update(data)
 	my_data.next_upd_t = data.t + 0.5
 end
 
+function CivilianLogicFlee.on_rescue_SO_administered(ignore_this, data, receiver_unit)
+	managers.groupai:state():on_civilian_try_freed()
+
+	local my_data = data.internal_data
+	my_data.rescuer = receiver_unit
+	my_data.rescue_SO_id = nil
+	
+	receiver_unit:sound():say("cr1", true)
+	
+	managers.groupai:state():unregister_rescueable_hostage(data.key)
+end
+
 function CivilianLogicFlee._unregister_rescue_SO(data, my_data)
 	if my_data.rescuer then
 		if alive(my_data.rescuer) then

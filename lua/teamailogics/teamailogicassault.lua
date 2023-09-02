@@ -1,9 +1,61 @@
 TeamAILogicAssault._COVER_CHK_INTERVAL = 0.7
 
+function TeamAILogicAssault.enter(data, new_logic_name, enter_params)
+	TeamAILogicBase.enter(data, new_logic_name, enter_params)
+	data.unit:brain():cancel_all_pathing_searches()
+
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	data.internal_data = my_data
+	my_data.detection = data.char_tweak.detection.combat
+	my_data.cover_chk_t = 0
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+		my_data.firing = old_internal_data.firing
+		my_data.shooting = old_internal_data.shooting
+		my_data.attention_unit = old_internal_data.attention_unit
+
+		CopLogicAttack._set_best_cover(data, my_data, old_internal_data.best_cover)
+	end
+
+	local key_str = tostring(data.key)
+	my_data.detection_task_key = "TeamAILogicAssault._upd_enemy_detection" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, TeamAILogicAssault._upd_enemy_detection, data, data.t)
+	
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	if data.objective then
+		my_data.attitude = data.objective.attitude
+	end
+
+	data.unit:movement():set_cool(false)
+	data.unit:movement():set_stance("hos")
+
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	my_data.cover_test_step = 3
+end
+
+
 function TeamAILogicAssault.update(data)
 	local my_data = data.internal_data
 	local t = data.t
 	local unit = data.unit
+	
+	if my_data.has_old_action or my_data.old_action_advancing then
+		CopLogicAttack._upd_stop_old_action(data, my_data)
+		
+		--log("yippie!")
+		
+		if my_data.has_old_action or my_data.old_action_advancing then
+			return
+		end
+	end
+	
 	local focus_enemy = data.attention_obj
 
 	CopLogicAttack._process_pathing_results(data, my_data)

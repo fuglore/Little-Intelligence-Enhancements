@@ -1,6 +1,164 @@
 TeamAILogicIdle.global_last_cop_int_t = 0
 TeamAILogicIdle.global_last_advance_int_t = 0
 local tmp_vec1 = Vector3()
+local tmp_vec2 = Vector3()
+local tmp_vec3 = Vector3()
+
+function TeamAILogicIdle.enter(data, new_logic_name, enter_params)
+	TeamAILogicBase.enter(data, new_logic_name, enter_params)
+
+	local my_data = {
+		unit = data.unit,
+		detection = data.char_tweak.detection.idle,
+		enemy_detect_slotmask = managers.slot:get_mask("enemies")
+	}
+	local old_internal_data = data.internal_data
+
+	if old_internal_data then
+		if old_internal_data.best_cover then
+			my_data.best_cover = old_internal_data.best_cover
+
+			managers.navigation:reserve_cover(my_data.best_cover[1], data.pos_rsrv_id)
+		end
+
+		if old_internal_data.nearest_cover then
+			my_data.nearest_cover = old_internal_data.nearest_cover
+
+			managers.navigation:reserve_cover(my_data.nearest_cover[1], data.pos_rsrv_id)
+		end
+
+		my_data.attention_unit = old_internal_data.attention_unit
+	end
+
+	data.internal_data = my_data
+	local key_str = tostring(data.key)
+	my_data.detection_task_key = "TeamAILogicIdle._upd_enemy_detection" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, TeamAILogicIdle._upd_enemy_detection, data, data.t)
+
+	if my_data.nearest_cover or my_data.best_cover then
+		my_data.cover_update_task_key = "CopLogicIdle._update_cover" .. key_str
+
+		CopLogicBase.add_delayed_clbk(my_data, my_data.cover_update_task_key, callback(CopLogicTravel, CopLogicTravel, "_update_cover", data), data.t + 1)
+	end
+
+	my_data.stare_path_search_id = "stare" .. key_str
+	my_data.relocate_chk_t = 0
+
+	CopLogicBase._reset_attention(data)
+
+	if data.unit:movement():stance_name() == "cbt" then
+		data.unit:movement():set_stance("hos")
+	end
+
+	data.unit:movement():set_allow_fire(false)
+
+	local objective = data.objective
+	local entry_action = enter_params and enter_params.action
+
+	if objective then
+		if objective.type == "revive" then
+			if objective.action_start_clbk then
+				objective.action_start_clbk(data.unit)
+			end
+
+			local success = nil
+			local revive_unit = objective.follow_unit
+			local revive_char_dmg_ext = revive_unit:character_damage()
+
+			if revive_unit:interaction() then
+				if revive_unit:interaction():active() and data.unit:brain():action_request(objective.action) then
+					revive_unit:interaction():interact_start(data.unit)
+
+					success = true
+				end
+			elseif revive_char_dmg_ext:arrested() then
+				if data.unit:brain():action_request(objective.action) then
+					revive_char_dmg_ext:pause_arrested_timer()
+
+					success = true
+				end
+			elseif revive_char_dmg_ext:need_revive() and data.unit:brain():action_request(objective.action) then
+				revive_char_dmg_ext:pause_downed_timer()
+
+				success = true
+			end
+
+			if success then
+				my_data.performing_act_objective = objective
+				my_data.reviving = revive_unit
+				my_data.acting = true
+				my_data.revive_complete_clbk_id = "TeamAILogicIdle_revive" .. tostring(data.key)
+				local revive_t = TimerManager:game():time() + (objective.action_duration or 0)
+
+				CopLogicBase.add_delayed_clbk(my_data, my_data.revive_complete_clbk_id, callback(TeamAILogicIdle, TeamAILogicIdle, "clbk_revive_complete", data), revive_t)
+
+				if not revive_char_dmg_ext:arrested() then
+					local suffix = "a"
+
+					if revive_char_dmg_ext.get_revives then
+						local amount_revives = revive_char_dmg_ext:get_revives()
+
+						if amount_revives == 1 then
+							suffix = "c"
+						elseif amount_revives == 2 then
+							suffix = "b"
+						else
+							local first_down_nr_chk = revive_char_dmg_ext:get_revives_max() - 1
+
+							if amount_revives < first_down_nr_chk then
+								suffix = "b"
+							end
+						end
+					end
+
+					data.unit:sound():say("s09" .. suffix, true)
+				end
+			else
+				data.unit:brain():set_objective()
+
+				return
+			end
+		elseif objective.type == "throw_bag" then
+			data.unit:movement():throw_bag(objective.unit)
+
+			data._ignore_first_travel_order = true
+
+			data.unit:brain():set_objective()
+		else
+			if objective.action_duration then
+				my_data.action_timeout_clbk_id = "TeamAILogicIdle_action_timeout" .. key_str
+				local action_timeout_t = data.t + objective.action_duration
+
+				CopLogicBase.add_delayed_clbk(my_data, my_data.action_timeout_clbk_id, callback(CopLogicIdle, CopLogicIdle, "clbk_action_timeout", data), action_timeout_t)
+			end
+
+			if objective.type == "act" then
+				if data.unit:brain():action_request(objective.action) then
+					my_data.acting = true
+				end
+
+				my_data.performing_act_objective = objective
+
+				if objective.action_start_clbk then
+					objective.action_start_clbk(data.unit)
+				end
+			end
+		end
+
+		if objective.scan then
+			my_data.scan = true
+
+			if not my_data.acting then
+				my_data.wall_stare_task_key = "CopLogicIdle._chk_stare_into_wall" .. tostring(data.key)
+
+				CopLogicBase.queue_task(my_data, my_data.wall_stare_task_key, CopLogicIdle._chk_stare_into_wall_1, data, data.t)
+			end
+		end
+	end
+	
+	CopLogicIdle._chk_has_old_action(data, my_data)	
+end
 
 function TeamAILogicIdle._on_player_slow_pos_rsrv_upd(data)
 	local my_data = data.internal_data
@@ -337,6 +495,103 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 	end
 
 	return best_target, best_target_priority_slot, best_target_reaction
+end
+
+function TeamAILogicIdle.update(data)
+	local my_data = data.internal_data
+	
+	if my_data.has_old_action or my_data.old_action_advancing then
+		CopLogicIdle._upd_stop_old_action(data, my_data, objective)
+		
+		if my_data.has_old_action or my_data.old_action_advancing then
+			return
+		end
+	end
+
+	CopLogicIdle._upd_pathing(data, my_data)
+	CopLogicIdle._upd_scan(data, my_data)
+
+	local objective = data.objective
+
+	if objective then
+		if not my_data.acting then
+			if objective.type == "follow" then
+				if TeamAILogicIdle._check_should_relocate(data, my_data, objective) and not data.unit:movement():chk_action_forbidden("walk") then
+					objective.in_place = nil
+
+					TeamAILogicBase._exit(data.unit, "travel")
+				end
+			elseif objective.type == "revive" then
+				objective.in_place = nil
+
+				TeamAILogicBase._exit(data.unit, "travel")
+			end
+		end
+	elseif not data.path_fail_t or data.t - data.path_fail_t > 6 then
+		managers.groupai:state():on_criminal_jobless(data.unit)
+	end
+end
+
+function TeamAILogicIdle.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
+
+	if action_type == "turn" then
+		data.internal_data.turning = nil
+
+		if my_data._turning_to_intimidate then
+			my_data._turning_to_intimidate = nil
+
+			TeamAILogicIdle.intimidate_civilians(data, data.unit, true, true, my_data._primary_intimidation_target)
+
+			my_data._primary_intimidation_target = nil
+		end
+	elseif action_type == "act" then
+		my_data.acting = nil
+
+		if my_data.scan and not my_data.exiting and (not my_data.queued_tasks or not my_data.queued_tasks[my_data.wall_stare_task_key]) and not my_data.stare_path_pos then
+			my_data.wall_stare_task_key = "CopLogicIdle._chk_stare_into_wall" .. tostring(data.key)
+
+			CopLogicBase.queue_task(my_data, my_data.wall_stare_task_key, CopLogicIdle._chk_stare_into_wall_1, data, data.t)
+		end
+
+		if my_data.performing_act_objective then
+			local old_objective = my_data.performing_act_objective
+			my_data.performing_act_objective = nil
+
+			if my_data.delayed_clbks and my_data.delayed_clbks[my_data.revive_complete_clbk_id] then
+				CopLogicBase.cancel_delayed_clbk(my_data, my_data.revive_complete_clbk_id)
+
+				my_data.revive_complete_clbk_id = nil
+				local revive_unit = my_data.reviving
+
+				if revive_unit:interaction() then
+					if revive_unit:interaction():active() then
+						revive_unit:interaction():interact_interupt(data.unit)
+					end
+				elseif revive_unit:character_damage():arrested() then
+					revive_unit:character_damage():unpause_arrested_timer()
+				elseif revive_unit:character_damage():need_revive() then
+					revive_unit:character_damage():unpause_downed_timer()
+				end
+
+				my_data.reviving = nil
+
+				data.objective_failed_clbk(data.unit, data.objective)
+			elseif action:expired() then
+				if not my_data.action_timeout_clbk_id then
+					data.objective_complete_clbk(data.unit, old_objective)
+				end
+			else
+				data.objective_failed_clbk(data.unit, old_objective)
+			end
+		end
+	elseif action_type == "shoot" then
+		data.internal_data.shooting = nil
+	elseif action_type == "walk" then		
+		data.internal_data.advancing = nil
+		data.internal_data.old_action_advancing = nil
+	end
 end
 
 function TeamAILogicIdle._upd_enemy_detection(data)

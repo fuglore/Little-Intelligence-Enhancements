@@ -26,6 +26,8 @@ local math_ceil = math.ceil
 local math_floor = math.floor
 local temp_vec1 = Vector3()
 local temp_vec2 = Vector3()
+local temp_vec3 = Vector3()
+local temp_vec4 = Vector3()
 local math_up = math.UP
 NavigationManager.has_registered_cover_units_for_LIES = nil
 NavigationManager._LIES_navlink_elements = {}
@@ -135,7 +137,6 @@ function NavigationManager:generate_cover_fwd(tracker)
 		mvec3_dir(new_fwd, field_pos, best_door_pos)
 		
 		local ray_params = {
-			trace = true,
 			pos_from = field_pos
 		}
 		local hits = {}
@@ -155,10 +156,25 @@ function NavigationManager:generate_cover_fwd(tracker)
 			ray_params.pos_to = fwd_test
 			
 			if self:raycast(ray_params) then
-				if i == 6 then --perfect match.
-					return mvec3_cpy(new_fwd)
-				else
-					hits[#hits + 1] = {mvec3_cpy(new_fwd), angle * i}
+				local cover_pos = field_pos
+				local ray_from = temp_vec3
+
+				mvec3_set(ray_from, math_up)
+				mvec3_mul(ray_from, 90)
+				mvec3_add(ray_from, cover_pos)
+				
+				local ray_to_pos = temp_vec4
+				
+				mvec3_set(ray_to_pos, math_up)
+				mvec3_mul(ray_to_pos, 90)
+				mvec3_add(ray_to_pos, fwd_test)
+				
+				if World:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+					if i == 6 then --perfect match.
+						return mvec3_cpy(new_fwd)
+					else
+						hits[#hits + 1] = {mvec3_cpy(new_fwd), angle * i}
+					end
 				end
 			end
 			

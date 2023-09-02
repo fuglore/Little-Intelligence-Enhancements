@@ -16,10 +16,10 @@ function TaserLogicAttack.queued_update(data)
 		return
 	end
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
 		
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			CopLogicBase.queue_task(my_data, my_data.update_task_key, TaserLogicAttack.queued_update, data, data.t + delay, data.important)
 
 			return
@@ -210,7 +210,7 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 							local react_t = 2
 						
 							if shoot then
-								local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
+								local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance or 1500
 								local focus_enemy_dis = focus_enemy.dis
 								local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.5, 1)
 								react_t = react_t * lerp
@@ -296,7 +296,7 @@ function TaserLogicAttack._chk_reaction_to_attention_object(data, attention_data
 		return AIAttentionObject.REACT_COMBAT
 	end
 	
-	local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance
+	local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance or 1500
 
 	if (attention_data.is_human_player or not attention_data.unit:movement():chk_action_forbidden("hurt")) and attention_data.verified and attention_data.verified_dis < tase_dis * 0.9 then
 		local vis_ray = data.unit:raycast("ray", data.unit:movement():m_head_pos(), attention_data.m_head_pos, "slot_mask", managers.slot:get_mask("bullet_impact_targets_no_criminals"), "sphere_cast_radius", 30, "ignore_unit", attention_data.unit, "report")

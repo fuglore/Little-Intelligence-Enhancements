@@ -41,10 +41,12 @@ function TankCopLogicAttack.update(data)
 	local unit = data.unit
 	local my_data = data.internal_data
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
-
-		return
+		
+		if my_data.has_old_action or my_data.old_action_advancing then
+			return
+		end
 	end
 
 	if CopLogicIdle._chk_relocate(data) then

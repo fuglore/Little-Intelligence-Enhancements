@@ -3659,6 +3659,48 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 			1.2
 		}
 	}
+	self.enemy_chatter.aggressive = {
+		radius = 800,
+		max_nr = 4,
+		queue = "g90",
+		group_min = 0,
+		duration = {
+			4,
+			8
+		},
+		interval = {
+			1.5,
+			3
+		}
+	}
+	self.enemy_chatter.teammatedown = {
+		radius = 800,
+		max_nr = 4,
+		queue = "lk3a",
+		group_min = 0,
+		duration = {
+			4,
+			8
+		},
+		interval = {
+			1.5,
+			3
+		}
+	}
+	self.enemy_chatter.wantcover = {
+		radius = 800,
+		max_nr = 4,
+		queue = "hlp",
+		group_min = 0,
+		duration = {
+			4,
+			8
+		},
+		interval = {
+			1.5,
+			3
+		}
+	}
 	self.enemy_chatter.go_go = {
 		radius = 1000,
 		max_nr = 1,

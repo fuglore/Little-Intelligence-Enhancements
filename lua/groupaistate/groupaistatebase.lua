@@ -409,6 +409,26 @@ Hooks:PostHook(GroupAIStateBase, "unregister_rescueable_hostage", "lies_hrt_unre
 
 end)
 
+Hooks:PostHook(GroupAIStateBase, "_remove_group_member", "lies_frienddead", function(self, group, u_key, is_casualty)
+	if not self._groups[group.id] or not is_casualty then
+		return
+	end
+	
+	for un_key, unit_data in pairs(group.units) do
+		if un_key ~= u_key then
+			local brain = unit_data.unit:brain()
+			
+			if brain:is_important() then
+				local current_objective = brain:objective()
+				
+				if unit_data.char_tweak.chatter.suppress and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "teammatedown") then
+					break
+				end
+			end
+		end
+	end
+end)
+
 function GroupAIStateBase:print_objective(objective)
 	if objective then
 		log("objective info:")

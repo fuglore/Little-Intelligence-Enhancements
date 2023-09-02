@@ -183,9 +183,16 @@ function CivilianLogicSurrender.queued_update(rubbish, data)
 		if CopLogicIdle._chk_relocate(data) then
 			return
 		end
-	
-		CivilianLogicFlee._chk_add_delayed_rescue_SO(data, my_data)
-		managers.groupai:state():add_to_surrendered(data.unit, callback(CivilianLogicSurrender, CivilianLogicSurrender, "queued_update", data))
+		
+		if data.unit:anim_data().drop then
+			data.unit:brain():set_update_enabled_state(false)
+			CivilianLogicFlee._chk_add_delayed_rescue_SO(data, my_data)
+			
+			if my_data == data.internal_data then
+				managers.groupai:state():add_to_surrendered(data.unit, callback(CivilianLogicSurrender, CivilianLogicSurrender, "queued_update", data))
+				my_data.surrender_clbk_registered = true
+			end
+		end
 	end	
 end
 

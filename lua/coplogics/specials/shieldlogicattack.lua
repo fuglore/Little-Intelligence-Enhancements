@@ -349,8 +349,18 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 	ShieldLogicAttack._upd_aim(data, my_data)
 
-	if my_data.optimal_pos then	
+	if my_data.optimal_pos then
 		my_data.optimal_pos = managers.navigation:clamp_position_to_field(my_data.optimal_pos)
+		
+		local reservation = {
+			radius = 30,
+			position = my_data.optimal_pos,
+			filter = data.pos_rsrv_id
+		}
+
+		if not managers.navigation:is_pos_free(reservation) then
+			my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 120)
+		end
 	end
 end
 
@@ -392,10 +402,10 @@ function ShieldLogicAttack.queued_update(data)
 		return
 	end
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicAttack._upd_stop_old_action(data, my_data)
 		
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			ShieldLogicAttack.queue_update(data, my_data)
 			CopLogicBase._report_detections(data.detected_attention_objects)
 
@@ -438,7 +448,7 @@ function ShieldLogicAttack.queued_update(data)
 				my_data.optimal_pos = nil
 				
 				if not data.objective or not data.objective.follow_unit then
-					if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 3 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
+					if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 2 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
 						local ray_params = {
 							pos_to = to_pos,
 							trace = true

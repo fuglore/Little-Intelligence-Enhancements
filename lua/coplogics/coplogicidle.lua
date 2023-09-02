@@ -117,6 +117,17 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	end
 end
 
+function CopLogicIdle._chk_has_old_action(data, my_data)
+	local anim_data = data.unit:anim_data()
+	my_data.has_old_action = anim_data.to_idle or anim_data.act
+	local lower_body_action = data.unit:movement()._active_actions[2]
+	my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
+	
+	if my_data.advancing then
+		my_data.old_action_advancing = my_data.advancing
+	end
+end
+
 function CopLogicIdle._on_player_slow_pos_rsrv_upd(data)
 	local my_data = data.internal_data
 
@@ -155,10 +166,10 @@ function CopLogicIdle.queued_update(data)
 
 	local objective = data.objective
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CopLogicIdle._upd_stop_old_action(data, my_data, objective)
 		
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
 
 			return
@@ -895,6 +906,7 @@ function CopLogicIdle.action_complete_clbk(data, action)
 		data.internal_data.shooting = nil
 	elseif action_type == "walk" then		
 		data.internal_data.advancing = nil
+		data.internal_data.old_action_advancing = nil
 	elseif not data.is_converted and action_type == "hurt" and data.important and action:expired() then
 		CopLogicBase.chk_start_action_dodge(data, "hit")
 	end
@@ -935,10 +947,6 @@ function CopLogicIdle.on_alert(data, alert_data)
 			}
 
 			data.unit:brain():action_request(action_data)
-			
-			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
-				data.unit:sound():say("lk3b", true)
-			end
 		elseif not is_new and att_obj_data.is_person and att_obj_data.verified and att_obj_data.crim_record and not att_obj_data.crim_record.gun_called_out and data.char_tweak.chatter.criminalhasgun then
 			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
 				new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")

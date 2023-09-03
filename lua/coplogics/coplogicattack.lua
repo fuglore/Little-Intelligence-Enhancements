@@ -814,7 +814,7 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	local aggro_level = LIES.settings.enemy_aggro_level
 	
 	if my_data.attitude ~= "engage" then
-		return
+		return true
 	end
 	
 	if aggro_level > 3 then

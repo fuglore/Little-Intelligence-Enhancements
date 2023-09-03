@@ -53,6 +53,102 @@ function CivilianLogicEscort.enter(data, new_logic_name, enter_params)
 	data.unit:brain():set_attention_settings(attention_settings)
 end
 
+function CivilianLogicEscort._get_objective_path_data(data, my_data)
+	local objective = data.objective
+	local path_data = objective.path_data
+	local path_style = objective.path_style
+
+	if path_data then
+		if path_style == "precise" then
+			local path = {
+				mvector3.copy(data.m_pos)
+			}
+
+			for _, point in ipairs(path_data.points) do
+				table.insert(path, point.position)
+			end
+
+			my_data.advance_path = path
+			my_data.coarse_path_index = 1
+			local start_seg = data.unit:movement():nav_tracker():nav_segment()
+			local end_pos = mvector3.copy(path[#path])
+			local end_seg = managers.navigation:get_nav_seg_from_pos(end_pos)
+			my_data.path_is_precise = true
+			my_data.coarse_path = {
+				{
+					start_seg
+				},
+				{
+					end_seg,
+					end_pos
+				}
+			}
+		elseif path_style == "coarse" then
+			local t_ins = table.insert
+			my_data.coarse_path_index = 1
+			local start_seg = data.unit:movement():nav_tracker():nav_segment()
+			my_data.coarse_path = {
+				{
+					start_seg
+				}
+			}
+			local coarse_path = my_data.coarse_path
+			local points = path_data.points
+			local i_point = 1
+
+			while i_point <= #path_data.points do
+				local next_pos = points[i_point].position
+				local next_seg = managers.navigation:get_nav_seg_from_pos(next_pos)
+
+				t_ins(coarse_path, {
+					next_seg,
+					mvector3.copy(next_pos)
+				})
+
+				i_point = i_point + 1
+			end
+		elseif path_style == "destination" then
+			my_data.coarse_path_index = 1
+			local start_seg = data.unit:movement():nav_tracker():nav_segment()
+			local end_pos = mvector3.copy(path_data.points[#path_data.points].position)
+			local end_seg = managers.navigation:get_nav_seg_from_pos(end_pos)
+			my_data.coarse_path = {
+				{
+					start_seg
+				},
+				{
+					end_seg,
+					end_pos
+				}
+			}
+		end
+	end
+end
+
+function CivilianLogicEscort._begin_advance_action(data, my_data)
+	CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
+
+	local objective = data.objective
+	local haste = objective and objective.haste or "run"
+	local new_action_data = {
+		type = "walk",
+		body_part = 2,
+		nav_path = my_data.advance_path,
+		path_simplified = my_data.path_is_precise,
+		variant = haste,
+		end_rot = objective.rot
+	}
+	my_data.advancing = data.unit:brain():action_request(new_action_data)
+
+	if my_data.advancing then
+		data.brain:rem_pos_rsrv("path")
+
+		my_data.advance_path = nil
+	else
+		debug_pause("[CivilianLogicEscort._begin_advance_action] failed to start")
+	end
+end
+
 function CivilianLogicEscort.too_scared_to_move(data)
 	local my_data = data.internal_data
 	local m_com = data.unit:movement():m_com()
@@ -99,7 +195,6 @@ function CivilianLogicEscort.too_scared_to_move(data)
 		return "pigs"
 	end
 end
-
 
 function CivilianLogicEscort.exit(data, new_logic_name, enter_params)
 	CopLogicBase.exit(data, new_logic_name, enter_params)

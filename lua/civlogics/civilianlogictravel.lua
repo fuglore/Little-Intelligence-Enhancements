@@ -19,13 +19,17 @@ function CivilianLogicTravel.enter(data, new_logic_name, enter_params)
 	
 	CivilianLogicEscort._get_objective_path_data(data, my_data)
 	
+	--if data.objective.element and data.objective.type == "act" and data.char_tweak.is_escort then
+		--managers.groupai:state():print_objective(data.objective)
+	--end
+	
 	local key_str = tostring(data.key)
 
 	if data.is_tied then
 		managers.groupai:state():on_hostage_state(true, data.key, nil, true)
 
 		my_data.is_hostage = true
-	else
+	elseif not data.char_tweak.is_escort then
 		data.unit:brain():set_update_enabled_state(false)
 		
 		my_data.upd_task_key = "CivilianLogicTravel_queued_update" .. key_str
@@ -88,16 +92,40 @@ function CivilianLogicTravel.enter(data, new_logic_name, enter_params)
 	end
 end
 
+function CivilianLogicTravel.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
+
+	if action_type == "walk" then
+		if action:expired() and not my_data.starting_advance_action and my_data.coarse_path_index and not my_data.has_old_action and not my_data.old_action_advancing and my_data.advancing then
+			if my_data.going_to_index then
+				my_data.coarse_path_index = my_data.going_to_index
+			else
+				my_data.coarse_path_index = my_data.coarse_path_index + 1
+			end
+
+			if my_data.coarse_path_index > #my_data.coarse_path then
+				my_data.coarse_path_index = my_data.coarse_path_index - 1
+			end
+		end
+	
+		my_data.old_action_advancing = nil
+		my_data.advancing = nil
+	elseif action_type == "act" and my_data.getting_up then
+		my_data.getting_up = nil
+	end
+end
+
 function CivilianLogicTravel.update(data)
 	local my_data = data.internal_data
 	local unit = data.unit
 	local objective = data.objective
 	local t = data.t
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CivilianLogicTravel._upd_stop_old_action(data, my_data)
 		
-		if my_data.has_old_action then
+		if my_data.has_old_action or my_data.old_action_advancing then
 			return
 		end
 	end
@@ -122,40 +150,13 @@ function CivilianLogicTravel.update(data)
 			CivilianLogicTravel._on_destination_reached(data)
 		end
 	elseif my_data.processing_advance_path or my_data.processing_coarse_path then
-		local was_processing_advance = my_data.processing_advance_path and true
 		CivilianLogicEscort._upd_pathing(data, my_data)
 		
-		if was_processing_advance and my_data.advance_path then
-			CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
+		if data.internal_data ~= my_data then
+			return
+		end
 
-			if my_data.is_hostage then
-				my_data.advance_path = LIES:_optimize_path(my_data.advance_path, data)
-			end
-
-			local end_rot = nil
-
-			if my_data.coarse_path_index == #my_data.coarse_path - 1 then
-				end_rot = objective and objective.rot
-			end
-
-			local haste = objective and objective.haste or "walk"
-			local new_action_data = {
-				type = "walk",
-				body_part = 2,
-				nav_path = my_data.advance_path,
-				variant = haste,
-				end_rot = end_rot
-			}
-			my_data.starting_advance_action = true
-			my_data.advancing = data.unit:brain():action_request(new_action_data)
-			my_data.starting_advance_action = false
-
-			if my_data.advancing then
-				my_data.advance_path = nil
-
-				data.brain:rem_pos_rsrv("path")
-			end
-		elseif my_data.coarse_path then
+		if not my_data.advance_path and my_data.coarse_path then
 			local coarse_path = my_data.coarse_path
 			local cur_index = my_data.coarse_path_index
 			local total_nav_points = #coarse_path
@@ -185,9 +186,40 @@ function CivilianLogicTravel.update(data)
 
 				unit:brain():search_for_path(my_data.advance_path_search_id, to_pos)
 			end
+		elseif my_data.advance_path then
+			CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
+
+			if my_data.is_hostage then
+				my_data.advance_path = LIES:_optimize_path(my_data.advance_path, data)
+			end
+
+			local end_rot = nil
+
+			if my_data.coarse_path_index == #my_data.coarse_path - 1 then
+				end_rot = objective and objective.rot
+			end
+
+			local haste = objective and objective.haste or "walk"
+			local new_action_data = {
+				type = "walk",
+				body_part = 2,
+				nav_path = my_data.advance_path,
+				path_simplified = my_data.path_is_precise,
+				variant = haste,
+				end_rot = end_rot
+			}
+			my_data.starting_advance_action = true
+			my_data.advancing = data.unit:brain():action_request(new_action_data)
+			my_data.starting_advance_action = false
+
+			if my_data.advancing then
+				my_data.advance_path = nil
+
+				data.brain:rem_pos_rsrv("path")
+			end
 		end
 	elseif my_data.advancing then
-		-- Nothing
+		--a
 	elseif my_data.advance_path then
 		CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
 
@@ -206,6 +238,7 @@ function CivilianLogicTravel.update(data)
 			type = "walk",
 			body_part = 2,
 			nav_path = my_data.advance_path,
+			path_simplified = my_data.path_is_precise,
 			variant = haste,
 			end_rot = end_rot
 		}
@@ -219,34 +252,12 @@ function CivilianLogicTravel.update(data)
 			data.brain:rem_pos_rsrv("path")
 		end
 	elseif objective then
-		if not my_data.coarse_path and my_data.is_hostage then
-			local nav_seg = nil
-
-			if objective.follow_unit then
-				nav_seg = objective.follow_unit:movement():nav_tracker():nav_segment()
-			else
-				nav_seg = objective.nav_seg
-			end
-		
-			my_data.coarse_path = unit:brain():search_for_coarse_immediate(my_data.coarse_path_search_id, nav_seg)
-			
-			if my_data.coarse_path then
-				my_data.coarse_path_index = 1
-			end
-		end
-	
 		if my_data.coarse_path then
 			local coarse_path = my_data.coarse_path
 			local cur_index = my_data.coarse_path_index
 			local total_nav_points = #coarse_path
 
 			if cur_index >= total_nav_points then
-				if my_data.is_hostage then
-					if CopLogicIdle._chk_relocate(data) then
-						return
-					end
-				end
-				
 				objective.in_place = true
 
 				if objective.type ~= "escort" and objective.type ~= "act" and objective.type ~= "follow" and not objective.action_duration then
@@ -276,8 +287,6 @@ function CivilianLogicTravel.update(data)
 
 			if objective.follow_unit then
 				nav_seg = objective.follow_unit:movement():nav_tracker():nav_segment()
-			elseif objective.pos then
-				nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
 			else
 				nav_seg = objective.nav_seg
 			end
@@ -288,8 +297,6 @@ function CivilianLogicTravel.update(data)
 		end
 	else
 		CopLogicBase._exit(data.unit, "idle")
-		
-		return
 	end
 end
 

@@ -410,6 +410,10 @@ Hooks:PostHook(GroupAIStateBase, "unregister_rescueable_hostage", "lies_hrt_unre
 end)
 
 Hooks:PostHook(GroupAIStateBase, "_remove_group_member", "lies_frienddead", function(self, group, u_key, is_casualty)
+	if not Network:is_server() then
+		return
+	end
+
 	if not self._groups[group.id] or not is_casualty then
 		return
 	end

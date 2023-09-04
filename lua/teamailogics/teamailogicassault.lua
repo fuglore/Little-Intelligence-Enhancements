@@ -112,7 +112,18 @@ function TeamAILogicAssault.update(data)
 				
 				action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 			else
-				CopLogicAttack._cancel_cover_pathing(data, my_data)
+				local my_tracker = unit:movement():nav_tracker()
+				local m_tracker_pos = my_tracker:position()
+				
+				if not action_taken and my_data.in_cover[7] then
+					local path = {
+						mvector3.copy(m_tracker_pos),
+						mvector3.copy(my_data.in_cover[5])
+					}
+					
+					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_offset_pos(data, my_data, path)
+				end
+				
 				action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 			end
 		end
@@ -321,23 +332,37 @@ function TeamAILogicAssault.action_complete_clbk(data, action)
 
 	if action_type == "walk" then
 		my_data.advancing = nil
-
+		my_data.old_action_advancing = nil
+		my_data.in_cover = nil
+		
+		CopLogicAttack._cancel_cover_pathing(data, my_data)
+		CopLogicAttack._cancel_charge(data, my_data)
+		
 		if my_data.surprised then
 			my_data.surprised = false
 		elseif my_data.moving_to_cover then
 			if action:expired() then
 				my_data.in_cover = my_data.moving_to_cover
+				my_data.in_cover[7] = nil
 				my_data.cover_enter_t = data.t
-				my_data.cover_sideways_chk = nil
+				my_data.cover_test_step = 0
+				my_data.flank_cover = nil
 			end
 
 			my_data.moving_to_cover = nil
 		elseif my_data.walking_to_cover_shoot_pos then
 			my_data.walking_to_cover_shoot_pos = nil
+			my_data.charging = nil
+			
+			if action:expired() then
+				my_data.at_cover_shoot_pos = true
+			end
 		end
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data)
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				data.logic._upd_aim(data, my_data)
+			end
 		end
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
@@ -353,7 +378,7 @@ function TeamAILogicAssault.action_complete_clbk(data, action)
 		end
 		
 		if action:expired() then
-			CopLogicAttack._upd_aim(data, my_data) --check if i need to turn again
+			data.logic._upd_aim(data, my_data)
 		end
 		
 		if data.attention_obj and (not TeamAILogicAssault._mark_special_t or TeamAILogicAssault._mark_special_t + 6 < data.t) and not my_data.acting and not data.unit:sound():speaking() then

@@ -1,3 +1,69 @@
+local hide_anims = {
+	e_so_sneak_wait_crh = true,
+	e_so_sneak_wait_crh_var2 = true,
+	e_so_sneak_wait_crh_var3 = true,
+	e_so_sneak_wait_stand = true,
+	e_so_hide_under_car_enter = true,
+	e_so_hide_2_5m_vent_enter = true,
+	e_so_hide_behind_door_enter = true,
+	e_so_hide_ledge_enter = true
+}
+
+function SpoocLogicIdle._upd_enemy_detection(data)
+	managers.groupai:state():on_unit_detection_updated(data.unit)
+
+	data.t = TimerManager:game():time()
+	local my_data = data.internal_data
+	local min_reaction = not data.cool and AIAttentionObject.REACT_SCARED
+	CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	
+	local delay = 0
+	
+	if not managers.groupai:state():whisper_mode() then
+		delay = (data.unit:anim_data().hide or data.unit:anim_data().hide_loop) and 0.5 or data.important and 0.7 or 1.4
+	end
+	
+	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects)
+
+	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
+
+	if new_reaction and AIAttentionObject.REACT_SUSPICIOUS < new_reaction then
+		local objective = data.objective
+		local wanted_state = nil
+		local allow_trans, obj_failed = CopLogicBase.is_obstructed(data, objective, nil, new_attention)
+
+		if allow_trans then
+			wanted_state = CopLogicBase._get_logic_state_from_reaction(data)
+		end
+
+		if wanted_state and wanted_state ~= data.name then
+			if obj_failed then
+				data.objective_failed_clbk(data.unit, data.objective)
+			end
+
+			if my_data == data.internal_data then
+				CopLogicBase._exit(data.unit, wanted_state)
+			end
+		end
+	end
+
+	if my_data == data.internal_data then
+		CopLogicBase._chk_call_the_police(data)
+
+		if my_data ~= data.internal_data then
+			return delay
+		end
+	end
+
+	SpoocLogicIdle._chk_exit_hiding(data)
+
+	if my_data ~= data.internal_data then
+		return delay
+	end
+
+	return delay
+end
+
 function SpoocLogicIdle._exit_hiding(data)
 	data.unit:brain():set_objective({ --this used to call data.unit:set_objective in vanilla...
 		type = "act",
@@ -22,8 +88,22 @@ end
 
 function SpoocLogicIdle.damage_clbk(data, damage_info)
 	local res = SpoocLogicIdle.super.damage_clbk(data, damage_info)
+	
+	local hiding = data.unit:anim_data().hide_loop or data.unit:anim_data().hide
+	
+	if not hiding then
+		local act_act = data.unit:movement():get_action(1)
+		
+		if act_act and act_act:type() == "act" then
+			local variant = act_act._action_desc.variant
+			
+			if hide_anims[variant] then
+				hiding = true
+			end
+		end
+	end
 
-	if data.unit:anim_data().hide_loop or data.unit:anim_data().hide then
+	if hiding then
 		SpoocLogicIdle._exit_hiding(data)
 	end
 
@@ -31,10 +111,24 @@ function SpoocLogicIdle.damage_clbk(data, damage_info)
 end
 
 function SpoocLogicIdle._chk_exit_hiding(data)
-	if data.unit:anim_data().hide_loop or data.unit:anim_data().hide then
+	local hiding = data.unit:anim_data().hide_loop or data.unit:anim_data().hide
+	
+	if not hiding then
+		local act_act = data.unit:movement():get_action(1)
+		
+		if act_act and act_act:type() == "act" then
+			local variant = act_act._action_desc.variant
+			
+			if hide_anims[variant] then
+				hiding = true
+			end
+		end
+	end
+
+	if hiding then		
 		for u_key, attention_data in pairs(data.detected_attention_objects) do
-			if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
-				if attention_data.dis < 1500 and (attention_data.verified or attention_data.nearly_visible) then
+			if data.enemy_slotmask and attention_data.unit:in_slot(data.enemy_slotmask) then				
+				if attention_data.dis < 1500 and (attention_data.verified or attention_data.nearly_visible or attention_data.verified_t) then
 					SpoocLogicIdle._exit_hiding(data)
 				elseif attention_data.dis < 700 then
 					if attention_data.nav_tracker then
@@ -48,12 +142,6 @@ function SpoocLogicIdle._chk_exit_hiding(data)
 								break
 							end
 						end
-					end
-					
-					if math.abs(attention_data.m_pos.z - data.m_pos.z) < 250 then
-						SpoocLogicIdle._exit_hiding(data)
-						
-						break
 					end
 				end
 			end

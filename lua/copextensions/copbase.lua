@@ -26,6 +26,20 @@ function CopBase:default_weapon_name(selection_name)
 	local m_weapon_id = self._default_weapon_id
 
 	if LIES.settings.hhtacs then
+		if not LIES.smg_groups then
+			LIES.smg_groups = {
+				tac_reenforce = true
+			}
+			
+			if LIES.settings.fixed_spawngroups > 2 then
+				LIES.smg_groups["tac_swat_rifle_flank"] = true
+			else
+				LIES.smg_groups["tac_swat_smg"] = true
+			end
+		end
+		
+		local group_type = self._unit:brain()._logic_data and self._unit:brain()._logic_data.group and self._unit:brain()._logic_data.group.type
+	
 		if difficulty == "sm_wish" then
 			if m_weapon_id == "dmr" then
 				m_weapon_id = "heavy_zeal_sniper"
@@ -42,15 +56,13 @@ function CopBase:default_weapon_name(selection_name)
 				if self._tweak_table == "taser" then
 					m_weapon_id = "m4_yellow"
 				elseif zeal_types[self._tweak_table] then
-					if self._unit:brain()._logic_data and self._unit:brain()._logic_data.group and self._unit:brain()._logic_data.group.type ~= "custom" then
-						local l_data = self._unit:brain()._logic_data
-						
-						if shotgun_groups[l_data.group.type] then
-							m_weapon_id = "benelli"
-							self._shotgunner = true
-						end
-					elseif self._shotgunner then
+					if self._shotgunner then
 						m_weapon_id = "benelli"
+					elseif shotgun_groups[group_type] then
+						m_weapon_id = "benelli"
+						self._shotgunner = true
+					elseif LIES.smg_groups[group_type] then
+						m_weapon_id = "ump"
 					end
 					
 					if m_weapon_id == "m4" or m_weapon_id == "ak47_ass" or m_weapon_id == "g36" then
@@ -79,6 +91,8 @@ function CopBase:default_weapon_name(selection_name)
 								self._unit:movement()._action_common_data.char_tweak = char_tweaks
 							end
 						end
+					elseif LIES.smg_groups[group_type] then
+						m_weapon_id = "ump"
 					elseif m_weapon_id == "mp5" then
 						m_weapon_id = "m4"
 					end
@@ -95,6 +109,14 @@ function CopBase:default_weapon_name(selection_name)
 			
 			if self._tweak_table ~= "tank" and self._tweak_table ~= "tank_hw" then
 				self._shotgunner = true
+			end
+		elseif LIES.smg_groups[group_type] then
+			if tweak_data.group_ai._not_america == "russia" then
+				m_weapon_id = "akmsu_smg"
+			elseif difficulty_index > 5 and group_type ~= "tac_reenforce" then
+				m_weapon_id = "ump"
+			else
+				m_weapon_id = "mp5"
 			end
 		elseif tweak_data.group_ai._not_america and (difficulty_index < 6 or difficulty_index > 7) and m_weapon_id == "g36" then
 			m_weapon_id = "m4"
@@ -135,10 +157,7 @@ function CopBase:default_weapon_name(selection_name)
 			m_weapon_id = police_weapon_ids[math.random(#police_weapon_ids)]
 			
 			if difficulty_index > 6 and m_weapon_id == "r870" then
-				if difficulty_index > 6 then
-					m_weapon_id = "benelli"
-				end
-				
+				m_weapon_id = "benelli"	
 				self._shotgunner = true
 			end
 		end

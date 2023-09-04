@@ -1860,7 +1860,7 @@ function GroupAIStateBesiege:_get_group_area(group)
 end
 
 function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, ranged, impatient)
-	dis_to_check = dis_to_check * dis_to_check
+	local dist_sq = dis_to_check * dis_to_check
 	
 	local old_engaging_area = group.objective.old_engaging_area or nil
 	local best_dis, best_u_area
@@ -1898,14 +1898,14 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, range
 						local seen_enemy = focus_enemy.verified_t and logic_data.t - focus_enemy.verified_t <= 15 and focus_enemy.last_verified_m_pos
 
 						if seen_enemy then
-							if mvec3_dis_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dis_to_check / 2 and mvec3_dis_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dis_to_check then
+							if mvec3_dis_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dist_sq / 2 and mvec3_dis_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dist_sq then
 								local nav_seg = managers.navigation:get_nav_seg_from_pos(focus_enemy.m_pos, true)
 								local target_area = self:get_area_from_nav_seg_id(nav_seg)
 								
 								return best_u_area, target_area
 							end
-						elseif ranged then
-							if mvec3_dis_sq(logic_data.m_pos, focus_enemy.m_pos) < dis_to_check / 2 then
+						elseif math.abs(logic_data.m_pos.z - focus_enemy.m_pos.z) < dis_to_check * 0.2 then
+							if mvec3_dis_sq(logic_data.m_pos, focus_enemy.m_pos) < dist_sq / 2 then
 								local nav_seg = managers.navigation:get_nav_seg_from_pos(focus_enemy.m_pos, true)
 								local target_area = self:get_area_from_nav_seg_id(nav_seg)
 								
@@ -2464,9 +2464,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						if aggression_level > 3 then
 							impatient = self._t - group.in_place_t > 2
 						elseif aggression_level > 2 then
-							impatient = not ranged and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 7
+							impatient = self._t - group.in_place_t > 7
 						else
-							impatient = not ranged and self._t - group.in_place_t > 7 or self._t - group.in_place_t > 15
+							impatient = self._t - group.in_place_t > 15
 						end
 					end
 					
@@ -2528,9 +2528,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					if aggression_level > 3 then
 						impatient = self._t - group.in_place_t > 2
 					elseif aggression_level > 2 then
-						impatient = not ranged and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 7
+						impatient = self._t - group.in_place_t > 7
 					else
-						impatient = not ranged and self._t - group.in_place_t > 7 or self._t - group.in_place_t > 15
+						impatient = self._t - group.in_place_t > 15
 					end
 				end
 				
@@ -2541,6 +2541,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				end
 				
 				engaging, target_area = self:_chk_group_engaging_area(group, dis, ranged, impatient)
+				
 				has_criminals_close = engaging and true
 			end
 			
@@ -2560,9 +2561,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					if aggression_level > 3 then
 						impatient = self._t - group.in_place_t > 2
 					elseif aggression_level > 2 then
-						impatient = not ranged and self._t - group.in_place_t > 2 or self._t - group.in_place_t > 7
+						impatient = self._t - group.in_place_t > 7
 					else
-						impatient = not ranged and self._t - group.in_place_t > 7 or self._t - group.in_place_t > 15
+						impatient = self._t - group.in_place_t > 15
 					end
 				end
 			end

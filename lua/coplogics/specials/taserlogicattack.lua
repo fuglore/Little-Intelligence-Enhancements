@@ -157,7 +157,7 @@ function TaserLogicAttack._upd_aim(data, my_data, reaction)
 	
 	if focus_enemy then
 		if tase then
-			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover
+			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
 		
 			if tase and has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
 				local new_action = {

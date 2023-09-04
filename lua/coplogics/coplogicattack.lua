@@ -679,7 +679,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 						my_data.cover_test_step = my_data.cover_test_step + 1
 					end
 				end
-			elseif not enemy_visible_soft and data.t - my_data.cover_enter_t > 7 then
+			elseif not enemy_visible_soft then
 				move_to_cover = true
 				
 				if not data.tactics or not data.tactics.sniper then
@@ -820,21 +820,25 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	if aggro_level > 3 then
 		return
 	end
-
+	
 	if data.unit:anim_data().reload then
 		return true
 	end
-
+	
 	if aggro_level < 3 then
+		if data.is_suppressed then
+			return true
+		end
+		
 		if ammo / ammo_max < 0.2 then
 			return true
 		end
-	end
-	
-	if aggro_level < 3 and data.attention_obj.verified then
-		if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close * 0.5 < data.attention_obj.verified_dis then
-			if my_data.firing then
-				return true
+		
+		if data.attention_obj.verified then
+			if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close * 0.5 < data.attention_obj.verified_dis then
+				if my_data.firing then
+					return true
+				end
 			end
 		end
 	end
@@ -904,7 +908,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 		local last_sup_t = data.unit:character_damage():last_suppression_t()
 		
 		if not data.char_tweak.always_face_enemy and not focus_enemy.dangerous_special then
-			if my_data.low_value_att or data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis then
+			if my_data.low_value_att or data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis and not (data.tactics and data.tactics.sniper) then
 				walk_action = my_data.advancing 
 			
 				if walk_action and walk_action._init_called and walk_action._cur_vel >= 0.1 and not walk_action:stopping() then --do this properly
@@ -2202,7 +2206,7 @@ function CopLogicAttack._can_move(data)
 end
 
 function CopLogicAttack._upd_stop_old_action(data, my_data)
-	if data.unit:anim_data().to_idle then
+	if data.unit:anim_data().to_idle or data.unit:anim_data().hurt then
 		return
 	end
 

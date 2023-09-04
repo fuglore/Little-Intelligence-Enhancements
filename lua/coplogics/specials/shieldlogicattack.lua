@@ -243,8 +243,6 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			else
 				my_data.optimal_pos = mvector3.copy(data.m_pos)
 			end
-			
-			my_data.optimal_pos = mvector3.copy(data.m_pos)
 
 			mvector3.add(my_data.optimal_pos, out)
 		else
@@ -332,7 +330,6 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 				local follow_unit_pos = advance_pos or data.objective.follow_unit:movement():nav_tracker():field_position()
 				
 				my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(follow_unit_pos, dis)
-				mvector3.set_z(my_data.optimal_pos, follow_unit_pos.z)
 			elseif AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker and my_data.attitude == "engage" then
 				my_data.optimal_pos = CopLogicAttack._find_flank_pos(data, my_data, new_attention.nav_tracker)
 			end

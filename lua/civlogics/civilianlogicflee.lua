@@ -55,8 +55,11 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 	CivilianLogicFlee._chk_add_delayed_rescue_SO(data, my_data)
 
 	if data.objective and data.objective.was_rescued or not data.is_tied and data.char_tweak.faster_reactions and managers.groupai:state():is_police_called() then
-		local was_freed = data.objective.was_rescued ~= nil
-		data.objective.was_rescued = nil
+		local was_freed = data.objective and data.objective.was_rescued ~= nil
+		
+		if data.objective then
+			data.objective.was_rescued = nil
+		end
 
 		if CivilianLogicFlee._get_coarse_flee_path(data) then
 			data.unit:brain():set_update_enabled_state(true)

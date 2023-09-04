@@ -54,8 +54,8 @@ local adjust_ids = {
 	
 	--transports and other heists sharing element numbers in really obvious ways.
 	pines = {
-		[100122] = 0.25,
-		[100124] = 0.375,
+		[100122] = 0.01,
+		[100124] = 0.25,
 		[100125] = 0.499
 	},
 	des = {

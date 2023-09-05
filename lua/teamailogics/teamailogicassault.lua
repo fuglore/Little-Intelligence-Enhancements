@@ -40,7 +40,6 @@ function TeamAILogicAssault.enter(data, new_logic_name, enter_params)
 	my_data.cover_test_step = 3
 end
 
-
 function TeamAILogicAssault.update(data)
 	local my_data = data.internal_data
 	local t = data.t
@@ -72,6 +71,15 @@ function TeamAILogicAssault.update(data)
 		focus_enemy = data.attention_obj
 	end
 	
+	local action_taken = my_data.advancing or my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data._turning_to_intimidate
+	
+	local enemy_visible = focus_enemy.verified
+		
+	my_data.want_to_take_cover = TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
+	local want_to_take_cover = my_data.want_to_take_cover
+	my_data.cover_test_step = 3
+	action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
+	
 	if not data.unit:movement()._should_stay then
 		if my_data.cover_chk_t < data.t then
 			CopLogicAttack._update_cover(data)
@@ -79,11 +87,7 @@ function TeamAILogicAssault.update(data)
 			my_data.cover_chk_t = data.t + TeamAILogicAssault._COVER_CHK_INTERVAL
 		end
 	
-		local enemy_visible = focus_enemy.verified
-		local action_taken = my_data.advancing or my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data._turning_to_intimidate
-		my_data.want_to_take_cover = TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
-		local want_to_take_cover = my_data.want_to_take_cover
-		action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
+		
 		local in_cover = my_data.in_cover
 		local best_cover = my_data.best_cover
 		
@@ -345,7 +349,7 @@ function TeamAILogicAssault.action_complete_clbk(data, action)
 				my_data.in_cover = my_data.moving_to_cover
 				my_data.in_cover[7] = nil
 				my_data.cover_enter_t = data.t
-				my_data.cover_test_step = 0
+				my_data.cover_test_step = 3
 				my_data.flank_cover = nil
 			end
 
@@ -404,11 +408,7 @@ function TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 	if not data.attention_obj or data.attention_obj.reaction < AIAttentionObject.REACT_COMBAT then
 		return
 	end
-	
-	if data.unit:movement()._should_stay then
-		return
-	end
-	
+
 	if my_data.moving_to_cover then 
 		return true
 	end

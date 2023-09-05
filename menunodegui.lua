@@ -4,7 +4,7 @@ Hooks:PostHook(MenuNodeGui, "_setup_item_rows", "LIES_update", function(self, no
 	
 	if not Global.has_shown_lies_update_warning and new_ver_string and current_ver ~= new_ver_string then
 		title = "LIES has a new update."
-		desc = "Visit the ModWorkshop page to acquire it or update it through Beardlib."
+		desc = "Visit the ModWorkshop page to acquire it."
 		QuickMenu:new(title, desc, {}, true)
 		
 		Global.has_shown_lies_update_warning  = true

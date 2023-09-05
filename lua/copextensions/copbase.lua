@@ -4,6 +4,23 @@ local shotgun_groups = {
 	tac_shield_wall_charge = true
 }
 
+local shotguns = {
+	r870 = true,
+	benelli = true
+}
+
+local shotgun_unit_types = {
+	CS_swat_R870 = true,
+	FBI_swat_R870 = true,
+	CS_heavy_R870 = true,
+	FBI_heavy_R870 = true,
+}
+
+local fbi_3_units = {
+	[Idstring("units/payday2/characters/ene_fbi_3/ene_fbi_3"):key()] = true,
+	[Idstring("units/pd2_dlc_hvh/characters/ene_fbi_hvh_3/ene_fbi_hvh_3"):key()] = true
+}
+
 function CopBase:default_weapon_name(selection_name)
 	local weap_ids = tweak_data.character.weap_ids
 	local weap_unit_names = tweak_data.character.weap_unit_names
@@ -26,10 +43,28 @@ function CopBase:default_weapon_name(selection_name)
 	local m_weapon_id = self._default_weapon_id
 
 	if LIES.settings.hhtacs then
+		if fbi_3_units[self._unit:name():key()] then
+			m_weapon_id = "r870"
+			
+			local char_tweaks = deep_clone(self._char_tweak)
+			char_tweaks.safe_weapon = "mp5"
+			
+			self._char_tweak = char_tweaks
+							
+			if self._unit:brain()._logic_data then
+				self._unit:brain()._logic_data.char_tweak = char_tweaks
+			end
+			
+			self._unit:character_damage()._char_tweak = char_tweaks
+			self._unit:movement()._tweak_data = char_tweaks
+			
+			if self._unit:movement()._action_common_data then
+				self._unit:movement()._action_common_data.char_tweak = char_tweaks
+			end
+		end
+	
 		if not LIES.smg_groups then
-			LIES.smg_groups = {
-				tac_reenforce = true
-			}
+			LIES.smg_groups = {}
 			
 			if LIES.settings.fixed_spawngroups > 2 then
 				LIES.smg_groups["tac_swat_rifle_flank"] = true
@@ -55,10 +90,12 @@ function CopBase:default_weapon_name(selection_name)
 				
 				if self._tweak_table == "taser" then
 					m_weapon_id = "m4_yellow"
+				elseif self._tweak_table == "medic" and not shotguns[m_weapon_id] then
+					m_weapon_id = "mp5"
 				elseif zeal_types[self._tweak_table] then
 					if self._shotgunner then
 						m_weapon_id = "benelli"
-					elseif shotgun_groups[group_type] then
+					elseif self._unit_type and shotgun_unit_types[self._unit_type] then
 						m_weapon_id = "benelli"
 						self._shotgunner = true
 					elseif LIES.smg_groups[group_type] then
@@ -70,7 +107,9 @@ function CopBase:default_weapon_name(selection_name)
 
 						if not self._char_tweak.throwable then
 							local char_tweaks = deep_clone(self._char_tweak)
-						
+							
+							char_tweaks.safe_weapon = "raging_bull"
+							
 							char_tweaks.throwable = "launcher_frag"
 							
 							if self._tweak_table ~= "drug_lord_boss" then
@@ -91,8 +130,12 @@ function CopBase:default_weapon_name(selection_name)
 								self._unit:movement()._action_common_data.char_tweak = char_tweaks
 							end
 						end
-					elseif LIES.smg_groups[group_type] then
-						m_weapon_id = "ump"
+					elseif LIES.smg_groups[group_type] and not shotguns[m_weapon_id] then
+						if tweak_data.group_ai._not_america == "russia" then
+							m_weapon_id = "akmsu_smg"
+						else
+							m_weapon_id = "ump"
+						end
 					elseif m_weapon_id == "mp5" then
 						m_weapon_id = "m4"
 					end
@@ -110,7 +153,7 @@ function CopBase:default_weapon_name(selection_name)
 			if self._tweak_table ~= "tank" and self._tweak_table ~= "tank_hw" then
 				self._shotgunner = true
 			end
-		elseif LIES.smg_groups[group_type] then
+		elseif LIES.smg_groups[group_type] and not shotguns[m_weapon_id] then
 			if tweak_data.group_ai._not_america == "russia" then
 				m_weapon_id = "akmsu_smg"
 			elseif difficulty_index > 5 and group_type ~= "tac_reenforce" then
@@ -122,6 +165,8 @@ function CopBase:default_weapon_name(selection_name)
 			m_weapon_id = "m4"
 		elseif self._tweak_table == "taser" then
 			m_weapon_id = "m4_yellow"
+		elseif self._tweak_table == "medic" and not shotguns[m_weapon_id] then
+			m_weapon_id = "mp5"
 		end
 	
 		local security_vars = {

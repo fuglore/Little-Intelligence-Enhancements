@@ -55,12 +55,52 @@ function CharacterTweakData:_setup_extra_chatter_tweak()
 	self.marshal_shield_break.die_sound_event = "mga_death_scream"
 end
 
+local fry_vars = {
+	"cop",
+	"gensec",
+	"cop_scared",
+	"cop_female",
+	"security",
+	"security_mex",
+	"security_mex_no_pager",
+	"fbi"
+}
+local swat_vars = {
+	"swat",
+	"heavy_swat",
+	"fbi_swat",
+	"fbi_heavy_swat",
+	"city_swat"
+}
+
+
 function CharacterTweakData:setup_hhtacs()
 	self.tank_mini.throwable = "frag"
 	self.drug_lord_boss.throwable = "launcher_frag"
 	
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
+	
+	for i = 1, #fry_vars do
+		local tweak = fry_vars[i]
+		
+		if self[tweak] then
+			self[tweak].safe_weapon = "c45"
+		end
+	end
+	
+	local safe_for_swat = difficulty_index > 7 and "deagle" or "c45"
+	
+	for i = 1, #swat_vars do
+		local tweak = swat_vars[i]
+		
+		if self[tweak] then
+			self[tweak].safe_weapon = safe_for_swat
+		end
+	end
+	
+	self.medic.safe_weapon = "raging_bull"
+	self.spooc.safe_weapon = "beretta92"
 	
 	if difficulty_index > 5 then
 		self.civilian.faster_reactions = true

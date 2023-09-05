@@ -452,6 +452,8 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 	local too_close_threshold = data.internal_data.weapon_range.close
 	local tactics_harass = data.tactics and data.tactics.harass
 	local tactics_dg = data.tactics and data.tactics.deathguard
+	local hhtacs = LIES.settings.hhtacs
+	local rescueable_hostages, all_civilians
 
 	for u_key, attention_data in pairs(attention_objects) do
 		local att_unit = attention_data.unit
@@ -586,7 +588,59 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						weight_mul = (weight_mul or 1) * 0.75
 					end
 				end
+				
+				if hhtacs then
+					if crim_record and attention_data.nav_tracker and AIAttentionObject.REACT_COMBAT <= reaction then
+						local hostages = 0
+						local hostage_blocked = false
+						
+						if not rescueable_hostages then
+							rescueable_hostages = managers.groupai:state():rescueable_hostages()
+						end
+						
+						for hos_key, hos_table in pairs(rescueable_hostages) do
+							local hos_area = hos_table.area
+							local hos_pos = hos_table.pos
+							
+							if hos_area.nav_segs[attention_data.nav_tracker:nav_segment()] or math.abs(hos_pos.z - attention_data.m_pos.z) < 250 and mvector3.distance_sq(attention_data.m_pos, hos_pos) < 250000 then
+								hostages = hostages + 1
+									
+								if hostages > 1 then
+									hostage_blocked = true
+									
+									break
+								end
+							end
+						end
 
+						if not hostage_blocked then
+							if not all_civilians then
+								all_civilians = managers.enemy:all_civilians()
+							end
+						
+							for civ_key, civ_data in pairs(all_civilians) do
+								if not rescueable_hostages[civ_key] and alive(civ_data.unit) then
+									local civ_area = managers.groupai:state():get_area_from_nav_seg_id(civ_data.tracker:nav_segment())
+									
+									if civ_area.nav_segs[attention_data.nav_tracker:nav_segment()] or math.abs(civ_data.m_pos.z - attention_data.m_pos.z) < 250 and mvector3.distance_sq(attention_data.m_pos, civ_data.m_pos) < 250000 then
+										hostages = hostages + 1
+								
+										if hostages > 1 then
+											hostage_blocked = true
+											
+											break
+										end
+									end
+								end
+							end
+						end
+						
+						attention_data.hostage_blocked = hostage_blocked
+					elseif attention_data.hostage_blocked then
+						attention_data.hostage_blocked = nil
+					end
+				end
+				
 				if weight_mul and weight_mul ~= 1 then
 					weight_mul = 1 / weight_mul
 					alert_dt = alert_dt and alert_dt * weight_mul

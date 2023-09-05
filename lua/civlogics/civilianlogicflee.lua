@@ -581,6 +581,23 @@ function CivilianLogicFlee.update(data)
 	my_data.next_upd_t = data.t + 0.5
 end
 
+function CivilianLogicFlee.rescue_SO_verification(ignore_this, params, unit)
+	local areas = params.areas
+	local data = params.logic_data
+
+	if not unit:base():char_tweak().rescue_hostages or unit:movement():cool() or data.team.foes[unit:movement():team().id] then
+		return
+	end
+
+	local u_nav_seg = unit:movement():nav_tracker():nav_segment()
+
+	for _, area in ipairs(areas) do
+		if area.nav_segs[u_nav_seg] or data.tactics and data.tactics.hrt and math.abs(data.m_pos.z - area.pos.z) < 250 then
+			return true
+		end
+	end
+end
+
 function CivilianLogicFlee.on_rescue_SO_administered(ignore_this, data, receiver_unit)
 	managers.groupai:state():on_civilian_try_freed()
 

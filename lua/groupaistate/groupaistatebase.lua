@@ -392,12 +392,17 @@ Hooks:PostHook(GroupAIStateBase, "_clbk_switch_enemies_to_not_cool", "lies_switc
 	end
 end)
 
+function GroupAIStateBase:rescueable_hostages()
+	return self._rescueable_hostages or {}
+end
+
 Hooks:PostHook(GroupAIStateBase, "register_rescueable_hostage", "lies_hrt_reg", function(self, unit, rescue_area)
 	local u_key = unit:key()
+	local position = unit:movement():nav_tracker():position()
 	local rescue_area = rescue_area or self:get_area_from_nav_seg_id(unit:movement():nav_tracker():nav_segment())
 	
 	local rescueable_hostages = self._rescueable_hostages or {}
-	rescueable_hostages[u_key] = rescue_area
+	rescueable_hostages[u_key] = {area = rescue_area, pos = position}
 	self._rescueable_hostages = rescueable_hostages
 end)
 

@@ -40,7 +40,7 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 	
 	local function _f_draw_logic_name(u_key, l_data, draw_color)
 		local logic_name_text = logic_name_texts[u_key]
-		local text_str = l_data.name
+		local text_str = tostring(l_data.unit:base()._tweak_table) .. ":" .. l_data.name
 
 		if l_data.objective then
 			text_str = text_str .. ":" .. l_data.objective.type 
@@ -110,7 +110,7 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 		local objective = unit:brain():objective()
 		local objective_type = objective and objective.type
 
-		if objective_type == "guard" then
+		if objective_type == "guard" or objective_type == "escort" then
 			brush = draw_data.brush_guard
 		elseif objective_type == "defend_area" then
 			brush = draw_data.brush_defend
@@ -393,6 +393,10 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._special_unit_types.tank_medic = true
 		self._special_unit_types.tank_hw = true
 		self._special_unit_types.phalanx_minion = true
+	end
+	
+	if LIES.settings.fixed_spawngroups > 2 or LIES.settings.hhtacs then
+		self._perform_group_spawning = self._perform_group_spawning_LIES
 	end
 	
 	if LIES.settings.hhtacs then
@@ -2157,8 +2161,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				elseif current_objective.tactic == "hrt" then
 					if self._rescueable_hostages then
 						if not next(current_objective.area.criminal.units) then
-							for u_key, hos_area in pairs(self._rescueable_hostages) do
-								if current_objective.area.id == hos_area.id then
+							for u_key, u_table in pairs(self._rescueable_hostages) do
+								if current_objective.area.id == u_table.area.id then
 									return
 								end
 							end
@@ -2185,8 +2189,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					if self._rescueable_hostages then
 						local closest_area_dis, closest_area, closest_chosen_u_data
 						
-						for u_key, area in pairs(self._rescueable_hostages) do
-						
+						for u_key, u_table in pairs(self._rescueable_hostages) do
+							local area = u_table.area
+							
 							if not next(area.criminal.units) then
 								local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(area.pos, group.units)
 								
@@ -2918,8 +2923,18 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				local detonate_pos = nil
 				
 				if tactics_map.gas then
-					if self._task_data.assault.old_target_pos_t and self._task_data.assault.old_target_pos_t > 7 then
+					if self._task_data.assault.old_target_pos_t and self._task_data.assault.old_target_pos_t > 15 then
 						use_gas = true
+						
+						for civ_key, civ_data in pairs(managers.enemy:all_civilians()) do
+							local civ_area = managers.groupai:state():get_area_from_nav_seg_id(civ_data.tracker:nav_segment())
+							
+							if civ_area == assault_area then
+								use_gas = nil
+								
+								break
+							end
+						end
 					end
 				end
 				
@@ -4211,4 +4226,152 @@ function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
 	end
 
 	return best_grp, best_grp_type
+end
+
+function GroupAIStateBesiege:_perform_group_spawning(spawn_task, force, use_last)
+	local nr_units_spawned = 0
+	local produce_data = {
+		name = true,
+		spawn_ai = {}
+	}
+	local group_ai_tweak = tweak_data.group_ai
+	local spawn_points = spawn_task.spawn_group.spawn_pts
+
+	local function _try_spawn_unit(u_type_name, spawn_entry)
+		if GroupAIStateBesiege._MAX_SIMULTANEOUS_SPAWNS <= nr_units_spawned and not force then
+			return
+		end
+
+		local hopeless = true
+		local current_unit_type = tweak_data.levels:get_ai_group_type()
+
+		for _, sp_data in ipairs(spawn_points) do
+			local category = group_ai_tweak.unit_categories[u_type_name]
+
+			if (sp_data.accessibility == "any" or category.access[sp_data.accessibility]) and (not sp_data.amount or sp_data.amount > 0) and sp_data.mission_element:enabled() then
+				hopeless = false
+
+				if sp_data.delay_t < self._t then
+					local units = category.unit_types[current_unit_type]
+					produce_data.name = units[math.random(#units)]
+					produce_data.name = managers.modifiers:modify_value("GroupAIStateBesiege:SpawningUnit", produce_data.name)
+					local spawned_unit = sp_data.mission_element:produce(produce_data)
+					local u_key = spawned_unit:key()
+					local objective = nil
+
+					if spawn_task.objective then
+						objective = self.clone_objective(spawn_task.objective)
+					else
+						objective = spawn_task.group.objective.element:get_random_SO(spawned_unit)
+
+						if not objective then
+							spawned_unit:set_slot(0)
+
+							return true
+						end
+
+						objective.grp_objective = spawn_task.group.objective
+					end
+
+					local u_data = self._police[u_key]
+
+					self:set_enemy_assigned(objective.area, u_key)
+
+					if spawn_entry.tactics then
+						u_data.tactics = spawn_entry.tactics
+						u_data.tactics_map = {}
+
+						for _, tactic_name in ipairs(u_data.tactics) do
+							u_data.tactics_map[tactic_name] = true
+						end
+					end
+					
+					spawned_unit:base()._unit_type = u_type_name
+
+					spawned_unit:brain():set_spawn_entry(spawn_entry, u_data.tactics_map)
+
+					u_data.rank = spawn_entry.rank
+
+					self:_add_group_member(spawn_task.group, u_key)
+
+					if spawned_unit:brain():is_available_for_assignment(objective) then
+						if objective.element then
+							objective.element:clbk_objective_administered(spawned_unit)
+						end
+
+						spawned_unit:brain():set_objective(objective)
+					else
+						spawned_unit:brain():set_followup_objective(objective)
+					end
+
+					nr_units_spawned = nr_units_spawned + 1
+
+					if spawn_task.ai_task then
+						spawn_task.ai_task.force_spawned = spawn_task.ai_task.force_spawned + 1
+						spawned_unit:brain()._logic_data.spawned_in_phase = spawn_task.ai_task.phase
+					end
+
+					sp_data.delay_t = self._t + sp_data.interval
+
+					if sp_data.amount then
+						sp_data.amount = sp_data.amount - 1
+					end
+
+					return true
+				end
+			end
+		end
+
+		if hopeless then
+			debug_pause("[GroupAIStateBesiege:_upd_group_spawning] spawn group", spawn_task.spawn_group.id, "failed to spawn unit", u_type_name)
+
+			return true
+		end
+	end
+
+	for u_type_name, spawn_info in pairs(spawn_task.units_remaining) do
+		if not group_ai_tweak.unit_categories[u_type_name].access.acrobatic then
+			for i = spawn_info.amount, 1, -1 do
+				local success = _try_spawn_unit(u_type_name, spawn_info.spawn_entry)
+
+				if success then
+					spawn_info.amount = spawn_info.amount - 1
+				end
+
+				break
+			end
+		end
+	end
+
+	for u_type_name, spawn_info in pairs(spawn_task.units_remaining) do
+		for i = spawn_info.amount, 1, -1 do
+			local success = _try_spawn_unit(u_type_name, spawn_info.spawn_entry)
+
+			if success then
+				spawn_info.amount = spawn_info.amount - 1
+			end
+
+			break
+		end
+	end
+
+	local complete = true
+
+	for u_type_name, spawn_info in pairs(spawn_task.units_remaining) do
+		if spawn_info.amount > 0 then
+			complete = false
+
+			break
+		end
+	end
+
+	if complete then
+		spawn_task.group.has_spawned = true
+
+		table.remove(self._spawning_groups, use_last and #self._spawning_groups or 1)
+
+		if spawn_task.group.size <= 0 then
+			self._groups[spawn_task.group.id] = nil
+		end
+	end
 end

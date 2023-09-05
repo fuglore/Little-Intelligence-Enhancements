@@ -1,9 +1,10 @@
 Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
 	CopBrain._logic_variants.marshal_marksman = CopBrain._logic_variants.swat
 
-	CopBrain._logic_variants.tank.attack = BossLogicAttack
-	CopBrain._logic_variants.tank_medic.attack = BossLogicAttack
-	CopBrain._logic_variants.tank_mini.attack = BossLogicAttack
+	CopBrain._logic_variants.tank.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.tank_medic.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.tank_mini.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.triad_boss.attack = LIESBossLogicAttack
 	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
 	CopBrain._logic_variants.biker_boss = CopBrain._logic_variants.tank
 	CopBrain._logic_variants.drug_lord_boss = CopBrain._logic_variants.tank
@@ -72,6 +73,10 @@ Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", func
 	self._unit:movement()._action_common_data.char_tweak = char_tweaks
 end)
 
+local supposedly_shitty_guns = {
+	c45 = true,
+	mac11 = true
+}
 local ludicrous_damage = {
 	m4 = true,
 	m4_yellow = true,
@@ -99,16 +104,53 @@ local non_scaling_units = {
 	city_swat = "swat"
 }
 
+function CopBrain:_do_hhtacs_damage_modifiers()
+	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
+	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
+
+	if self._ludicrous_damage_debuff then
+		self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
+		
+		self._ludicrous_damage_debuff = nil
+	end
+	
+	if supposedly_shitty_guns[self._unit:base()._current_weapon_id] then
+		if scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6) --almost all guns in this game deal the same fucking damage, its dumb
+		else
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5)
+		end
+	elseif self._unit:base()._tweak_table ~= "marshal_shield" and self._unit:base()._current_weapon_id == "deagle" then
+		if scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
+		else
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5)
+		end
+	elseif self._unit:base()._current_weapon_id == "raging_bull" and scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5)
+	elseif ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
+		--m4 nerds with spicy tactics on death sentence will deal the same damage as a zeal heavy
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6)
+	elseif self._unit:base()._current_weapon_id == "sg417" and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
+	elseif self._unit:base()._current_weapon_id == "g36" and Global.game_settings.difficulty == "sm_wish" then 
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --g36 users deal 75 damage with "good" preset compared to zeal's 90
+	elseif mayhem_rifles[self._unit:base()._current_weapon_id] and Global.game_settings.difficulty == "easy_wish" then
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) 
+	elseif self._unit:base()._current_weapon_id == "ak47_ass" and Global.game_settings.difficulty == "easy_wish" then
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) 
+	end
+end
+
 Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group)
 	if not Network:is_server() then
 		return
 	end
-	
+
 	if LIES.settings.hhtacs then
 		local not_america = tweak_data.group_ai._not_america
 		local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 		local difficulty_index = tweak_data:difficulty_to_index(difficulty)
-		
 		if not_america and difficulty == "sm_wish" and not self._unit:base()._loudtweakdata then
 			if non_scaling_units[self._unit:base()._tweak_table] then
 				local new_tweak_name = non_scaling_units[self._unit:base()._tweak_table]
@@ -133,23 +175,8 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 		self._unit:inventory():add_unit_by_name(weap_name, true)
 	end
 	
-	if LIES.settings.hhtacs then	
-		if not self._ludicrous_damage_debuff and ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
-			--m4 nerds with spicy tactics on death sentence will deal the same damage as a zeal heavy
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6)
-		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "sg417" and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
-		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "g36" and Global.game_settings.difficulty == "sm_wish" then 
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --g36 users deal 75 damage with "good" preset compared to zeal's 90
-		elseif not self._ludicrous_damage_debuff and mayhem_rifles[self._unit:base()._current_weapon_id] and Global.game_settings.difficulty == "easy_wish" then
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) 
-		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "ak47_ass" and Global.game_settings.difficulty == "easy_wish" then
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) 
-		elseif self._ludicrous_damage_debuff then
-			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
-			
-			self._ludicrous_damage_debuff = nil
-		end
+	if LIES.settings.hhtacs then
+		self:_do_hhtacs_damage_modifiers()
 	end
 end)
 
@@ -169,17 +196,8 @@ Hooks:PostHook(CopBrain, "on_reload", "lies_on_reload", function(self)
 		self._unit:inventory():add_unit_by_name(weap_name, true)
 	end
 	
-	if LIES.settings.hhtacs then	
-		if not self._ludicrous_damage_debuff and ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
-			--m4 nerds with spicy tactics on death sentence will deal the same damage as a zeal heavy
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6)
-		elseif not self._ludicrous_damage_debuff and self._unit:base()._current_weapon_id == "sg417" and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
-			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
-		elseif self._ludicrous_damage_debuff then
-			self._unit:base():remove_buff_by_id("base_damage", self._ludicrous_damage_debuff) 
-			
-			self._ludicrous_damage_debuff = nil
-		end
+	if LIES.settings.hhtacs then
+		self:_do_hhtacs_damage_modifiers()
 	end
 end)
 
@@ -519,4 +537,92 @@ function CopBrain:is_criminal()
 	if self._unit:in_slot(16) or self._logic_data.team.id == tweak_data.levels:get_default_team_ID("player") or self._logic_data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 		return true
 	end
+end
+
+local safe_weapons = {
+	c45 = true,
+	raging_bull = true,
+	deagle = true,
+	mp5 = true --hrt swaps to this
+}
+
+local unsafe_weapons = {
+	sg417 = true,
+	r870 = true,
+	benelli = true,
+	mp5_tactical = true
+}
+
+function CopBrain:request_switch_to_safe_weapon(t)
+	if self._logic_data.safe_weapon_cooldown_t and self._timer:time() < self._logic_data.safe_weapon_cooldown_t then
+		return
+	end
+
+	if self._logic_data.safe_equipped then
+		self._logic_data.safe_weapon_t = self._timer:time() + t
+		
+		return
+	end
+
+	if not self._logic_data.char_tweak or not self._logic_data.char_tweak.safe_weapon then
+		return
+	end
+	
+	if safe_weapons[self._unit:base()._current_weapon_id] or not unsafe_weapons[self._unit:base()._current_weapon_id] then
+		return
+	end
+	
+	local safe_weapon_id = self._logic_data.char_tweak.safe_weapon
+
+	self._logic_data.safe_equipped = true
+	self._logic_data.safe_weapon_t = self._timer:time() + t
+	
+	if not self._logic_data.safe_weapon_name then
+		local weap_ids = tweak_data.character.weap_ids
+		local weap_unit_names = tweak_data.character.weap_unit_names
+		
+		for i_weap_id, weap_id in ipairs(weap_ids) do
+			if safe_weapon_id == weap_id then
+				self._logic_data.safe_weapon_name = weap_unit_names[i_weap_id]
+				
+				break
+			end
+		end
+	end
+	
+	local safe_weapon_name = self._logic_data.safe_weapon_name
+	
+	self._unit:base()._shotgunner = nil
+	self._unit:base()._current_weapon_id = safe_weapon_id
+	self._unit:base()._old_weapon = safe_weapon_name
+	
+	PlayerInventory.destroy_all_items(self._unit:inventory())
+
+	self._unit:inventory():add_unit_by_name(safe_weapon_name, true)
+
+	self:_do_hhtacs_damage_modifiers()
+
+	return true
+end
+
+function CopBrain:request_switch_to_normal_weapon(t)
+	if not self._logic_data.safe_equipped or self._logic_data.safe_weapon_t and self._logic_data.safe_weapon_t > self._timer:time() then
+		return
+	end
+	
+	self._logic_data.safe_equipped = nil
+	self._logic_data.safe_weapon_cooldown_t = self._timer:time() + t
+
+	local weap_name = self._unit:base():default_weapon_name()
+	
+	if self._unit:base()._old_weapon and weap_name ~= self._unit:base()._old_weapon then
+		self._unit:base()._old_weapon = nil
+		PlayerInventory.destroy_all_items(self._unit:inventory())
+
+		self._unit:inventory():add_unit_by_name(weap_name, true)
+	end
+	
+	self:_do_hhtacs_damage_modifiers()
+	
+	return true
 end

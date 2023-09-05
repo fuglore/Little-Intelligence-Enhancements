@@ -136,6 +136,12 @@ function CivilianLogicTravel.update(data)
 		if data.internal_data ~= my_data then
 			return
 		end
+		
+		CivilianLogicTravel._check_for_scare(data, my_data)
+		
+		if data.internal_data ~= my_data then
+			return
+		end
 	end
 	
 	if my_data.warp_pos then
@@ -309,17 +315,13 @@ function CivilianLogicTravel.queued_update(data)
 		return
 	end
 	
-	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 1)
+	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 0.7)
 end
 
-function CivilianLogicTravel._stop_for_criminal(data, my_data)
+function CivilianLogicTravel._check_for_scare(data, my_data)
 	local objective = data.objective
 
 	if not objective or objective.type ~= "follow" or data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then
-		return
-	end
-
-	if not my_data.coarse_path_index or my_data.coarse_path and #my_data.coarse_path - 1 == 1 then
 		return
 	end
 	
@@ -328,47 +330,75 @@ function CivilianLogicTravel._stop_for_criminal(data, my_data)
 	end
 	
 	local follow_unit = objective.follow_unit
-	local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
-	local my_areas = managers.groupai:state():get_areas_from_nav_seg_id(my_nav_seg_id)
-	local follow_unit_nav_seg_id = follow_unit:movement():nav_tracker():nav_segment()
-	local should_try_stop = nil
 	
-	if my_nav_seg_id == follow_unit_nav_seg_id then
-		if mvector3.distance_sq(data.m_pos, follow_unit:movement():nav_tracker():field_position()) < 3600 then
-			objective.in_place = true
+	local follow_unit_far = true
+	local max_dis_sq = 1000000
 
-			data.logic.on_new_objective(data)
-			
-			return
-		end
+	if mvector3.distance_sq(follow_unit:movement():nav_tracker():position(), data.m_pos) < max_dis_sq then
+		follow_unit_far = nil
+	end
 	
-		should_try_stop = true
-	else
-		for _, area in ipairs(my_areas) do
-			if area.nav_segs[follow_unit_nav_seg_id] then
-				should_try_stop = true
-				
+	if follow_unit_far then
+		managers.groupai:state():on_civilian_objective_failed(data.unit, data.objective)
+	
+		return
+	end
+	
+	local player_team_id = tweak_data.levels:get_default_team_ID("player")
+	local enemies_close = nil
+	local min_dis_sq = 250
+	min_dis_sq = min_dis_sq * min_dis_sq
+
+	for c_key, c_data in pairs(managers.enemy:all_enemies()) do
+		if not c_data.unit:anim_data().surrender and c_data.unit:brain()._current_logic_name ~= "trade" and not not c_data.unit:movement():team().foes[player_team_id] and mvector3.distance_sq(c_data.m_pos, data.m_pos) < min_dis_sq and math.abs(c_data.m_pos.z - data.m_pos.z) < 250 then
+			if not data.unit:raycast("ray", m_head_pos, c_data.unit:movement():m_head_pos(), "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "ignore_unit", c_data.unit, "report") then
+				enemies_close = true
+
 				break
 			end
 		end
 	end
 	
-	if not should_try_stop then
+	if enemies_close then
+		managers.groupai:state():on_civilian_objective_failed(data.unit, data.objective)
+	
+		return
+	end
+end
+
+function CivilianLogicTravel._stop_for_criminal(data, my_data)
+	local objective = data.objective
+
+	if not objective or objective.type ~= "follow" or data.unit:movement():chk_action_forbidden("walk") or data.unit:anim_data().act_idle then
+		return
+	end
+	
+	if not objective.follow_unit or not alive(objective.follow_unit) then
+		return
+	end
+	
+	if not my_data.coarse_path then
+		return
+	end
+	
+	local follow_unit = objective.follow_unit
+	local my_nav_seg_id = data.unit:movement():nav_tracker():nav_segment()
+	local my_areas = managers.groupai:state():get_areas_from_nav_seg_id(my_nav_seg_id)
+	local follow_unit_nav_seg_id = follow_unit:movement():nav_tracker():nav_segment()
+	
+	if mvector3.distance_sq(data.m_pos, follow_unit:movement():nav_tracker():field_position()) < 3600 then
+		objective.in_place = true
+
+		data.logic.on_new_objective(data)
+			
+		return
+	else
 		local obj_nav_seg = my_data.coarse_path[#my_data.coarse_path][1]
-		local obj_areas = managers.groupai:state():get_areas_from_nav_seg_id(obj_nav_seg)
-		local follow_unit_areas = managers.groupai:state():get_areas_from_nav_seg_id(follow_unit_nav_seg_id)
-		local dontcheckdis, dis
+		local obj_area = managers.groupai:state():get_area_from_nav_seg_id(obj_nav_seg)
+		local follow_unit_area = managers.groupai:state():get_area_from_nav_seg_id(follow_unit_nav_seg_id)
 		
-		for _, area in ipairs(obj_areas) do
-			if area.nav_segs[follow_unit_nav_seg_id] then
-				dontcheckdis = true
-				
-				break
-			end
-		end
-		
-		if not dontcheckdis and #obj_areas > 0 and #follow_unit_areas > 0 then
-			if mvector3.distance_sq(obj_areas[1].pos, follow_unit_areas[1].pos) > 10000 or math.abs(obj_areas[1].pos.z - follow_unit:movement():nav_tracker():field_position().z) > 250 then
+		if obj_area and follow_unit_area then
+			if mvector3.distance_sq(obj_area.pos, follow_unit_area.pos) > 10000 or math.abs(obj_area.pos.z - follow_unit:movement():nav_tracker():field_position().z) > 250 then
 				objective.in_place = nil
 				
 				data.logic.on_new_objective(data)

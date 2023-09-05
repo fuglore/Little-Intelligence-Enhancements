@@ -116,25 +116,23 @@ function SpoocLogicAttack.update(data)
 	local do_spooc_attack = true
 
 	if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
-		if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) then
-			if not data.attention_obj.react_t then
-				data.attention_obj.react_t = data.t
-			end
+		if not data.attention_obj.react_t then
+			data.attention_obj.react_t = data.t
+		end
+	
+		if not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 2 then
+			data.attention_obj.react_t = data.t
+		end
+	
+		local react_t = 1.4
 		
-			if not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 2 then
-				data.attention_obj.react_t = data.t
-			end
-		
-			local react_t = 1.4
-			
-			local charge_dis = my_data.want_to_take_cover and 1500 or 2500
-			local focus_enemy_dis = data.attention_obj.dis
-			local lerp = math.clamp(focus_enemy_dis / charge_dis, 1, 0)
-			react_t = react_t * lerp
-		
-			if data.t - data.attention_obj.react_t < react_t then
-				do_spooc_attack = nil
-			end
+		local charge_dis = my_data.want_to_take_cover and 1500 or 2500
+		local focus_enemy_dis = data.attention_obj.dis
+		local lerp = math.clamp(focus_enemy_dis / charge_dis, 1, 0)
+		react_t = react_t * lerp
+	
+		if data.t - data.attention_obj.react_t < react_t then
+			do_spooc_attack = nil
 		end
 	end
 	
@@ -191,10 +189,6 @@ function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 	end
 	
 	if data.spooc_attack_timeout_t and data.t < data.spooc_attack_timeout_t then
-		return true
-	end
-	
-	if data.attention_obj.dis >= 1500 then
 		return true
 	end
 	

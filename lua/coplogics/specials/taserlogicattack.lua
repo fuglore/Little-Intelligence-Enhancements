@@ -296,6 +296,10 @@ function TaserLogicAttack._chk_reaction_to_attention_object(data, attention_data
 		return AIAttentionObject.REACT_COMBAT
 	end
 	
+	if attention_data.hostage_blocked then
+		return AIAttentionObject.REACT_COMBAT
+	end
+	
 	local tase_dis =  data.char_tweak.weapon.is_rifle.tase_distance or 1500
 
 	if (attention_data.is_human_player or not attention_data.unit:movement():chk_action_forbidden("hurt")) and attention_data.verified and attention_data.verified_dis < tase_dis * 0.9 then

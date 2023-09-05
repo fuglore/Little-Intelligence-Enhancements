@@ -250,6 +250,10 @@ function CopLogicAttack.update(data)
 			end
 		end
 		
+		if data.attention_obj.hostage_blocked and not (data.tactics and data.tactics.hrt) then
+			want_to_take_cover = true
+		end
+		
 		my_data.want_to_take_cover = want_to_take_cover
 		
 		--log(tostring(my_data.attitude))
@@ -906,6 +910,48 @@ function CopLogicAttack._upd_aim(data, my_data)
 
 	if focus_enemy and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 		local last_sup_t = data.unit:character_damage():last_suppression_t()
+
+		if LIES.settings.hhtacs and focus_enemy.verified_t and data.t - focus_enemy.verified_t < 2 or my_data.shooting then
+			if focus_enemy.hostage_blocked then
+				if data.important then
+					if data.char_tweak.chatter and data.char_tweak.chatter.ready then
+						managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "hostageblock")
+					end
+				end
+			
+				if data.brain:request_switch_to_safe_weapon(3) then
+					if my_data.shooting then
+						local new_action = {
+							body_part = 3,
+							type = "idle"
+						}
+
+						data.unit:brain():action_request(new_action)
+					end
+					
+					if my_data.firing then
+						data.unit:movement():set_allow_fire(false)
+
+						my_data.firing = nil
+					end
+				end
+			elseif data.safe_equipped and data.brain:request_switch_to_normal_weapon(15) then
+				if my_data.shooting then
+					local new_action = {
+						body_part = 3,
+						type = "idle"
+					}
+
+					data.unit:brain():action_request(new_action)
+				end
+				
+				if my_data.firing then
+					data.unit:movement():set_allow_fire(false)
+
+					my_data.firing = nil
+				end
+			end
+		end
 		
 		if not data.char_tweak.always_face_enemy and not focus_enemy.dangerous_special then
 			if my_data.low_value_att or data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis and not (data.tactics and data.tactics.sniper) then
@@ -1011,8 +1057,8 @@ function CopLogicAttack._upd_aim(data, my_data)
 		CopLogicAttack._chk_enrage(data, focus_enemy)
 	end
 	
-	if shoot and focus_enemy then
-		BossLogicAttack._chk_use_throwable(data, my_data, focus_enemy)
+	if shoot and focus_enemy and not data.safe_equipped and not focus_enemy.hostage_blocked then
+		LIESBossLogicAttack._chk_use_throwable(data, my_data, focus_enemy)
 	end
 
 	if not aim then

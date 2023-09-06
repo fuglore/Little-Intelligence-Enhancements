@@ -438,6 +438,17 @@ Hooks:PostHook(GroupAIStateBase, "_remove_group_member", "lies_frienddead", func
 	end
 end)
 
+function GroupAIStateBase:register_active_drill(drill_key, area)
+	self._jammable_drills = self._jammable_drills or {}
+	
+	self._jammable_drills[drill_key] = area
+end
+
+function GroupAIStateBase:unregister_active_drill(drill_key)
+	self._jammable_drills = self._jammable_drills or {}
+	self._jammable_drills[drill_key] = nil
+end
+
 function GroupAIStateBase:print_objective(objective)
 	if objective then
 		log("objective info:")

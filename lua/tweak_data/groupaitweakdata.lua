@@ -4066,21 +4066,23 @@ function GroupAITweakData:_setup_hhtacs_bo_compatibility(difficulty_index)
 			Idstring("units/pd2_mod_bofa/characters/bofa_units/ene_bofa_g36/ene_bofa_g36")
 		}
 	end
-
-	if difficulty_index < 8 then
-		self.unit_categories.FBI_reenforce.unit_types.bo = {
-			Idstring("units/pd2_mod_bofa/characters/ovk_units/ene_ovk_m4/ene_ovk_m4")
-		}
-		self.unit_categories.FBI_reenforce_heavy.unit_types.bo = {
-			Idstring("units/pd2_mod_bofa/characters/ovk_units/ene_ovk_heavy_m4/ene_ovk_heavy_m4")
-		}
-	else
-		self.unit_categories.FBI_reenforce.unit_types.bo = {
-			Idstring("units/pd2_mod_bofa/characters/bofa_units/ene_bofa_g36/ene_bofa_g36")
-		}
-		self.unit_categories.FBI_reenforce_heavy.unit_types.bo = {
-			Idstring("units/pd2_mod_bofa/characters/bofa_units/ene_bofa_heavy_g36/ene_bofa_heavy_g36")
-		}
+	
+	if self.unit_categories.FBI_reenforce then
+		if difficulty_index < 8 then
+			self.unit_categories.FBI_reenforce.unit_types.bo = {
+				Idstring("units/pd2_mod_bofa/characters/ovk_units/ene_ovk_m4/ene_ovk_m4")
+			}
+			self.unit_categories.FBI_reenforce_heavy.unit_types.bo = {
+				Idstring("units/pd2_mod_bofa/characters/ovk_units/ene_ovk_heavy_m4/ene_ovk_heavy_m4")
+			}
+		else
+			self.unit_categories.FBI_reenforce.unit_types.bo = {
+				Idstring("units/pd2_mod_bofa/characters/bofa_units/ene_bofa_g36/ene_bofa_g36")
+			}
+			self.unit_categories.FBI_reenforce_heavy.unit_types.bo = {
+				Idstring("units/pd2_mod_bofa/characters/bofa_units/ene_bofa_heavy_g36/ene_bofa_heavy_g36")
+			}
+		end
 	end
 	
 	if self.unit_categories.FBI_SMG then
@@ -4384,26 +4386,28 @@ function GroupAITweakData:_setup_hhtacs_cartel_compatibility(difficulty_index)
 		}
 	end
 	
-	if difficulty_index < 8 then
-		self.unit_categories.FBI_reenforce.unit_types.federales = {
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_1/ene_cartel_soldier_fbi_1"),
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_2/ene_cartel_soldier_fbi_2"),
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_3/ene_cartel_soldier_fbi_3"),		
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_4/ene_cartel_soldier_fbi_4")
-		}
-		self.unit_categories.FBI_reenforce_heavy.unit_types.federales = {
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_heavy_fbi/ene_cartel_soldier_heavy_fbi"),
-		}
-	else
-		self.unit_categories.FBI_reenforce.unit_types.federales = {
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_1/ene_cartel_soldier_city_1"),
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_2/ene_cartel_soldier_city_2"),
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_3/ene_cartel_soldier_city_3"),		
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_4/ene_cartel_soldier_city_4")
-		}
-		self.unit_categories.FBI_reenforce_heavy.unit_types.federales = {
-			Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_heavy_city/ene_cartel_soldier_heavy_city")
-		}
+	if self.unit_categories.FBI_reenforce then
+		if difficulty_index < 8 then
+			self.unit_categories.FBI_reenforce.unit_types.federales = {
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_1/ene_cartel_soldier_fbi_1"),
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_2/ene_cartel_soldier_fbi_2"),
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_3/ene_cartel_soldier_fbi_3"),		
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_fbi_4/ene_cartel_soldier_fbi_4")
+			}
+			self.unit_categories.FBI_reenforce_heavy.unit_types.federales = {
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_heavy_fbi/ene_cartel_soldier_heavy_fbi"),
+			}
+		else
+			self.unit_categories.FBI_reenforce.unit_types.federales = {
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_1/ene_cartel_soldier_city_1"),
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_2/ene_cartel_soldier_city_2"),
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_3/ene_cartel_soldier_city_3"),		
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_city_4/ene_cartel_soldier_city_4")
+			}
+			self.unit_categories.FBI_reenforce_heavy.unit_types.federales = {
+				Idstring("units/pd2_mod_ttr/characters/ene_cartel_soldier_heavy_city/ene_cartel_soldier_heavy_city")
+			}
+		end
 	end
 	
 	self.enemy_spawn_groups.CS_cops = nil

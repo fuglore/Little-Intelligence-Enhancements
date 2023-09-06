@@ -65,25 +65,30 @@ function SpoocLogicIdle._upd_enemy_detection(data)
 end
 
 function SpoocLogicIdle._exit_hiding(data)
-	data.unit:brain():set_objective({ --this used to call data.unit:set_objective in vanilla...
+	if data.unit:anim_data().to_idle then
+		return
+	end
+
+	--some hiding actions block out "idle/action" meaning that the cloaker cant get out when hiding, do it like this instead
+	local action = {
+		variant = "idle",
+		body_part = 1,
 		type = "act",
-		action = {
-			variant = "idle",
-			body_part = 1,
-			type = "act",
-			blocks = {
-				heavy_hurt = -1,
-				idle = -1,
-				action = -1,
-				turn = -1,
-				light_hurt = -1,
-				walk = -1,
-				fire_hurt = -1,
-				hurt = -1,
-				expl_hurt = -1
-			}
+		blocks = {
+			heavy_hurt = -1,
+			idle = -1,
+			action = -1,
+			turn = -1,
+			light_hurt = -1,
+			walk = -1,
+			fire_hurt = -1,
+			hurt = -1,
+			expl_hurt = -1
 		}
-	})
+	}
+
+	data.unit:brain():action_request(action)
+	data.unit:brain():set_objective()
 end
 
 function SpoocLogicIdle.damage_clbk(data, damage_info)
@@ -108,6 +113,61 @@ function SpoocLogicIdle.damage_clbk(data, damage_info)
 	end
 
 	return res
+end
+
+function SpoocLogicIdle.exit(data, new_logic_name, enter_params)
+	local hiding = data.unit:anim_data().hide_loop or data.unit:anim_data().hide
+	
+	if not hiding then
+		local act_act = data.unit:movement():get_action(1)
+		
+		if act_act and act_act:type() == "act" then
+			local variant = act_act._action_desc.variant
+			
+			if hide_anims[variant] then
+				hiding = true
+			end
+		end
+	end
+	
+	if hiding then
+		local action = {
+			variant = "idle",
+			body_part = 1,
+			type = "act",
+			blocks = {
+				heavy_hurt = -1,
+				idle = -1,
+				action = -1,
+				turn = -1,
+				light_hurt = -1,
+				walk = -1,
+				fire_hurt = -1,
+				hurt = -1,
+				expl_hurt = -1
+			}
+		}
+
+		data.unit:brain():action_request(action)
+	end
+	
+	CopLogicBase.exit(data, new_logic_name, enter_params)
+
+	local my_data = data.internal_data
+
+	data.unit:brain():cancel_all_pathing_searches()
+	CopLogicBase.cancel_queued_tasks(my_data)
+	CopLogicBase.cancel_delayed_clbks(my_data)
+
+	if my_data.best_cover then
+		managers.navigation:release_cover(my_data.best_cover[1])
+	end
+
+	if my_data.nearest_cover then
+		managers.navigation:release_cover(my_data.nearest_cover[1])
+	end
+
+	data.brain:rem_pos_rsrv("path")
 end
 
 function SpoocLogicIdle._chk_exit_hiding(data)

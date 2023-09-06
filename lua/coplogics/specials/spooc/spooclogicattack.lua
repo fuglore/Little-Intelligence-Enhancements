@@ -125,12 +125,7 @@ function SpoocLogicAttack.update(data)
 		end
 	
 		local react_t = 1.4
-		
-		local charge_dis = my_data.want_to_take_cover and 1500 or 2500
-		local focus_enemy_dis = data.attention_obj.dis
-		local lerp = math.clamp(focus_enemy_dis / charge_dis, 1, 0)
-		react_t = react_t * lerp
-	
+
 		if data.t - data.attention_obj.react_t < react_t then
 			do_spooc_attack = nil
 		end

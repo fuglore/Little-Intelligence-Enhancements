@@ -2159,10 +2159,22 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						end
 					end
 				elseif current_objective.tactic == "hrt" then
-					if self._rescueable_hostages then
+					if current_objective.going_for_hostages and self._rescueable_hostages then
 						if not next(current_objective.area.criminal.units) then
 							for u_key, u_table in pairs(self._rescueable_hostages) do
 								if current_objective.area.id == u_table.area.id then
+									return
+								end
+							end
+							
+							current_objective.tactic = nil
+						else
+							current_objective.tactic = nil
+						end
+					elseif current_objective.going_for_drill and self._jammable_drills then
+						if not next(current_objective.area.criminal.units) then
+							for u_key, area in pairs(self._jammable_drills) do
+								if current_objective.area.id == area.id then
 									return
 								end
 							end
@@ -2218,6 +2230,51 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 									type = "assault_area",
 									attitude = "avoid",
 									tactic = "hrt",
+									going_for_hostages = true,
+									area = closest_area,
+									coarse_path = coarse_path
+								}
+
+								self:_set_objective_to_enemy_group(group, grp_objective)
+
+								return
+							end
+						end
+					end
+					
+					if self._jammable_drills then
+						local closest_area_dis, closest_area, closest_chosen_u_data
+						
+						for u_key, u_area in pairs(self._jammable_drills) do
+							local area = u_area
+							
+							if not next(area.criminal.units) then
+								local closest_u_id, closest_u_data, closest_u_dis_sq = self._get_closest_group_unit_to_pos(area.pos, group.units)
+								
+								if not closest_area_dis or closest_u_dis_sq < closest_area_dis then
+									closest_area = area
+									closest_area_dis = closest_u_dis_sq
+									closest_chosen_u_data = closest_u_data
+								end
+							end
+						end
+						
+						if closest_area then
+							local search_params = {
+								id = "GroupAI_HRTtactic",
+								from_tracker = closest_chosen_u_data.unit:movement():nav_tracker(),
+								to_seg = closest_area.pos_nav_seg,
+								access_pos = self._get_group_acces_mask(group),
+								verify_clbk = callback(self, self, "is_nav_seg_safe")
+							}
+							local coarse_path = managers.navigation:search_coarse(search_params)
+							
+							if coarse_path then							
+								local grp_objective = {
+									type = "assault_area",
+									attitude = "avoid",
+									tactic = "hrt",
+									going_for_drill = true,
 									area = closest_area,
 									coarse_path = coarse_path
 								}
@@ -2925,11 +2982,12 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				if tactics_map.gas then
 					if self._task_data.assault.old_target_pos_t and self._task_data.assault.old_target_pos_t > 15 then
 						use_gas = true
+						local old_target_pos = self._task_data.assault.old_target_pos
 						
 						for civ_key, civ_data in pairs(managers.enemy:all_civilians()) do
 							local civ_area = managers.groupai:state():get_area_from_nav_seg_id(civ_data.tracker:nav_segment())
 							
-							if civ_area == assault_area then
+							if civ_area == assault_area or mvector3.distance(civ_data.m_pos, old_target_pos) <= 700 then
 								use_gas = nil
 								
 								break

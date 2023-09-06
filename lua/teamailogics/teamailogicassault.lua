@@ -37,7 +37,7 @@ function TeamAILogicAssault.enter(data, new_logic_name, enter_params)
 	data.unit:movement():set_stance("hos")
 
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
-	my_data.cover_test_step = 3
+	my_data.cover_test_step = 0
 end
 
 function TeamAILogicAssault.update(data)
@@ -77,7 +77,6 @@ function TeamAILogicAssault.update(data)
 		
 	my_data.want_to_take_cover = TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 	local want_to_take_cover = my_data.want_to_take_cover
-	my_data.cover_test_step = 3
 	action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
 	
 	if not data.unit:movement()._should_stay then

@@ -69,6 +69,10 @@ Hooks:PostHook(Drill, "clbk_sabotage_SO_verification", "lies_tacs_drill", functi
 	if not LIES.settings.hhtacs then
 		return
 	end
+	
+	if candidate_unit:movement():cool() then
+		return
+	end
 
 	local pos = candidate_unit:movement():nav_tracker():field_position()
 
@@ -146,4 +150,9 @@ function Drill:_register_sabotage_SO()
 	self._sabotage_SO_id = "drill_sabotage" .. tostring(self._unit:key())
 
 	managers.groupai:state():add_special_objective(self._sabotage_SO_id, so_descriptor)
+	managers.groupai:state():register_active_drill(self._unit:key(), self._SO_area)
 end
+
+Hooks:PostHook(Drill, "_unregister_sabotage_SO", "lies_unregisterdrill", function(self)
+	managers.groupai:state():unregister_active_drill(self._unit:key())
+end)

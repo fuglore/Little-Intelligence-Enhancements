@@ -403,7 +403,13 @@ function CopLogicAttack._upd_combat_movement(data)
 			if my_data.charge_path then
 				local path = my_data.charge_path
 				my_data.charge_path = nil
-				action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, data.tactics and data.tactics.charge and "run" or "walk")
+				local haste = "walk"
+				
+				if data.tactics and data.tactics.charge or aggro_level > 2 then
+					haste = "run"
+				end
+				
+				action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, haste)
 				
 				if action_taken then
 					my_data.charging = true
@@ -619,6 +625,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	local want_to_take_cover = my_data.want_to_take_cover
 	action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
 	local move_to_cover, want_flank_cover = nil
+	local aggro_level = LIES.settings.enemy_aggro_level
 	
 	if my_data.cover_test_step ~= 0 and not enemy_visible_softer and (action_taken or want_to_take_cover or not in_cover) then
 		my_data.cover_test_step = 0
@@ -635,15 +642,21 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	elseif want_to_take_cover or data.is_converted then
 		move_to_cover = true
 	elseif not enemy_visible then --no longer requires a group objective to work, takes into account flank cover and just generally not seeing enemies in a while
-		if not (data.tactics and data.tactics.sniper) and (my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and my_data.charge_path then
+		if not (data.tactics and data.tactics.sniper) and (aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and my_data.charge_path then
 			local path = my_data.charge_path
 			my_data.charge_path = nil
-			action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, data.tactics and data.tactics.charge and "run" or "walk")
+			local haste = "walk"
+			
+			if data.tactics and data.tactics.charge or aggro_level > 2 then
+				haste = "run"
+			end
+			
+			action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, haste)
 			
 			if action_taken then
 				my_data.charging = true
 			end
-		elseif focus_enemy.verified_t and t - focus_enemy.verified_t < 2 and best_cover and (not in_cover or best_cover[1] ~= in_cover[1]) then
+		elseif aggro_level < 4 and focus_enemy.verified_t and t - focus_enemy.verified_t < 2 and best_cover and (not in_cover or best_cover[1] ~= in_cover[1]) then
 			move_to_cover = true
 		elseif in_cover then
 			local my_tracker = unit:movement():nav_tracker()
@@ -665,7 +678,7 @@ function CopLogicAttack._pathing_complete_clbk(data)
 					height = 82.5
 				end
 				
-				local aim_pos = focus_enemy.last_verified_pos or focus_enemy.verified_pos
+				local aim_pos = focus_enemy.verified_pos
 				
 				--make this into a loop to save updates
 				while my_data.cover_test_step < 3 do
@@ -699,21 +712,25 @@ function CopLogicAttack._pathing_complete_clbk(data)
 		else
 			move_to_cover = true
 		end
-	elseif my_data.at_cover_shoot_pos then
+	elseif my_data.at_cover_shoot_pos and aggro_level < 4 then
 		if not my_data.stay_out_time or my_data.stay_out_time < t then
 			move_to_cover = true
 		end
 	else
 		if not (data.tactics and data.tactics.sniper) then
-			if my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge then
-				if my_data.charge_path then
-					local path = my_data.charge_path
-					my_data.charge_path = nil
-					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, data.tactics and data.tactics.charge and "run" or "walk")
-					
-					if action_taken then
-						my_data.charging = true
-					end
+			if (aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and my_data.charge_path then
+				local path = my_data.charge_path
+				my_data.charge_path = nil
+				local haste = "walk"
+				
+				if data.tactics and data.tactics.charge or aggro_level > 2 then
+					haste = "run"
+				end
+				
+				action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, haste)
+				
+				if action_taken then
+					my_data.charging = true
 				end
 			else
 				move_to_cover = true
@@ -935,7 +952,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 						my_data.firing = nil
 					end
 				end
-			elseif data.safe_equipped and data.brain:request_switch_to_normal_weapon(15) then
+			elseif data.safe_equipped and data.brain:request_switch_to_normal_weapon(7) then
 				if my_data.shooting then
 					local new_action = {
 						body_part = 3,
@@ -2288,31 +2305,69 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 	local m_key = data.key
 	local focus_enemy = data.attention_obj
 	
-	for u_key, u_data in pairs(data.group.units) do
-		if u_key ~= m_key then
-			local is_shield = look_for_shields and u_data.unit:base():has_tag("shield")
-			local is_medic = u_data.unit:base():has_tag("medic")
-			local is_tank = u_data.unit:base():has_tag("tank")
+	if data.group then
+		for u_key, u_data in pairs(data.group.units) do
+			if u_key ~= m_key then
+				local is_shield = look_for_shields and u_data.unit:base():has_tag("shield")
+				local is_medic = u_data.unit:base():has_tag("medic")
+				local is_tank = u_data.unit:base():has_tag("tank")
 
-			if is_medic and is_tank or is_shield or is_medic or not has_medic and is_tank then
-				local buddy_logic_data = u_data.unit:brain()._logic_data
-				
-				if buddy_logic_data and buddy_logic_data.name ~= "inactive" then
-					local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
-					local follow_unit_pos = advance_pos or u_data.unit:movement():nav_tracker():field_position()
+				if is_medic and is_tank or is_shield or is_medic or not has_medic and is_tank then
+					local buddy_logic_data = u_data.unit:brain()._logic_data
 					
-					if follow_unit_pos then
-						local m_dis = dis_sq(m_field_pos, follow_unit_pos)
+					if buddy_logic_data and buddy_logic_data.name ~= "inactive" then
+						local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
+						local follow_unit_pos = advance_pos or u_data.unit:movement():nav_tracker():field_position()
 						
-						if not best_dis or best_dis > m_dis then
-							best_dis = m_dis
-							best_pos = follow_unit_pos
-							has_shield = is_shield
-							has_medic = is_medic
-							has_tank = is_tank
-							best_rank = u_data.rank
-							chosen_u_data = u_data
-							look_for_shields = not is_medic
+						if follow_unit_pos then
+							local m_dis = dis_sq(m_field_pos, follow_unit_pos)
+							
+							if not best_dis or best_dis < m_dis then
+								best_dis = m_dis
+								best_pos = follow_unit_pos
+								has_shield = is_shield
+								has_medic = is_medic
+								has_tank = is_tank
+								best_rank = u_data.rank
+								chosen_u_data = u_data
+								look_for_shields = not is_medic
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	if not best_pos and data.important then
+		for u_key, u_data in pairs(managers.enemy:all_enemies()) do
+			if u_key ~= m_key and alive(u_data.unit) and not u_data.unit:movement():team().foes[data.team.id] then
+				local is_shield = look_for_shields and u_data.unit:base():has_tag("shield")
+				local is_medic = u_data.unit:base():has_tag("medic")
+				local is_tank = u_data.unit:base():has_tag("tank")
+
+				if is_medic and is_tank or is_shield or is_medic or not has_medic and is_tank then
+					local buddy_logic_data = u_data.unit:brain()._logic_data
+					
+					if buddy_logic_data and buddy_logic_data.name ~= "inactive" then
+						local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
+						local follow_unit_pos = advance_pos or u_data.unit:movement():nav_tracker():field_position()
+						
+						if follow_unit_pos then
+							local m_dis = dis_sq(m_field_pos, follow_unit_pos)
+							
+							if m_dis < 1000000 then
+								if not best_dis or best_dis < m_dis then
+									best_dis = m_dis
+									best_pos = follow_unit_pos
+									has_shield = is_shield
+									has_medic = is_medic
+									has_tank = is_tank
+									best_rank = u_data.rank
+									chosen_u_data = u_data
+									look_for_shields = not is_medic
+								end
+							end
 						end
 					end
 				end
@@ -2357,7 +2412,7 @@ function CopLogicAttack._update_cover(data)
 			local want_to_take_cover = my_data.want_to_take_cover
 			local friend_pos
 			
-			if want_to_take_cover and data.group then
+			if want_to_take_cover then
 				friend_pos = CopLogicAttack._find_friend_pos(data, my_data)
 			end
 			
@@ -2366,10 +2421,10 @@ function CopLogicAttack._update_cover(data)
 				
 				if not best_cover or mvec3_dis_sq(best_cover[1][1], friend_pos) > 40000 or not CopLogicAttack._verify_cover(best_cover[1], threat_pos) then
 					local nav_seg_id = managers.navigation:get_nav_seg_from_pos(friend_pos, true)
-					local follow_unit_area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg_id)
-					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_area.nav_segs, 200, friend_pos, threat_pos)
+					local found_cover = managers.navigation:find_cover_away_from_pos(friend_pos, threat_pos, nav_seg_id)
 
 					if found_cover then
+						--log("IT'S HAPPY HOUR!!!")
 						satisfied = true
 						local better_cover = {
 							found_cover
@@ -2377,10 +2432,6 @@ function CopLogicAttack._update_cover(data)
 						
 						if not best_cover or best_cover[1] ~= found_cover then
 							CopLogicAttack._set_best_cover(data, my_data, better_cover)
-							
-							my_data.flank_cover = nil
-						elseif my_data.flank_cover then
-							my_data.flank_cover.failed = true
 						end
 
 						local offset_pos, yaw = CopLogicAttack._get_cover_offset_pos(data, better_cover, threat_pos)
@@ -2389,8 +2440,6 @@ function CopLogicAttack._update_cover(data)
 							better_cover[5] = offset_pos
 							better_cover[6] = yaw
 						end
-						
-						my_data.flank_cover = nil
 					end
 				end
 			elseif data.objective and data.objective.follow_unit and alive(data.objective.follow_unit) then
@@ -2401,14 +2450,10 @@ function CopLogicAttack._update_cover(data)
 				local dis = data.objective.distance and data.objective.distance * 0.6 or 450
 				
 				if not best_cover or mvec3_dis_sq(near_pos, best_cover[1][1]) > dis * dis or not CopLogicAttack._verify_cover(best_cover[1], threat_pos) then
-					local follow_unit_area = managers.groupai:state():get_area_from_nav_seg_id(data.objective.follow_unit:movement():nav_tracker():nav_segment())
-					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_area.nav_segs, dis, near_pos, threat_pos)
+					local follow_unit_seg = data.objective.follow_unit:movement():nav_tracker():nav_segment()
+					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_seg, dis, near_pos, threat_pos)
 
 					if found_cover then
-						if not follow_unit_area.nav_segs[found_cover[3]:nav_segment()] then
-							debug_pause_unit(data.unit, "cover in wrong area")
-						end
-
 						satisfied = true
 						local better_cover = {
 							found_cover
@@ -2501,7 +2546,7 @@ function CopLogicAttack._update_cover(data)
 					local search_nav_seg = nil
 
 					if data.objective and data.objective.type == "defend_area" then
-						search_nav_seg = data.objective.area and data.objective.area.nav_segs or data.objective.nav_seg
+						search_nav_seg = data.objective.nav_seg
 					end
 					
 					local found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)

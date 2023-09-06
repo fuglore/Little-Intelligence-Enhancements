@@ -69,3 +69,34 @@ function PlayerBleedOut._register_revive_SO(revive_SO_data, variant)
 		revive_SO_data.deathguard_SO_id = PlayerBleedOut._register_deathguard_SO(revive_SO_data.unit)
 	end
 end
+
+function PlayerBleedOut:on_rescue_SO_administered(revive_SO_data, receiver_unit)
+	if revive_SO_data.rescuer then
+		debug_pause("[PlayerBleedOut:on_rescue_SO_administered] Already had a rescuer!!!!", receiver_unit, revive_SO_data.rescuer)
+	end
+
+	revive_SO_data.rescuer = receiver_unit
+	revive_SO_data.SO_id = nil
+
+	if receiver_unit:movement():carrying_bag() then
+		local speed = 670
+		local can_run = tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type].can_run
+		local speed_mul = tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type].move_speed_modifier
+
+		if not can_run then
+			speed = 285
+		end
+		
+		speed = speed * speed_mul
+		
+		if can_run then
+			speed = speed * 28
+		else
+			speed = speed * 10
+		end
+		
+		if mvector3.distance(revive_SO_data.unit:movement():m_pos(), receiver_unit:movement():m_pos()) > speed then
+			receiver_unit:movement():throw_bag()
+		end
+	end
+end

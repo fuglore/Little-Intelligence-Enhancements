@@ -779,3 +779,175 @@ function TeamAILogicIdle.intimidate_others(data, my_data, can_turn)
 		best_unit:brain():on_intimidated(1, data.unit)
 	end
 end
+
+function TeamAILogicIdle.on_long_dis_interacted(data, other_unit, secondary)
+	if data.objective and data.objective.type == "revive" then
+		if other_unit:key() == data.objective.follow_unit:key() then
+			if not data.objective.called then
+				data.objective.called = true
+				
+				return
+			end
+			
+			if data.unit:movement():carrying_bag() then
+				data.unit:movement():throw_bag()
+			end
+		end
+	
+		return
+	end
+
+	local objective_type, objective_action, interrupt = nil
+
+	if other_unit:base().is_local_player then
+		if not secondary then
+			if other_unit:character_damage():need_revive() then
+				objective_type = "revive"
+				objective_action = "revive"
+			elseif other_unit:character_damage():arrested() then
+				objective_type = "revive"
+				objective_action = "untie"
+			else
+				objective_type = "follow"
+			end
+		else
+			objective_type = "stop"
+		end
+	elseif not secondary then
+		if other_unit:movement():need_revive() then
+			objective_type = "revive"
+
+			if other_unit:movement():current_state_name() == "arrested" then
+				objective_action = "untie"
+			else
+				objective_action = "revive"
+			end
+		else
+			objective_type = "follow"
+		end
+	else
+		objective_type = "stop"
+	end
+
+	local objective = nil
+	local should_stay = false
+
+	if objective_type == "follow" then
+		if data.unit:movement():carrying_bag() and not data.unit:movement()._should_stay then
+			local throw_distance = tweak_data.ai_carry.throw_distance * data.unit:movement():carry_tweak().throw_distance_multiplier
+			local dist = data.unit:position() - other_unit:position()
+			local throw_bag = mvector3.dot(dist, dist) < throw_distance * throw_distance
+
+			if throw_bag then
+				if other_unit == managers.player:player_unit() then
+					if other_unit:movement():current_state_name() == "carry" then
+						throw_bag = false
+					end
+				elseif other_unit:movement():carry_id() ~= nil then
+					throw_bag = false
+				end
+			end
+
+			if throw_bag then
+				objective = {
+					type = "throw_bag",
+					unit = other_unit
+				}
+			end
+		end
+
+		if not objective then
+			objective = {
+				scan = true,
+				destroy_clbk_key = false,
+				called = true,
+				type = objective_type,
+				follow_unit = other_unit
+			}
+
+			data.unit:sound():say("r01x_sin", true)
+		end
+	elseif objective_type == "stop" then
+		objective = {
+			scan = true,
+			destroy_clbk_key = false,
+			type = "follow",
+			called = true,
+			follow_unit = other_unit
+		}
+		should_stay = true
+	else
+		local followup_objective = {
+			scan = true,
+			type = "act",
+			action = {
+				variant = "crouch",
+				body_part = 1,
+				type = "act",
+				blocks = {
+					heavy_hurt = -1,
+					hurt = -1,
+					action = -1,
+					aim = -1,
+					walk = -1
+				}
+			}
+		}
+		objective = {
+			type = "revive",
+			called = true,
+			scan = true,
+			destroy_clbk_key = false,
+			follow_unit = other_unit,
+			nav_seg = other_unit:movement():nav_tracker():nav_segment(),
+			action = {
+				align_sync = true,
+				type = "act",
+				body_part = 1,
+				variant = objective_action,
+				blocks = {
+					light_hurt = -1,
+					hurt = -1,
+					action = -1,
+					heavy_hurt = -1,
+					aim = -1,
+					walk = -1
+				}
+			},
+			action_duration = tweak_data.interaction[objective_action == "untie" and "free" or objective_action].timer,
+			followup_objective = followup_objective
+		}
+
+		data.unit:sound():say("r02a_sin", true)
+	end
+	
+	if objective and objective.type == "revive" and objective_action ~= "untie" then
+		if data.unit:movement():carrying_bag() then
+			local speed = 670
+			local can_run = tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type].can_run
+			local speed_mul = tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type].move_speed_modifier
+
+			if not can_run then
+				speed = 285
+			end
+			
+			speed = speed * speed_mul
+			
+			if can_run then
+				speed = speed * 28
+			else
+				speed = speed * 10
+			end
+			
+			if mvector3.distance(other_unit:movement():m_pos(), data.m_pos) > speed then
+				data.unit:movement():throw_bag()
+			end
+		end
+	end
+
+	data.unit:movement():set_should_stay(should_stay)
+
+	if objective then
+		data.unit:brain():set_objective(objective)
+	end
+end

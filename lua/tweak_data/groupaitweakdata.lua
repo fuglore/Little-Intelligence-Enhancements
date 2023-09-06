@@ -870,25 +870,7 @@ function GroupAITweakData:_LIES_setup()
 	
 	--spawngroup setups for spicy tacs
 	if LIES.settings.hhtacs then
-		if difficulty_index < 5 then
-			self.unit_categories.FBI_tank.unit_types = {
-				america = {
-					Idstring("units/payday2/characters/ene_bulldozer_1/ene_bulldozer_1")
-				},
-				russia = {
-					Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_tank_r870/ene_akan_fbi_tank_r870")
-				},
-				zombie = {
-					Idstring("units/pd2_dlc_hvh/characters/ene_bulldozer_hvh_1/ene_bulldozer_hvh_1")
-				},
-				murkywater = {
-					Idstring("units/pd2_dlc_bph/characters/ene_murkywater_bulldozer_2/ene_murkywater_bulldozer_2")
-				},
-				federales = {
-					Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_r870/ene_swat_dozer_policia_federale_r870")
-				}
-			}
-		elseif difficulty_index == 6 then
+		if difficulty_index == 6 then
 			self.unit_categories.FBI_tank.unit_types.america = {
 				Idstring("units/payday2/characters/ene_bulldozer_1/ene_bulldozer_1"),
 				Idstring("units/payday2/characters/ene_bulldozer_2/ene_bulldozer_2"),
@@ -945,7 +927,7 @@ function GroupAITweakData:_LIES_setup()
 				Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_m249/ene_swat_dozer_policia_federale_m249"),
 				Idstring("units/pd2_dlc_bex/characters/ene_swat_dozer_policia_federale_minigun/ene_swat_dozer_policia_federale_minigun")
 			}
-		else
+		elseif difficulty_index == 8 then
 			self.unit_categories.FBI_tank.unit_types.america = {
 				Idstring("units/pd2_dlc_gitgud/characters/ene_zeal_bulldozer/ene_zeal_bulldozer"),
 				Idstring("units/pd2_dlc_gitgud/characters/ene_zeal_bulldozer_2/ene_zeal_bulldozer_2"),

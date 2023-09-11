@@ -130,6 +130,10 @@ function CivilianLogicIdle._upd_detection(data)
 	elseif not data.char_tweak.ignores_attention_focus then
 		CopLogicIdle._chk_focus_on_attention_object(data, my_data)
 	end
+	
+	if my_data ~= data.internal_data then
+		return
+	end
 
 	if not data.unit:movement():cool() and (not my_data.acting or not not data.unit:anim_data().act_idle) then
 		local objective = data.objective

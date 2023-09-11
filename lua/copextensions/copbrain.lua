@@ -5,6 +5,10 @@ Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
 	CopBrain._logic_variants.tank_medic.attack = LIESBossLogicAttack
 	CopBrain._logic_variants.tank_mini.attack = LIESBossLogicAttack
 	CopBrain._logic_variants.triad_boss.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.snowman_boss.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.hector_boss.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.drug_lord_boss.attack = LIESBossLogicAttack
+	CopBrain._logic_variants.deep_boss.attack = LIESBossLogicAttack
 	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
 	CopBrain._logic_variants.biker_boss = CopBrain._logic_variants.tank
 	CopBrain._logic_variants.drug_lord_boss = CopBrain._logic_variants.tank

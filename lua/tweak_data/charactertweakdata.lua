@@ -296,5 +296,110 @@ function CharacterTweakData:setup_hhtacs()
 		self.city_swat.dodge = light_adv
 		self.taser.dodge = light_adv
 		self.medic.dodge = light_adv
+		
+		local ninja_adv = {
+			speed = 1.6,
+			occasions = {
+				hit = {
+					chance = 1,
+					check_timeout = {
+						0,
+						0
+					},
+					variations = {
+						side_step = {
+							chance = 3,
+							shoot_chance = 1,
+							shoot_accuracy = 1,
+							timeout = {
+								0,
+								0
+							}
+						},
+						roll = {
+							chance = 1,
+							timeout = {
+								0.2,
+								0.2
+							}
+						},
+						wheel = {
+							chance = 2,
+							timeout = {
+								0.5,
+								0.5
+							}
+						}
+					}
+				},
+				preemptive = {
+					chance = 1,
+					check_timeout = {
+						0,
+						0
+					},
+					variations = {
+						side_step = {
+							chance = 3,
+							shoot_chance = 1,
+							shoot_accuracy = 1,
+							timeout = {
+								0,
+								0
+							}
+						},
+						roll = {
+							chance = 1,
+							timeout = {
+								0.2,
+								0.2
+							}
+						},
+						wheel = {
+							chance = 2,
+							timeout = {
+								0.2,
+								0.2
+							}
+						}
+					}
+				},
+				scared = {
+					chance = 1,
+					check_timeout = {
+						0,
+						0
+					},
+					variations = {
+						side_step = {
+							chance = 5,
+							shoot_chance = 1,
+							shoot_accuracy = 1,
+							timeout = {
+								0,
+								0
+							}
+						},
+						roll = {
+							chance = 3,
+							timeout = {
+								0.2,
+								0.2
+							}
+						},
+						wheel = {
+							chance = 3,
+							timeout = {
+								0.2,
+								0.2
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		self.spooc.dodge = ninja_adv
+		self.shadow_spooc.dodge = ninja_adv
 	end
 end

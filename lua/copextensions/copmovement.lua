@@ -2,7 +2,17 @@ Hooks:PostHook(CopMovement, "_upd_actions", "lies_actions", function(self, t)
 	if not self._need_upd then
 		local ext_anim = self._ext_anim
 		
-		self._need_upd = ext_anim.fumble and true or false
+		self._need_upd = ext_anim.fumble and true
+		
+		if not self._need_upd then
+			if managers.groupai:state():whisper_mode() and self._ext_base:lod_stage() then
+				self._need_upd = true
+			end
+		end
+		
+		if self._need_upd then
+			self:upd_m_head_pos()
+		end
 	end
 end)
 

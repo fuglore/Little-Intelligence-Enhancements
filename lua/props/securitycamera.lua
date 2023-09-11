@@ -65,6 +65,7 @@ function SecurityCamera:_upd_detect_attention_objects(t)
 	local my_pos = self._pos
 	local my_fwd = self._look_fwd
 	local det_delay = self._detection_delay
+	local hhtacs = LIES.settings.hhtacs
 
 	for u_key, attention_info in pairs(detected_obj) do
 		if t >= attention_info.next_verify_t then
@@ -92,12 +93,19 @@ function SecurityCamera:_upd_detect_attention_objects(t)
 					else
 						local min_delay = det_delay[1]
 						local max_delay = det_delay[2]
-						local angle_mul_mod = 0.15 * math.min(angle / self._cone_angle, 1)
-						local dis_mul_mod = 0.85 * dis_multiplier
+						local angle_mul_mod = (hhtacs and 0.5 or 0.15) * math.min(angle / self._cone_angle, 1)
+						local dis_mul_mod = (hhtacs and 0.5 or 0.85) * dis_multiplier
 						local notice_delay_mul = attention_info.settings.notice_delay_mul or 1
 
 						if attention_info.settings.detection and attention_info.settings.detection.delay_mul then
-							notice_delay_mul = notice_delay_mul * attention_info.settings.detection.delay_mul
+							if hhtacs then
+								local mul = attention_info.settings.detection.delay_mul
+								mul = math.lerp(mul, 1, 0.75) --detection risk affects detection rate 75% less
+								
+								notice_delay_mul = notice_delay_mul * mul
+							else
+								notice_delay_mul = notice_delay_mul * attention_info.settings.detection.delay_mul
+							end
 						end
 						
 						local notice_delay_modified = math.lerp(min_delay * notice_delay_mul, max_delay, dis_mul_mod + angle_mul_mod)
@@ -121,7 +129,7 @@ function SecurityCamera:_upd_detect_attention_objects(t)
 
 				attention_info.notice_progress = attention_info.notice_progress + delta_prog
 
-				if attention_info.notice_progress > 1 then
+				if attention_info.notice_progress >= 1 then
 					attention_info.notice_progress = nil
 					attention_info.prev_notice_chk_t = nil
 					attention_info.identified = true
@@ -132,7 +140,7 @@ function SecurityCamera:_upd_detect_attention_objects(t)
 					if AIAttentionObject.REACT_SCARED <= attention_info.settings.reaction then
 						managers.groupai:state():on_criminal_suspicion_progress(attention_info.unit, self._unit, true)
 					end
-				elseif attention_info.notice_progress < 0 then
+				elseif attention_info.notice_progress <= 0 then
 					self:_destroy_detected_attention_object_data(attention_info)
 
 					noticable = false
@@ -208,6 +216,7 @@ function SecurityCamera:_upd_suspicion(t)
 	end
 
 	local max_suspicion = 0
+	local hhtacs = LIES.settings.hhtacs
 
 	for u_key, attention_data in pairs(self._detected_attention_objects) do
 		if attention_data.identified and attention_data.reaction == AIAttentionObject.REACT_SUSPICIOUS then
@@ -234,10 +243,16 @@ function SecurityCamera:_upd_suspicion(t)
 				local dis = attention_data.dis
 				local susp_settings = attention_data.unit:base():suspicion_settings()
 				local suspicion_range = self._suspicion_range
+				local susp_mul = susp_settings.range_mul
+				
+				if hhtacs then
+					susp_mul = math.lerp(susp_mul, 1, 0.75)
+				end
+				
 				local uncover_range = 0
 				local max_range = self._range
 
-				if attention_data.settings.uncover_range and dis < math.min(max_range, uncover_range) * susp_settings.range_mul then
+				if attention_data.settings.uncover_range and dis < math.min(max_range, uncover_range) * susp_mul then
 					attention_data.unit:movement():on_suspicion(self._unit, true)	
 					managers.groupai:state():on_criminal_suspicion_progress(attention_data.unit, self._unit, true)
 					managers.groupai:state():criminal_spotted(attention_data.unit, true)
@@ -245,12 +260,22 @@ function SecurityCamera:_upd_suspicion(t)
 					max_suspicion = 1
 
 					_exit_func(attention_data)
-				elseif suspicion_range and dis < math.min(max_range, suspicion_range) * susp_settings.range_mul then
+				elseif suspicion_range and dis < math.min(max_range, suspicion_range) * susp_mul then
 					if attention_data.last_suspicion_t then
 						local dt = t - attention_data.last_suspicion_t
-						local range_max = (suspicion_range - uncover_range) * susp_settings.range_mul
+						local range_max = (suspicion_range - uncover_range) * susp_mul
 						local range_min = uncover_range
 						local mul = 1 - (dis - range_min) / range_max
+						
+						local settings_mul
+			
+						if hhtacs then
+							settings_mul = math.lerp(susp_settings.buildup_mul, 1, 0.5) / attention_data.settings.suspicion_duration
+						else
+							settings_mul = susp_settings.buildup_mul
+						end
+						
+						local total_mul = mul * settings_mul
 
 						if attention_data.is_husk_player then
 							local peer = managers.network:session():peer_by_unit(attention_data.unit)
@@ -260,11 +285,11 @@ function SecurityCamera:_upd_suspicion(t)
 								local ping = latency / 1000
 								local ping_add = 1 + ping + 0.02
 								
-								mul = mul / ping_add
+								total_mul = total_mul / ping_add
 							end	
 						end
 						
-						local progress = dt * 0.5 * mul * susp_settings.buildup_mul
+						local progress = dt * 0.5 * total_mul
 						attention_data.uncover_progress = (attention_data.uncover_progress or 0) + progress
 						max_suspicion = math.max(max_suspicion, attention_data.uncover_progress)
 
@@ -307,6 +332,38 @@ function SecurityCamera:_upd_suspicion(t)
 	end
 
 	self._suspicion = max_suspicion > 0 and max_suspicion
+end
+
+function SecurityCamera:_detection_angle_and_dis_chk(my_pos, my_fwd, handler, settings, attention_pos)
+	local dis = mvector3.direction(self._tmp_vec1, my_pos, attention_pos)
+	local dis_multiplier, angle_multiplier = nil
+	local max_dis = math.min(self._range, settings.max_range or self._range)
+
+	if settings.detection and settings.detection.range_mul then
+		local mul = settings.detection.range_mul
+		
+		if LIES.settings.hhtacs then
+			mul = math.lerp(mul, 1, 0.75)
+		end
+		
+		max_dis = max_dis * mul
+	end
+
+	dis_multiplier = dis / max_dis
+
+	if dis_multiplier < 1 then
+		if settings.notice_requires_FOV then
+			local angle = mvector3.angle(my_fwd, self._tmp_vec1)
+			local angle_max = self._cone_angle * 0.5
+			angle_multiplier = angle / angle_max
+
+			if angle_multiplier < 1 then
+				return angle, dis_multiplier
+			end
+		else
+			return 0, dis_multiplier
+		end
+	end
 end
 
 local tmp_rot1 = Rotation()

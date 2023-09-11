@@ -45,8 +45,16 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 		if l_data.objective then
 			text_str = text_str .. ":" .. l_data.objective.type 
 			
+			if l_data.objective.action and l_data.objective.action.type == "act" then
+				text_str = text_str .. ":" .. tostring(l_data.objective.action.variant)
+			end
+			
 			if l_data.objective.is_default then
 				text_str = text_str .. ":" .. "default"
+			end
+			
+			if l_data.objective.in_place then
+				text_str = text_str .. ":" .. "in_place"
 			end
 		end
 

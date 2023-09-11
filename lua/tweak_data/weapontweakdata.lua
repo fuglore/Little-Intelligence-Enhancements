@@ -1,4 +1,4 @@
-function WeaponTweakData:_setup_hhtacs()
+function WeaponTweakData:setup_hhtacs()
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	

@@ -33,6 +33,10 @@
 			"script_path": "lua/tweak_data/groupaitweakdata.lua"
 		},
 		{
+			"hook_id": "lib/tweak_data/skirmishtweakdata",
+			"script_path": "lua/tweak_data/skirmishtweakdata.lua"
+		},
+		{
 			"hook_id": "lib/managers/enemymanager",
 			"script_path": "lua/managers/enemymanager.lua"
 		},
@@ -123,6 +127,10 @@
 		{
 			"hook_id": "lib/units/enemies/cop/logics/coplogicidle",
 			"script_path": "lua/coplogics/coplogicidle.lua"
+		},
+		{
+			"hook_id": "lib/units/enemies/cop/logics/coplogicarrest",
+			"script_path": "lua/coplogics/coplogicarrest.lua"
 		},
 		{
 			"hook_id": "lib/units/enemies/cop/logics/coplogicattack",

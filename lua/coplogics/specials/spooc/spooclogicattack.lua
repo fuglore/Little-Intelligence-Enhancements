@@ -295,7 +295,7 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 end
 
 function SpoocLogicAttack._chk_play_charge_spooc_sound(data, my_data, focus_enemy)
-	if not my_data.spooc_attack and (not data.last_spooc_snd_play_t or data.t - data.last_spooc_snd_play_t > 6) and focus_enemy.verified_dis < 2500 and math.abs(data.m_pos.z - focus_enemy.m_pos.z) < 300 then
+	if not my_data.spooc_attack and (not data.last_spooc_snd_play_t or data.t - data.last_spooc_snd_play_t > 6) and focus_enemy.verified_dis < 2500 and math.abs(data.m_pos.z - focus_enemy.m_pos.z) < 400 then
 		data.last_spooc_snd_play_t = data.t
 
 		data.unit:sound():play("clk_c01x_plu", nil, true)

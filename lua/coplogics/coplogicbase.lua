@@ -201,11 +201,14 @@ function CopLogicBase.queue_task(internal_data, id, func, data, exec_t, asap)
 	if not id then
 		log("bad task queued")
 		log(tostring(data.name))
+		log(tostring(data.unit:base()._tweak_table))
 	end
 
 	if internal_data.unit and internal_data ~= internal_data.unit:brain()._logic_data.internal_data then
 		log("task queued from the wrong logic")
 		log(tostring(data.name))
+		log(tostring(data.unit:base()._tweak_table))
+		log(tostring(id))
 	end
 
 	local qd_tasks = internal_data.queued_tasks
@@ -214,7 +217,8 @@ function CopLogicBase.queue_task(internal_data, id, func, data, exec_t, asap)
 		if qd_tasks[id] then
 			log("task queued twice")
 			log(tostring(data.name))
-			log(tostring(func))
+			log(tostring(data.unit:base()._tweak_table))
+			log(tostring(id))
 		end
 
 		qd_tasks[id] = true
@@ -311,6 +315,103 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 	end
 end
 
+function CopLogicBase._upd_suspicion(data, my_data, attention_obj)
+	local function _exit_func()
+		attention_obj.unit:movement():on_uncovered(data.unit)
+
+		local reaction, state_name = nil
+
+		if attention_obj.dis < 2000 and attention_obj.verified and not data.char_tweak.no_arrest and not attention_obj.forced then
+			reaction = AIAttentionObject.REACT_ARREST
+			state_name = "arrest"
+		else
+			reaction = AIAttentionObject.REACT_COMBAT
+			state_name = "attack"
+		end
+
+		attention_obj.reaction = reaction
+		local allow_trans, obj_failed = CopLogicBase.is_obstructed(data, data.objective, nil, attention_obj)
+
+		if allow_trans then
+			if obj_failed then
+				data.objective_failed_clbk(data.unit, data.objective)
+
+				if my_data ~= data.internal_data then
+					return true
+				end
+			end
+
+			CopLogicBase._exit(data.unit, state_name)
+
+			return true
+		end
+	end
+
+	local dis = attention_obj.dis
+	local susp_settings = attention_obj.unit:base():suspicion_settings()
+	local hhtacs = LIES.settings.hhtacs
+
+	if attention_obj.settings.uncover_range and dis < math.min(attention_obj.settings.max_range, attention_obj.settings.uncover_range) * susp_settings.range_mul then
+		attention_obj.unit:movement():on_suspicion(data.unit, true)
+		managers.groupai:state():criminal_spotted(attention_obj.unit)
+
+		return _exit_func()
+	elseif attention_obj.verified and attention_obj.settings.suspicion_range and dis < math.min(attention_obj.settings.max_range, attention_obj.settings.suspicion_range) * susp_settings.range_mul then
+		if attention_obj.last_suspicion_t then
+			local dt = data.t - attention_obj.last_suspicion_t
+			local range_mul = susp_settings.range_mul
+			
+			if hhtacs then
+				range_mul = math.lerp(range_mul, 1, 0.75)
+			end
+			
+			local range_max = (attention_obj.settings.suspicion_range - (attention_obj.settings.uncover_range or 0)) * susp_settings.range_mul
+			local range_min = (attention_obj.settings.uncover_range or 0) * susp_settings.range_mul
+			local mul = 1 - (dis - range_min) / range_max
+			local settings_mul
+			
+			if hhtacs then
+				settings_mul = math.lerp(susp_settings.buildup_mul, 1, 0.75) / attention_obj.settings.suspicion_duration
+			else
+				settings_mul = susp_settings.buildup_mul / attention_obj.settings.suspicion_duration
+			end
+			
+			local progress = dt * mul * settings_mul
+			attention_obj.uncover_progress = (attention_obj.uncover_progress or 0) + progress
+
+			if attention_obj.uncover_progress < 1 then
+				attention_obj.unit:movement():on_suspicion(data.unit, attention_obj.uncover_progress)
+				managers.groupai:state():on_criminal_suspicion_progress(attention_obj.unit, data.unit, attention_obj.uncover_progress)
+			else
+				attention_obj.unit:movement():on_suspicion(data.unit, true)
+				managers.groupai:state():criminal_spotted(attention_obj.unit)
+
+				return _exit_func()
+			end
+		else
+			attention_obj.uncover_progress = 0
+		end
+
+		attention_obj.last_suspicion_t = data.t
+	elseif attention_obj.uncover_progress then
+		if attention_obj.last_suspicion_t then
+			local dt = data.t - attention_obj.last_suspicion_t
+			attention_obj.uncover_progress = attention_obj.uncover_progress - dt
+
+			if attention_obj.uncover_progress <= 0 then
+				attention_obj.uncover_progress = nil
+				attention_obj.last_suspicion_t = nil
+
+				attention_obj.unit:movement():on_suspicion(data.unit, false)
+			else
+				attention_obj.unit:movement():on_suspicion(data.unit, attention_obj.uncover_progress)
+			end
+		else
+			attention_obj.last_suspicion_t = data.t
+		end
+	end
+end
+
 function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_reaction)
 	local t = data.t
 	local detected_obj = data.detected_attention_objects
@@ -325,6 +426,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 	local is_detection_persistent = managers.groupai:state():is_detection_persistent()
 	local is_weapons_hot = managers.groupai:state():enemy_weapons_hot()
 	local delay = managers.groupai:state():whisper_mode() and 0 or 2
+	local hhtacs = LIES.settings.hhtacs
 	
 	local player_importance_wgt = data.unit:in_slot(managers.slot:get_mask("enemies")) and {}
 
@@ -342,30 +444,63 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 	local function _angle_and_dis_chk(handler, settings, attention_pos)
 		attention_pos = attention_pos or handler:get_detection_m_pos()
+
 		local dis = mvector3.direction(tmp_vec1, my_pos, attention_pos)
 		local dis_multiplier, angle_multiplier = nil
 		local max_dis = math.min(my_data.detection.dis_max, settings.max_range or my_data.detection.dis_max)
 
 		if settings.detection and settings.detection.range_mul then
-			max_dis = max_dis * settings.detection.range_mul
+			local range_mul = settings.detection.range_mul
+			
+			if hhtacs then
+				range_mul = math.lerp(range_mul, 1, 0.75)
+			end
+			
+			max_dis = max_dis * range_mul
 		end
 
 		dis_multiplier = dis / max_dis
 
 		if settings.uncover_range and my_data.detection.use_uncover_range and dis < settings.uncover_range then
-			return -1, 0
+			return hhtacs and 0 or -1, hhtacs and dis_multiplier or 0
 		end
 
 		if dis_multiplier < 1 then
 			if not is_weapons_hot and settings.notice_requires_FOV then
 				my_head_fwd = my_head_fwd or data.unit:movement():m_head_rot():z()
 				local angle = mvector3.angle(my_head_fwd, tmp_vec1)
-
-				if angle < 55 and not my_data.detection.use_uncover_range and settings.uncover_range and dis < settings.uncover_range then
+				
+				if hhtacs then
+					if not my_data.detection.use_uncover_range and settings.uncover_range and dis < settings.uncover_range then
+						local att_unit = handler:unit()
+						
+						if att_unit.movement then
+							local att_unit_pos = att_unit:movement():m_pos()
+							local uncover_dis = mvec3_dis(att_unit_pos, data.m_pos)
+							
+							if uncover_dis <= 90 then --*bump*
+								return -1, 0
+							end
+						end
+						
+						if angle < 55 then
+							return -1, 0
+						end
+					end
+				elseif angle < 55 and not my_data.detection.use_uncover_range and settings.uncover_range and dis < settings.uncover_range then
 					return -1, 0
 				end
-
-				local angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp((dis - 150) / 700, 0, 1))
+				
+				if hhtacs then
+					if data.unit:anim_data().run then
+						angle_max = math.lerp(90, 60, math.clamp(dis / 700, 0, 1))
+					else
+						angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp(dis / 200, 0, 1))
+					end		
+				else
+					angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp((dis - 150) / 700, 0, 1))
+				end
+				
 				angle_multiplier = angle / angle_max
 
 				if angle_multiplier < 1 then
@@ -531,9 +666,10 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 			elseif not attention_info.identified then
 				local noticable = nil
 				local angle, dis_multiplier = _angle_and_dis_chk(attention_info.handler, attention_info.settings)
-
+				
+				local attention_pos = attention_info.handler:get_detection_m_pos()
+				
 				if angle then
-					local attention_pos = attention_info.handler:get_detection_m_pos()
 					local vis_ray = World:raycast("ray", my_pos, attention_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision")
 
 					if not vis_ray or vis_ray.unit:key() == u_key then
@@ -543,22 +679,38 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 
 				local delta_prog = nil
 				local dt = t - attention_info.prev_notice_chk_t
+				
+				attention_info.real_pos = mvector3.copy(attention_pos)
 
 				if noticable then
+					local attention_pos = attention_info.handler:get_detection_m_pos()
+					attention_info.notice_t = t
+					attention_info.notice_pos = mvector3.copy(attention_info.m_pos)
+					attention_info.last_notice_pos = mvector3.copy(attention_pos)
+					attention_info.noticed = true
+				
 					if angle == -1 then
 						delta_prog = 1
 					else
-						local min_delay = my_data.detection.delay[1]
-						local max_delay = my_data.detection.delay[2]
-						local angle_mul_mod = 0.25 * math.min(angle / my_data.detection.angle_max, 1)
-						local dis_mul_mod = 0.75 * dis_multiplier
+						local min_delay = attention_info.settings.delay_override and attention_info.settings.delay_override[1] or my_data.detection.delay[1]
+						local max_delay = attention_info.settings.delay_override and attention_info.settings.delay_override[2] or my_data.detection.delay[2]
+						local angle_mul_mod =  (hhtacs and 0.5 or 0.25) * math.min(angle / my_data.detection.angle_max, 1)
+						local dis_mul_mod = (hhtacs and 0.5 or 0.75) * dis_multiplier
+
 						local notice_delay_mul = attention_info.settings.notice_delay_mul or 1
 
 						if attention_info.settings.detection and attention_info.settings.detection.delay_mul then
-							notice_delay_mul = notice_delay_mul * attention_info.settings.detection.delay_mul
+							if hhtacs then
+								local mul = attention_info.settings.detection.delay_mul
+								mul = math.lerp(mul, 1, 0.75) --detection risk affects detection rate 75% less
+								
+								notice_delay_mul = notice_delay_mul * mul
+							else
+								notice_delay_mul = notice_delay_mul * attention_info.settings.detection.delay_mul
+							end
 						end
 
-						local notice_delay_modified = math.lerp(min_delay * notice_delay_mul, max_delay, dis_mul_mod + angle_mul_mod)
+						local notice_delay_modified = math.lerp(min_delay * notice_delay_mul, max_delay, math.clamp(dis_mul_mod + angle_mul_mod, 0, 1))
 						
 						if attention_info.is_husk_player then
 							local peer = managers.network:session():peer_by_unit(attention_info.unit)
@@ -574,12 +726,24 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 						delta_prog = notice_delay_modified > 0 and dt / notice_delay_modified or 1
 					end
 				else
+					attention_info.noticed = nil
+					
 					delta_prog = dt * -0.125
+					
+					local attention_pos = attention_info.handler:get_detection_m_pos()
+					
+					if attention_info.last_notice_pos then
+						local lerp = math.clamp(mvector3.distance(attention_pos, attention_info.last_notice_pos) / 400)
+						
+						if attention_info.notice_t and data.t - attention_info.notice_t < math.lerp(2, 0.2, lerp) then					
+							attention_info.notice_pos = mvector3.copy(attention_info.m_pos)
+						end
+					end
 				end
 
-				attention_info.notice_progress = attention_info.notice_progress + delta_prog
+				attention_info.notice_progress = math.clamp(attention_info.notice_progress + delta_prog, 0, 1)
 
-				if attention_info.notice_progress > 1 then
+				if attention_info.notice_progress == 1 then
 					attention_info.notice_progress = nil
 					attention_info.prev_notice_chk_t = nil
 					attention_info.identified = true
@@ -588,12 +752,12 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					noticable = true
 
 					data.logic.on_attention_obj_identified(data, u_key, attention_info)
-				elseif attention_info.notice_progress < 0 then
+				elseif attention_info.notice_progress == 0 and not attention_info.being_chased and (not hhtacs or not attention_info.notice_t or not attention_info.detected_criminal or attention_info.detected_criminal and t - attention_info.notice_t > 2) then
 					CopLogicBase._destroy_detected_attention_object_data(data, attention_info)
 
 					noticable = false
 				else
-					noticable = attention_info.notice_progress
+					noticable = math.clamp(attention_info.notice_progress, 0.01, 1)
 					attention_info.prev_notice_chk_t = t
 
 					if data.cool and AIAttentionObject.REACT_SCARED <= attention_info.settings.reaction then

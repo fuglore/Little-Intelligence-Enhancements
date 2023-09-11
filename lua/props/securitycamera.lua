@@ -89,7 +89,18 @@ function SecurityCamera:_upd_detect_attention_objects(t)
 
 				if noticable then
 					if angle == -1 then
-						delta_prog = 1
+						if attention_info.is_husk_player then
+							local peer = managers.network:session():peer_by_unit(attention_info.unit)
+							local latency = peer and Network:qos(peer:rpc()).ping or nil
+							
+							if latency then
+								local ping = latency / 1000
+								
+								delta_prog = dt / ping + 0.02
+							end	
+						else
+							delta_prog = 1
+						end
 					else
 						local min_delay = det_delay[1]
 						local max_delay = det_delay[2]

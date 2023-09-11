@@ -140,7 +140,7 @@ function CopLogicArrest._upd_enemy_detection(data)
 
 	local should_arrest = new_reaction == AIAttentionObject.REACT_ARREST
 	local should_stand_close = new_reaction == AIAttentionObject.REACT_SCARED or new_attention and new_attention.criminal_record and new_attention.criminal_record.status
-	local should_call_immediately = nil --LIES.settings.hhtacs and new_reaction == AIAttentionObject.REACT_SCARED and new_attention.unit and new_attention.unit:in_slot(managers.slot:get_mask("enemies"))
+	local should_call_immediately = LIES.settings.hhtacs and new_reaction == AIAttentionObject.REACT_SCARED and new_attention.unit and new_attention.unit:in_slot(managers.slot:get_mask("enemies"))
 
 	if should_arrest ~= my_data.should_arrest or should_stand_close ~= my_data.should_stand_close or should_call_immediately ~= my_data.should_call_immediately then
 		my_data.should_arrest = should_arrest
@@ -375,7 +375,7 @@ function CopLogicArrest._upd_advance(data, my_data, attention_obj, arrest_data)
 			end
 
 			local new_action_data = {
-				variant = "walk", --LIES.settings.hhtacs and my_data.should_stand_close and "run" or "walk",
+				variant = LIES.settings.hhtacs and my_data.should_stand_close and "run" or "walk",
 				body_part = 2,
 				type = "walk",
 				nav_path = my_data.advance_path
@@ -393,7 +393,7 @@ function CopLogicArrest._upd_advance(data, my_data, attention_obj, arrest_data)
 				end
 
 				local new_action_data = {
-					variant = "walk", --LIES.settings.hhtacs and my_data.should_stand_close and "run" or "walk",
+					variant = LIES.settings.hhtacs and my_data.should_stand_close and "run" or "walk",
 					body_part = 2,
 					type = "walk",
 					nav_path = my_data.advance_path
@@ -449,9 +449,9 @@ function CopLogicArrest.action_complete_clbk(data, action)
 	if action_type == "walk" then
 		my_data.advancing = nil
 		
-		--if not LIES.settings.hhtacs then
+		if not LIES.settings.hhtacs then
 			my_data.next_action_delay_t = TimerManager:game():time() + math.lerp(2, 2.5, math.random())
-		--end
+		end
 
 		if my_data.should_stand_close then
 			my_data.in_position = true
@@ -471,8 +471,8 @@ function CopLogicArrest.action_complete_clbk(data, action)
 			end
 		end
 
-		--if not LIES.settings.hhtacs then
+		if not LIES.settings.hhtacs then
 			my_data.next_action_delay_t = TimerManager:game():time() + math.lerp(2, 2.5, math.random())
-		--end
+		end
 	end
 end

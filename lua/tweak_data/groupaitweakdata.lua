@@ -26,7 +26,11 @@ function GroupAITweakData:_LIES_setup()
 			end
 			
 			if tweak_data.weapon then
-				tweak_data.weapon:_setup_hhtacs()
+				tweak_data.weapon:setup_hhtacs()
+			end
+			
+			if tweak_data.attention then
+				tweak_data.attention:setup_hhtacs()
 			end
 			
 			self:_setup_hhtacs_task_data(difficulty_index)

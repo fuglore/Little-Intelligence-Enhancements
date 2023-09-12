@@ -840,7 +840,7 @@ function CopLogicTravel._chk_coarse_objective_reached(data)
 end
 
 function CopLogicTravel._chk_report_in(data)
-	if data.last_calm_chatter_t and data.t - data.last_calm_chatter_t < 120 then
+	if data.last_calm_chatter_t and data.t - data.last_calm_chatter_t < (data.important and 60 or 120) then
 		return
 	end
 

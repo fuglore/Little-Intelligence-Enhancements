@@ -95,29 +95,14 @@ function AttentionTweakData:setup_hhtacs()
 		self.settings.pl_mask_off_foe_combatant.turn_around_range = 500
 	end
 
-	self.settings.pl_mask_on_foe_combatant_whisper_mode_stand.delay_override = {
-		0.25,
-		4
-	}
+	self.settings.pl_mask_on_foe_combatant_whisper_mode_stand.max_range = 3000
 
-	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_stand.max_range = 2000
+	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_stand.max_range = 3000
 	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_stand.notice_delay_mul = 2
-	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_stand.delay_override = {
-		0.25,
-		4
-	}
 	
-	self.settings.pl_mask_on_foe_combatant_whisper_mode_crouch.delay_override = {
-		0.25,
-		4
-	}
+	self.settings.pl_mask_on_foe_combatant_whisper_mode_crouch.max_range = 2000
 
-	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_crouch.delay_override = {
-		0.25,
-		4
-	}
-
-	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_crouch.max_range = 1200
+	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_crouch.max_range = 2000
 	self.settings.pl_mask_on_foe_non_combatant_whisper_mode_crouch.notice_delay_mul = 2
 	
 	--civilian attention object states start here

@@ -260,8 +260,12 @@ function CopLogicIdle.queued_update(data)
 	end
 	
 	if LIES.settings.extra_chatter and data.cool and not my_data.advancing and data.char_tweak.chatter and data.char_tweak.chatter.criminalhasgun then
-		if not data.last_calm_chatter_t or data.t - data.last_calm_chatter_t > 120 then
-			if data.unit:sound():say("a06", true) then
+		if not data.last_calm_chatter_t or data.t - data.last_calm_chatter_t > (data.important and 45 or 120) then
+			if my_data.action_started ~= true then
+				if data.unit:sound():say("a06", true) then
+					data.last_calm_chatter_t = data.t - math.lerp(0, 30, math.random())
+				end
+			elseif (not data.last_calm_chatter_t or data.t - data.last_calm_chatter_t > 60) and data.unit:sound():say("a05", true) then
 				data.last_calm_chatter_t = data.t - math.lerp(0, 30, math.random())
 			end
 		end
@@ -1219,7 +1223,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 		if not attention_data.identified then
 			if data.cool then
 				if AIAttentionObject.REACT_SUSPICIOUS <= attention_data.reaction then
-					if attention_data.notice_progress > 0 then
+					if attention_data.notice_progress > (hhtacs and 0.1 or 0) then
 						if not attention_data.reacted_to then
 							if crim_record then
 								if math.random() <= 0.25 then

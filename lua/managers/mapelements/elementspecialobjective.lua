@@ -147,7 +147,7 @@ function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
 	end
 
 	if skip_element_ids == nil then
-		if self._values.allow_followup_self and self:enabled() then
+		if self._values.allow_followup_self and self:enabled() and (not LIES.settings.hhtacs or not self._stealth_patrol) then
 			skip_element_ids = {}
 		else
 			skip_element_ids = {

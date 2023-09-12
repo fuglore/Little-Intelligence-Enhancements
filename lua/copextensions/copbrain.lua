@@ -1,18 +1,18 @@
-Hooks:PostHook(CopBrain, "init", "lies_init", function(self, unit)
-	CopBrain._logic_variants.marshal_marksman = CopBrain._logic_variants.swat
+CopBrain._logic_variants.marshal_marksman.attack = CopLogicAttack
 
-	CopBrain._logic_variants.tank.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.tank_medic.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.tank_mini.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.triad_boss.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.snowman_boss.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.hector_boss.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.drug_lord_boss.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.deep_boss.attack = LIESBossLogicAttack
-	CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.tank
-	CopBrain._logic_variants.biker_boss = CopBrain._logic_variants.tank
-	CopBrain._logic_variants.drug_lord_boss = CopBrain._logic_variants.tank
-end)
+CopBrain._logic_variants.triad_boss.attack = LIESBossLogicAttack
+CopBrain._logic_variants.deep_boss.attack = LIESDeepBossLogicAttack
+
+CopBrain._logic_variants.tank = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.tank_medic = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.tank_mini = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.tank_hw = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.piggydozer = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.biker_boss = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.drug_lord_boss = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.hector_boss = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.mobster_boss = CopBrain._logic_variants.triad_boss
+CopBrain._logic_variants.snowman_boss = CopBrain._logic_variants.triad_boss
 
 Hooks:PostHook(CopBrain, "post_init", "lies_post", function(self)
 	if self._logic_data.char_tweak.buddy then
@@ -538,7 +538,7 @@ function CopBrain:request_stillness(t)
 end
 
 function CopBrain:is_criminal()
-	if self._unit:in_slot(16) or self._logic_data.team.id == tweak_data.levels:get_default_team_ID("player") or self._logic_data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
+	if self._unit:in_slot(16) or self._logic_data.team.id == tweak_data.levels:get_default_team_ID("player") or self._logic_data.team and self._logic_data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 		return true
 	end
 end

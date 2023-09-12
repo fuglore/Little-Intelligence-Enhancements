@@ -942,3 +942,14 @@ function LIESBossLogicAttack._upd_enemy_detection(data, is_synchronous)
 
 	CopLogicBase._report_detections(data.detected_attention_objects)
 end
+
+LIESDeepBossLogicAttack = LIESDeepBossLogicAttack or class(LIESBossLogicAttack)
+LIESDeepBossLogicAttack._keep_player_focus_t = 10
+
+function LIESDeepBossLogicAttack.damage_clbk(data, damage_info)
+	LIESBossLogicAttack.damage_clbk(data, damage_info)
+
+	if not data.unit:character_damage():dead() and data.unit:character_damage().health_ratio and data.unit:character_damage():health_ratio() < 0.4 then
+		data.unit:sound():say(data.unit:sound().combat_str_alt or "combat_alt", true)
+	end
+end

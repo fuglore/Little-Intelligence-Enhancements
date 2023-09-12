@@ -88,7 +88,7 @@ function SpoocLogicIdle._exit_hiding(data)
 	}
 
 	data.unit:brain():action_request(action)
-	data.unit:brain():set_objective()
+	--data.unit:brain():set_objective()
 end
 
 function SpoocLogicIdle.damage_clbk(data, damage_info)

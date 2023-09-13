@@ -29,7 +29,7 @@ function CivilianLogicTravel.enter(data, new_logic_name, enter_params)
 		managers.groupai:state():on_hostage_state(true, data.key, nil, true)
 
 		my_data.is_hostage = true
-	elseif not data.char_tweak.is_escort then
+	elseif not data.char_tweak.is_escort and not data.unit:base()._tweak_table == "drunk_pilot" then
 		data.unit:brain():set_update_enabled_state(false)
 		
 		my_data.upd_task_key = "CivilianLogicTravel_queued_update" .. key_str

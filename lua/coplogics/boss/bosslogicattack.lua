@@ -686,36 +686,7 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 			end
 
 			if change_speed then
-				local my_pos = data.unit:movement():nav_tracker():field_position()
-				local moving_to_pos = my_data.walking_to_chase_pos:get_walk_to_pos()
-				local unobstructed_line = nil
-
-				if math_abs(my_pos.z - moving_to_pos.z) < 40 then
-					local ray_params = {
-						allow_entry = false,
-						pos_from = my_pos,
-						pos_to = moving_to_pos
-					}
-
-					if not managers.navigation:raycast(ray_params) then
-						unobstructed_line = true
-					end
-				end
-
-				if unobstructed_line then
-					moving_to_pos = mvec3_cpy(moving_to_pos)
-
-					LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
-
-					my_data.chase_path = {
-						mvec3_cpy(my_pos),
-						moving_to_pos
-					}
-					
-					my_data.at_shoot_pos = nil
-
-					LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, change_speed)
-				end
+				LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 			end
 		end
 	end

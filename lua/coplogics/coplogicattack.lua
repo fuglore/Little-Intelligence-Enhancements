@@ -2084,20 +2084,22 @@ function CopLogicAttack._upd_stop_old_action(data, my_data)
 	if data.unit:anim_data().to_idle or data.unit:anim_data().hurt then
 		return
 	end
-
+	
+	if my_data.advancing and my_data.old_action_advancing then
+		if not data.unit:movement():chk_action_forbidden("walk") then
+			data.unit:brain():action_request({
+				body_part = 2,
+				type = "idle"
+			})
+		end
+	end
+	
 	if data.unit:movement():chk_action_forbidden("walk") then
 		if not data.unit:movement():chk_action_forbidden("idle") then
 			CopLogicIdle._start_idle_action_from_act(data)
 		end
 	elseif data.unit:anim_data().act and data.unit:anim_data().needs_idle then
 		CopLogicIdle._start_idle_action_from_act(data)
-	elseif my_data.advancing and my_data.old_action_advancing then
-		local new_action = {
-			body_part = 2,
-			type = "idle"
-		}
-
-		data.unit:brain():action_request(new_action)
 	end
 
 	CopLogicIdle._chk_has_old_action(data, my_data)

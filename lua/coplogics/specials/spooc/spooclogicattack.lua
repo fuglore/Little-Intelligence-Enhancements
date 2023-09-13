@@ -123,8 +123,11 @@ function SpoocLogicAttack.update(data)
 		if not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 2 then
 			data.attention_obj.react_t = data.t
 		end
-	
-		local react_t = 1.4
+
+		local charge_dis = my_data.want_to_take_cover and 1500 or 2500
+		local focus_enemy_dis = data.attention_obj.dis
+		local lerp = math.clamp(focus_enemy_dis / charge_dis, 0, 1)
+		local react_t = math.lerp(3, 0, lerp)
 
 		if data.t - data.attention_obj.react_t < react_t then
 			do_spooc_attack = nil
@@ -210,6 +213,7 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 
 	if action_type == "walk" then
 		my_data.advancing = nil
+		my_data.old_action_advancing = nil
 		my_data.in_cover = nil
 		
 		CopLogicAttack._cancel_cover_pathing(data, my_data)

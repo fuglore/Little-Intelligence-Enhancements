@@ -405,6 +405,7 @@ function TaserLogicAttack.action_complete_clbk(data, action)
 
 	if action_type == "walk" then
 		my_data.advancing = nil
+		my_data.old_action_advancing = nil
 		my_data.in_cover = nil
 		
 		CopLogicAttack._cancel_cover_pathing(data, my_data)

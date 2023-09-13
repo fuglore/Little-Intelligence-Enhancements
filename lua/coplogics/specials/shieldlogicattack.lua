@@ -107,7 +107,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 		local furthest_pt_dist = 0
 		local furthest_line = nil
 
-		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 100 then
+		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 50 then
 			my_data.threat_epicenter = mvector3.copy(threat_epicenter)
 
 			for key1, enemy_data1 in pairs(enemies) do
@@ -435,7 +435,7 @@ function ShieldLogicAttack.queued_update(data)
 	local engage = my_data.attitude == "engage"
 
 	if not action_taken then
-		if not data.next_mov_time or data.next_mov_time < data.t then
+		if not data.next_mov_time or data.next_mov_time < data.t or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
 			if my_data.pathing_to_optimal_pos then
 				-- Nothing
 			elseif my_data.optimal_path then
@@ -467,12 +467,12 @@ function ShieldLogicAttack.queued_update(data)
 
 				local fwd_bump = nil
 				to_pos, fwd_bump = ShieldLogicAttack.chk_wall_distance(data, my_data, to_pos)
-				local do_move = mvector3.distance_sq(to_pos, data.m_pos) > 10000
+				local do_move = mvector3.distance_sq(to_pos, data.m_pos) > 2500
 
 				if not do_move then
 					local to_pos_current, fwd_bump_current = ShieldLogicAttack.chk_wall_distance(data, my_data, data.m_pos)
 
-					if fwd_bump_current and mvector3.distance_sq(to_pos_current, data.m_pos) > 10000 then
+					if fwd_bump_current and mvector3.distance_sq(to_pos_current, data.m_pos) > 2500 then
 						do_move = true
 					end
 				end
@@ -506,4 +506,32 @@ function ShieldLogicAttack.queued_update(data)
 
 	ShieldLogicAttack.queue_update(data, my_data)
 	CopLogicBase._report_detections(data.detected_attention_objects)
+end
+
+function ShieldLogicAttack.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
+
+	if action_type == "walk" then
+		my_data.advancing = nil
+		my_data.old_action_advancing = nil
+
+		if my_data.walking_to_optimal_pos then
+			my_data.walking_to_optimal_pos = nil
+		end
+		
+		if action:expired() then
+			ShieldLogicAttack._upd_aim(data, my_data)
+		end
+	elseif action_type == "shoot" then
+		my_data.shooting = nil
+	elseif action_type == "turn" then
+		my_data.turning = nil
+		
+		if action:expired() then
+			ShieldLogicAttack._upd_aim(data, my_data)
+		end
+	elseif action_type == "hurt" and action:expired() then
+		ShieldLogicAttack._upd_aim(data, my_data)
+	end
 end

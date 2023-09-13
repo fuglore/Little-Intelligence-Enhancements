@@ -474,7 +474,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					if not my_data.detection.use_uncover_range and settings.uncover_range and dis < settings.uncover_range then
 						local att_unit = handler:unit()
 						
-						if att_unit.movement then
+						if att_unit:movement() then
 							local att_unit_pos = att_unit:movement():m_pos()
 							local uncover_dis = mvec3_dis(att_unit_pos, data.m_pos)
 							

@@ -44,5 +44,27 @@ function SkirmishTweakData:setup_hhtacs()
 		end
 	end
 	
+	self.assault.sustain_duration_min = {
+		105,
+		105,
+		105
+	}
+	self.assault.sustain_duration_max = {
+		105,
+		105,
+		105
+	}
+	self.assault.force = {
+		8,
+		8,
+		8
+	}
+	self.assault.force_pool = {
+		72,
+		72,
+		72
+	}
+	
+	
 	self._hhtacs = true
 end

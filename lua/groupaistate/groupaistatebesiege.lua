@@ -396,13 +396,6 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		self._upd_recon_tasks = LIES._upd_recon_tasks
 	end
 	
-	if LIES.settings.fixed_specialspawncaps then
-		self._special_unit_types.tank_mini = true
-		self._special_unit_types.tank_medic = true
-		self._special_unit_types.tank_hw = true
-		self._special_unit_types.phalanx_minion = true
-	end
-	
 	if LIES.settings.fixed_spawngroups > 2 or LIES.settings.hhtacs then
 		self._perform_group_spawning = self._perform_group_spawning_LIES
 	end
@@ -915,48 +908,6 @@ function GroupAIStateBesiege:_set_objective_to_phalanx_group_LIES(group)
 				CopLogicPhalanxVip._reposition_VIP_team()
 			end
 		end
-	end
-end
-
-function GroupAIStateBesiege:_get_special_unit_type_count(special_type)
-	if not self._special_units[special_type] then
-		return 0
-	end
-	
-	if special_type == "tank" then
-		local tanks = table.size(self._special_units[special_type])
-
-		if self._special_units["tank_mini"] then
-			tanks = tanks + table.size(self._special_units["tank_mini"])
-		end
-
-		if self._special_units["tank_medic"] then
-			tanks = tanks + table.size(self._special_units["tank_medic"])
-		end
-		
-		if self._special_units["tank_hw"] then
-			tanks = tanks + table.size(self._special_units["tank_hw"])
-		end
-
-		return tanks
-	elseif special_type == "medic" then
-		local medics = table.size(self._special_units[special_type])
-		
-		if self._special_units["tank_medic"] then
-			medics = medics + table.size(self._special_units["tank_medic"])
-		end
-		
-		return medics
-	elseif special_type == "shield" then
-		local shields = table.size(self._special_units[special_type])
-		
-		if self._special_units["phalanx_minion"] then
-			shields = shields + table.size(self._special_units["phalanx_minion"])
-		end
-		
-		return shields
-	else
-		return table.size(self._special_units[special_type])
 	end
 end
 

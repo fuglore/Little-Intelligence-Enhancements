@@ -3,8 +3,8 @@
 	"description" : "Big fixes to enemy AI in small number.",
 	"author" : "fugsystem",
 	"blt_version" : 2,
+	"version" : 75,
 	"image" : "logo.png",
-	
     "hooks": [
 		{	"hook_id" : "lib/managers/menumanager",
 			"script_path" : "menumanager.lua"
@@ -235,6 +235,16 @@
 		{
 		  "hook_id": "core/lib/utils/dev/editor/coreworlddefinition",
 		  "script_path": "lua/managers/core/coreworlddefinition.lua"
+		}
+	],
+	"updates" : [
+		{
+			"identifier" : "LIES",
+			"host": {
+				"meta": "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/bltupd.json",
+				"download": "https://modworkshop.net/mod/37304/download/67134",
+				"patchnotes": "https://modworkshop.net/mod/37304?tab=changelog"
+			}
 		}
 	]
 }

@@ -49,14 +49,6 @@
 		},
 		{
 			"type" : "toggle",
-			"id" : "lies_fixed_specialspawncaps",
-			"title" : "menu_lies_fixed_specialspawncaps_title",
-			"description" : "menu_lies_fixed_specialspawncaps_desc",
-			"callback" : "callback_lies_fixed_specialspawncaps",
-			"value" : "fixed_specialspawncaps"
-		},
-		{
-			"type" : "toggle",
 			"id" : "lies_copsretire",
 			"title" : "menu_lies_copsretire_title",
 			"description" : "menu_lies_copsretire_desc",

@@ -768,10 +768,10 @@ if RequiredScript == "lib/managers/menumanager" then
 		--create menus
 		MenuHelper:LoadFromJsonFile(LIES.options_path, LIES, LIES.settings)
 		
-		--if not Global.checked_for_updates_lies then
-			--log("LIES: Checking for update data.")
-			--LIES:check_for_updates()
-			--Global.checked_for_updates_lies = true
-		--end
+		if not Global.checked_for_updates_lies then
+			log("LIES: Checking for update data.")
+			LIES:check_for_updates()
+			Global.checked_for_updates_lies = true
+		end
 	end)
 end

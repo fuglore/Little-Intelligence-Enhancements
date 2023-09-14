@@ -246,7 +246,7 @@
 			"identifier" : "LIES",
 			"host": {
 				"meta": "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/bltupd.json",
-				"download": "https://modworkshop.net/mod/37304/download/67134",
+				"download": "https://github.com/fuglore/Little-Intelligence-Enhancements/archive/refs/heads/main.zip",
 				"patchnotes": "https://modworkshop.net/mod/37304?tab=changelog"
 			}
 		}

@@ -643,16 +643,34 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 	
 		local lerp = math.clamp(mvector3.distance(attention_real_pos, attention_info.last_notice_pos) / 400)
 						
-		if attention_info.notice_t and data.t - attention_info.notice_t < math.lerp(5, 1, lerp) then
+		if attention_info.notice_t and data.t - attention_info.notice_t < math.lerp(2, 0, lerp) then
 			visible_soft = true
 		end
 	end
 	
-	local should_turn = my_data.chasing or attention_info.notice_progress and attention_info.notice_progress > 0.1
-	local should_chase = my_data.chase_crim_path or my_data.chasing or attention_info.notice_progress and attention_info.notice_progress > 0.5 and attention_info.dis <= 2000
+	local should_turn = my_data.chasing or attention_info.notice_progress and attention_info.notice_progress > 0.25
+	local should_chase = my_data.chase_crim_path or attention_info.notice_progress and attention_info.notice_progress > 0.5 and mvec3_dis_sq(data.m_pos, attention_info.m_pos) < 1562500
 	local turn_to_real_pos
 	
 	local chase_pos
+	
+	if attention_info.notice_progress then
+		if attention_info.notice_progress > 0.5 then
+			local stance = "hos"
+	
+			if data.char_tweak.allowed_stances and not data.char_tweak.allowed_stances["hos"] then
+				stance = "cbt"
+			end
+			
+			local upper_body_action = data.unit:movement()._active_actions[3]
+
+			if not upper_body_action or upper_body_action:type() ~= "shoot" then
+				data.unit:movement():set_stance(stance)
+			end
+		elseif not my_data.chasing_run and not my_data.chasing then
+			data.unit:movement():set_stance("ntl")
+		end
+	end
 	
 	if (not my_data.chase_duration or my_data.chase_duration < data.t) and not my_data.chasing_run then
 		attention_info.being_chased = nil
@@ -723,7 +741,7 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 		end
 	end
 	
-	if not my_data.turning and should_chase and not my_data.chasing_run and (chase_pos or my_data.chase_crim_path) and not data.unit:movement():chk_action_forbidden("walk") then
+	if not my_data.turning and not my_data.chasing and should_chase and not my_data.chasing_run and (chase_pos or my_data.chase_crim_path) and not data.unit:movement():chk_action_forbidden("walk") then
 		--log("chase")
 		my_data.detected_criminal = true
 		
@@ -733,18 +751,6 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 		
 		if data.objective and data.objective.type ~= "free" and not data.objective.pos then
 			data.objective.pos = mvector3.copy(data.m_pos) --we can walk back to our position later when we're done dealing with this idiot
-		end
-		
-		local stance = "hos"
-	
-		if data.char_tweak.allowed_stances and not data.char_tweak.allowed_stances["hos"] then
-			stance = "cbt"
-		end
-		
-		local upper_body_action = data.unit:movement()._active_actions[3]
-
-		if not upper_body_action or upper_body_action:type() ~= "shoot" then
-			data.unit:movement():set_stance(stance)
 		end
 
 		if my_data.chase_crim_path then
@@ -762,7 +768,7 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 					body_part = 2,
 					type = "walk",
 					nav_path = path,
-					variant = "run"
+					variant = "walk"
 				}
 				
 				my_data.advancing = data.unit:brain():action_request(new_action_data)
@@ -805,7 +811,7 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 				local best_error_dis, best_pos, best_is_hit, best_is_miss, best_has_too_much_error = nil
 
 				for _, accross_pos in ipairs(accross_positions) do
-					local hit_dis = mvector3.distance(accross_pos[1], attention_info.notice_pos)
+					local hit_dis = mvector3.distance(accross_pos[1], data.m_pos)
 					--local too_much_error = error_dis / optimal_dis > 0.2
 					
 					if hit_dis > 400 then -- dont fuckin https://media.tenor.com/laSBfhRhTEYAAAAM/guy-arguing.gif the wall

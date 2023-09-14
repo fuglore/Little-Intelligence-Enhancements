@@ -357,42 +357,71 @@ function CopLogicBase._upd_suspicion(data, my_data, attention_obj)
 
 		return _exit_func()
 	elseif attention_obj.verified and attention_obj.settings.suspicion_range and dis < math.min(attention_obj.settings.max_range, attention_obj.settings.suspicion_range) * susp_settings.range_mul then
-		if attention_obj.last_suspicion_t then
-			local dt = data.t - attention_obj.last_suspicion_t
-			local range_mul = susp_settings.range_mul
-			
-			if hhtacs then
-				range_mul = math.lerp(range_mul, 1, 0.75)
-			end
-			
-			local range_max = (attention_obj.settings.suspicion_range - (attention_obj.settings.uncover_range or 0)) * susp_settings.range_mul
-			local range_min = (attention_obj.settings.uncover_range or 0) * susp_settings.range_mul
-			local mul = 1 - (dis - range_min) / range_max
-			local settings_mul
-			
-			if hhtacs then
-				settings_mul = math.lerp(susp_settings.buildup_mul, 1, 0.75) / attention_obj.settings.suspicion_duration
-			else
-				settings_mul = susp_settings.buildup_mul / attention_obj.settings.suspicion_duration
-			end
-			
-			local progress = dt * mul * settings_mul
-			attention_obj.uncover_progress = (attention_obj.uncover_progress or 0) + progress
-
-			if attention_obj.uncover_progress < 1 then
-				attention_obj.unit:movement():on_suspicion(data.unit, attention_obj.uncover_progress)
-				managers.groupai:state():on_criminal_suspicion_progress(attention_obj.unit, data.unit, attention_obj.uncover_progress)
-			else
-				attention_obj.unit:movement():on_suspicion(data.unit, true)
-				managers.groupai:state():criminal_spotted(attention_obj.unit)
-
-				return _exit_func()
-			end
+		local my_head_fwd = data.unit:movement():m_head_rot():z()
+		mvector3.direction(tmp_vec1, data.unit:movement():m_head_pos(), attention_obj.verified_pos)
+		local angle = mvector3.angle(my_head_fwd, tmp_vec1)
+		local angle_max
+		
+		if hhtacs then
+			angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp(dis / 200, 0, 1))
 		else
-			attention_obj.uncover_progress = 0
+			angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp((dis - 150) / 700, 0, 1))
 		end
+		
+		if angle < angle_max then
+			if attention_obj.last_suspicion_t then
+				local dt = data.t - attention_obj.last_suspicion_t
+				local range_mul = susp_settings.range_mul
+				
+				if hhtacs then
+					range_mul = math.lerp(range_mul, 1, 0.75)
+				end
+				
+				local range_max = (attention_obj.settings.suspicion_range - (attention_obj.settings.uncover_range or 0)) * susp_settings.range_mul
+				local range_min = (attention_obj.settings.uncover_range or 0) * susp_settings.range_mul
+				local mul = 1 - (dis - range_min) / range_max
+				local settings_mul
+				
+				if hhtacs then
+					settings_mul = math.lerp(susp_settings.buildup_mul, 1, 0.75) / attention_obj.settings.suspicion_duration
+				else
+					settings_mul = susp_settings.buildup_mul / attention_obj.settings.suspicion_duration
+				end
+				
+				local progress = dt * mul * settings_mul
+				attention_obj.uncover_progress = (attention_obj.uncover_progress or 0) + progress
 
-		attention_obj.last_suspicion_t = data.t
+				if attention_obj.uncover_progress < 1 then
+					attention_obj.unit:movement():on_suspicion(data.unit, attention_obj.uncover_progress)
+					managers.groupai:state():on_criminal_suspicion_progress(attention_obj.unit, data.unit, attention_obj.uncover_progress)
+				else
+					attention_obj.unit:movement():on_suspicion(data.unit, true)
+					managers.groupai:state():criminal_spotted(attention_obj.unit)
+
+					return _exit_func()
+				end
+			else
+				attention_obj.uncover_progress = 0
+			end
+		elseif attention_obj.uncover_progress then
+			if attention_obj.last_suspicion_t then
+				local dt = data.t - attention_obj.last_suspicion_t
+				attention_obj.uncover_progress = attention_obj.uncover_progress - dt
+
+				if attention_obj.uncover_progress <= 0 then
+					attention_obj.uncover_progress = nil
+					attention_obj.last_suspicion_t = nil
+
+					attention_obj.unit:movement():on_suspicion(data.unit, false)
+				else
+					attention_obj.unit:movement():on_suspicion(data.unit, attention_obj.uncover_progress)
+				end
+			end
+		end
+		
+		if attention_obj.uncover_progress then
+			attention_obj.last_suspicion_t = data.t
+		end
 	elseif attention_obj.uncover_progress then
 		if attention_obj.last_suspicion_t then
 			local dt = data.t - attention_obj.last_suspicion_t
@@ -492,11 +521,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 				end
 				
 				if hhtacs then
-					if data.unit:anim_data().run then
-						angle_max = math.lerp(90, 60, math.clamp(dis / 700, 0, 1))
-					else
-						angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp(dis / 200, 0, 1))
-					end		
+					angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp(dis / 200, 0, 1))	
 				else
 					angle_max = math.lerp(180, my_data.detection.angle_max, math.clamp((dis - 150) / 700, 0, 1))
 				end
@@ -705,8 +730,8 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					else
 						local min_delay = attention_info.settings.delay_override and attention_info.settings.delay_override[1] or my_data.detection.delay[1]
 						local max_delay = attention_info.settings.delay_override and attention_info.settings.delay_override[2] or my_data.detection.delay[2]
-						local angle_mul_mod =  (hhtacs and 0.5 or 0.25) * math.min(angle / my_data.detection.angle_max, 1)
-						local dis_mul_mod = (hhtacs and 0.5 or 0.75) * dis_multiplier
+						local angle_mul_mod = 0.25 * math.min(angle / my_data.detection.angle_max, 1)
+						local dis_mul_mod = 0.75 * dis_multiplier
 
 						local notice_delay_mul = attention_info.settings.notice_delay_mul or 1
 

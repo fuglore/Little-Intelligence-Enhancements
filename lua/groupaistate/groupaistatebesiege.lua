@@ -1003,6 +1003,40 @@ function GroupAIStateBesiege:_upd_regroup_task()
 	end
 end
 
+function GroupAIStateBesiege:start_extend_assault()
+	local regroup_task = self._task_data.regroup
+	
+	if regroup_task.active then
+		self:_end_regroup_task()
+	end
+	
+	if not self._task_data.assault.active then
+		self._task_data.assault.next_dispatch_t = self._t
+	else
+		local assault_task = self._task_data.assault
+	
+		if assault_task.phase == "anticipation" then
+			self._assault_number = self._assault_number + 1
+
+			managers.mission:call_global_event("start_assault")
+			managers.hud:start_assault(self._assault_number)
+			managers.groupai:dispatch_event("start_assault", self._assault_number)
+			self:_set_rescue_state(false)
+
+			assault_task.phase = "build"
+			assault_task.phase_end_t = self._t + self._tweak_data.assault.build_duration
+			assault_task.is_hesitating = nil
+
+			self:set_assault_mode(true)
+			managers.trade:set_trade_countdown(false)
+		else
+			assault_task.phase = "build"
+			assault_task.phase_end_t = self._t + self._tweak_data.assault.build_duration
+			assault_task.force_spawned = 0
+		end
+	end
+end
+
 function GroupAIStateBesiege:_queue_police_upd_task()
 	--log("a")
 	if not self._police_upd_task_queued then

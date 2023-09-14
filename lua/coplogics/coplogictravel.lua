@@ -1,7 +1,6 @@
 local temp_vec1 = Vector3()
 local mvec3_dis_sq = mvector3.distance_sq
 
-
 function CopLogicTravel.enter(data, new_logic_name, enter_params)
 	CopLogicBase.enter(data, new_logic_name, enter_params)
 	data.unit:brain():cancel_all_pathing_searches()
@@ -1046,11 +1045,29 @@ function CopLogicTravel._upd_focus_on_undetected_criminal(data, my_data, attenti
 		end
 	end
 	
-	local should_turn = my_data.chasing or attention_info.notice_progress and attention_info.notice_progress > 0.1
-	local should_chase = my_data.chase_crim_path or my_data.chasing or attention_info.notice_progress and attention_info.notice_progress > 0.5 and attention_info.dis <= 2000
+	local should_turn = my_data.chasing or attention_info.notice_progress and attention_info.notice_progress > 0.25
+	local should_chase = my_data.chase_crim_path or attention_info.notice_progress and attention_info.notice_progress > 0.5 and mvec3_dis_sq(data.m_pos, attention_info.m_pos) < 1562500
 	local turn_to_real_pos
 	
 	local chase_pos
+	
+	if attention_info.notice_progress then
+		if attention_info.notice_progress > 0.5 then
+			local stance = "hos"
+	
+			if data.char_tweak.allowed_stances and not data.char_tweak.allowed_stances["hos"] then
+				stance = "cbt"
+			end
+			
+			local upper_body_action = data.unit:movement()._active_actions[3]
+
+			if not upper_body_action or upper_body_action:type() ~= "shoot" then
+				data.unit:movement():set_stance(stance)
+			end
+		elseif not my_data.chasing_run and not my_data.chasing then
+			data.unit:movement():set_stance("ntl")
+		end
+	end
 	
 	if (not my_data.chase_duration or my_data.chase_duration < data.t) and not my_data.chasing_run then
 		attention_info.being_chased = nil
@@ -1074,24 +1091,8 @@ function CopLogicTravel._upd_focus_on_undetected_criminal(data, my_data, attenti
 		end
 	end
 	
-	if not my_data.turning and should_chase and not my_data.chasing_run and (chase_pos or my_data.chase_crim_path) and not data.unit:movement():chk_action_forbidden("walk") then
+	if not my_data.turning and not my_data.chasing and should_chase and (chase_pos or my_data.chase_crim_path) and not data.unit:movement():chk_action_forbidden("walk") then
 		my_data.detected_criminal = true
-		
-		if not attention_info.detected_criminal then
-			attention_info.detected_criminal = true
-		end
-	
-		local stance = "hos"
-	
-		if data.char_tweak.allowed_stances and not data.char_tweak.allowed_stances["hos"] then
-			stance = "cbt"
-		end
-		
-		local upper_body_action = data.unit:movement()._active_actions[3]
-
-		if not upper_body_action or upper_body_action:type() ~= "shoot" then
-			data.unit:movement():set_stance(stance)
-		end
 	
 		CopLogicBase._exit(data.unit, "idle") --we gotta chase this guy lets not fuck over our travel data
 		

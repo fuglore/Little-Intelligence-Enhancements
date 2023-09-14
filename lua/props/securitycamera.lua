@@ -104,8 +104,8 @@ function SecurityCamera:_upd_detect_attention_objects(t)
 					else
 						local min_delay = det_delay[1]
 						local max_delay = det_delay[2]
-						local angle_mul_mod = (hhtacs and 0.5 or 0.15) * math.min(angle / self._cone_angle, 1)
-						local dis_mul_mod = (hhtacs and 0.5 or 0.85) * dis_multiplier
+						local angle_mul_mod = 0.15 * math.min(angle / self._cone_angle, 1)
+						local dis_mul_mod =  0.85 * dis_multiplier
 						local notice_delay_mul = attention_info.settings.notice_delay_mul or 1
 
 						if attention_info.settings.detection and attention_info.settings.detection.delay_mul then

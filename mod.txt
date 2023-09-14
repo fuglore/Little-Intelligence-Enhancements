@@ -3,7 +3,7 @@
 	"description" : "Big fixes to enemy AI in small number.",
 	"author" : "fugsystem",
 	"blt_version" : 2,
-	"version" : 75,
+	"version" : 76,
 	"image" : "logo.png",
     "hooks": [
 		{	"hook_id" : "lib/managers/menumanager",
@@ -75,6 +75,10 @@
 		{
 			"hook_id": "lib/managers/mission/elementspecialobjective",
 			"script_path": "lua/managers/mapelements/elementspecialobjective.lua"
+		},
+		{
+			"hook_id": "lib/managers/mission/elementaiglobalevent",
+			"script_path": "lua/managers/mapelements/elementaiglobalevent.lua"
 		},
 		{
 			"hook_id": "lib/managers/group_ai_states/groupaistatebase",

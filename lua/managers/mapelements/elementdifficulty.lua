@@ -51,6 +51,21 @@ local adjust_ids = {
 		[102685] = 0.499,
 		[100125] = 0.5,
 	},
+	crojob2 = {
+		[101739] = 0.1,
+		[101049] = 0.25,
+		[101050] = 0.5,	
+	},
+	crojob3 = {
+		[100557] = 0.1,
+		[101220] = 0.25,
+		[101221] = 0.375,	
+	},
+	crojob3_night = {
+		[100557] = 0.1,
+		[101220] = 0.25,
+		[101221] = 0.375,	
+	},
 	
 	--transports and other heists sharing element numbers in really obvious ways.
 	pines = {

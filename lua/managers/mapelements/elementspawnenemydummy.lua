@@ -6,7 +6,8 @@ local instance_strings = {
 }
 local valid_levels = {
 	man = true,
-	rvd1 = true
+	rvd1 = true,
+	moon = true
 }
 
 Hooks:PostHook(ElementSpawnEnemyDummy, "_finalize_values", "lies_hhtacs_elementcheck", function(self)

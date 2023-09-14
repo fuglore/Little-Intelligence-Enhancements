@@ -3713,7 +3713,7 @@ end
 
 Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(self)
 	self.enemy_chatter.retreat = {
-		radius = 800,
+		radius = 1500,
 		max_nr = 2,
 		queue = "m01",
 		group_min = 2,
@@ -3755,7 +3755,7 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		}
 	}
 	self.enemy_chatter.hostageblock = {
-		radius = 700,
+		radius = 1500,
 		max_nr = 1,
 		queue = "bak",
 		group_min = 2,
@@ -3772,7 +3772,7 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		radius = 800,
 		max_nr = 4,
 		queue = "hlp",
-		group_min = 0,
+		group_min = 2,
 		duration = {
 			4,
 			8
@@ -3783,7 +3783,7 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		}
 	}
 	self.enemy_chatter.go_go = {
-		radius = 1000,
+		radius = 2000,
 		max_nr = 1,
 		queue = "mov",
 		group_min = 2,
@@ -3923,7 +3923,7 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		}
 	}
 	self.enemy_chatter.flank = {
-		radius = 700,
+		radius = 2000,
 		max_nr = 1,
 		queue = "t01",
 		group_min = 0,

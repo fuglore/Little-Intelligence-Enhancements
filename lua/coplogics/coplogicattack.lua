@@ -329,6 +329,7 @@ function CopLogicAttack._upd_combat_movement(data)
 	action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
 	local move_to_cover, want_flank_cover = nil
 	local aggro_level = LIES.settings.enemy_aggro_level
+	local wanted_attack_range = my_data.wanted_attack_range
 
 	--[[uncomment to draw cover stuff or whatever
 		
@@ -395,13 +396,19 @@ function CopLogicAttack._upd_combat_movement(data)
 	elseif my_data.attitude == "engage" and not my_data.stay_out_time and not enemy_visible and my_data.at_cover_shoot_pos and not action_taken and not want_to_take_cover then
 		my_data.stay_out_time = t + 7
 	end
+	
+	local can_charge
+	
+	if not data.tactics or not data.tactics.sniper then
+		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge or wanted_attack_range and focus_enemy.dis > wanted_attack_range
+	end
 
 	if action_taken then
 		-- Nothing
 	elseif want_to_take_cover or data.is_converted then
 		move_to_cover = true
 	elseif not enemy_visible then --no longer requires a group objective to work, takes into account flank cover and just generally not seeing enemies in a while
-		if not (data.tactics and data.tactics.sniper) and (aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge) and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
+		if can_charge and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
 			if my_data.charge_path then
 				local path = my_data.charge_path
 				my_data.charge_path = nil
@@ -417,7 +424,7 @@ function CopLogicAttack._upd_combat_movement(data)
 					my_data.charging = true
 				end
 			elseif not my_data.charge_path_search_id and data.attention_obj.nav_tracker then
-				my_data.charge_pos = CopLogicAttack._find_charge_pos(data, my_data, data.attention_obj.nav_tracker, my_data.weapon_range.close)
+				my_data.charge_pos = CopLogicAttack._find_charge_pos(data, my_data, data.attention_obj.nav_tracker, wanted_attack_range and wanted_attack_range * 0.9 or my_data.weapon_range.close)
 
 				if my_data.charge_pos then
 					my_data.charge_path_search_id = "charge" .. tostring(data.key)
@@ -491,8 +498,8 @@ function CopLogicAttack._upd_combat_movement(data)
 			move_to_cover = true
 		end
 	else
-		if not (data.tactics and data.tactics.sniper) and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
-			if aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge then
+		if (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
+			if can_charge then
 				if my_data.charge_path then
 					local path = my_data.charge_path
 					my_data.charge_path = nil
@@ -508,7 +515,7 @@ function CopLogicAttack._upd_combat_movement(data)
 						my_data.charging = true
 					end
 				elseif not my_data.charge_path_search_id and data.attention_obj.nav_tracker then
-					my_data.charge_pos = CopLogicAttack._find_charge_pos(data, my_data, data.attention_obj.nav_tracker, my_data.weapon_range.close)
+					my_data.charge_pos = CopLogicAttack._find_charge_pos(data, my_data, data.attention_obj.nav_tracker, wanted_attack_range and wanted_attack_range * 0.9 or my_data.weapon_range.close)
 
 					if my_data.charge_pos then
 						my_data.charge_path_search_id = "charge" .. tostring(data.key)
@@ -608,8 +615,12 @@ function CopLogicAttack._pathing_complete_clbk(data)
 	
 	CopLogicAttack._process_pathing_results(data, my_data)
 	CopLogicAttack._upd_combat_movement(data)
+	local action_taken = data.logic.action_taken(data, my_data)
+	
+	if not action_taken then
+		data.logic._update_cover(data)
+	end
 end
-
 
 function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
@@ -2197,7 +2208,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 				return true
 			end
 		else
-			if not has_medic then
+			if not has_medic and not has_tank then
 				if alive(chosen_u_data.unit) and chosen_u_data.unit:brain() then
 					if chosen_u_data.unit:brain().request_stillness then
 						 chosen_u_data.unit:brain():request_stillness(7.5)
@@ -2317,6 +2328,10 @@ function CopLogicAttack._update_cover(data)
 
 							mvector3.set_length(my_vec, optimal_dis)
 						end
+					elseif my_data.wanted_attack_range and optimal_dis > my_data.wanted_attack_range then
+						optimal_dis = my_data.wanted_attack_range
+						
+						mvector3.set_length(my_vec, optimal_dis)
 					elseif optimal_dis > my_data.weapon_range.close then
 						optimal_dis = my_data.weapon_range.close
 

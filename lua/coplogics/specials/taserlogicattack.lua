@@ -1,3 +1,54 @@
+function TaserLogicAttack.enter(data, new_logic_name, enter_params)
+	CopLogicBase.enter(data, new_logic_name, enter_params)
+	data.unit:brain():cancel_all_pathing_searches()
+
+	local old_internal_data = data.internal_data
+	local my_data = {
+		unit = data.unit
+	}
+	data.internal_data = my_data
+	my_data.detection = data.char_tweak.detection.combat
+	my_data.tase_distance = data.char_tweak.weapon.is_rifle.tase_distance
+
+	if old_internal_data then
+		my_data.turning = old_internal_data.turning
+		my_data.firing = old_internal_data.firing
+		my_data.shooting = old_internal_data.shooting
+		my_data.attention_unit = old_internal_data.attention_unit
+
+		CopLogicAttack._set_best_cover(data, my_data, old_internal_data.best_cover)
+		CopLogicAttack._set_nearest_cover(my_data, old_internal_data.nearest_cover)
+	end
+
+	local key_str = tostring(data.key)
+	my_data.update_task_key = "TaserLogicAttack.queued_update" .. key_str
+
+	CopLogicBase.queue_task(my_data, my_data.update_task_key, TaserLogicAttack.queued_update, data, data.t, data.important)
+	data.unit:brain():set_update_enabled_state(false)
+	CopLogicIdle._chk_has_old_action(data, my_data)
+
+	local objective = data.objective
+
+	my_data.attitude = "engage"
+
+	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
+	my_data.wanted_attack_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].tase_distance or 1500
+	my_data.cover_test_step = 1
+	data.tase_delay_t = data.tase_delay_t or -1
+
+	TaserLogicAttack._chk_play_charge_weapon_sound(data, my_data, data.attention_obj)
+	data.unit:movement():set_cool(false)
+
+	if my_data ~= data.internal_data then
+		return
+	end
+
+	data.unit:brain():set_attention_settings({
+		cbt = true
+	})
+end
+
+
 function TaserLogicAttack.queued_update(data)
 	local my_data = data.internal_data
 
@@ -104,7 +155,7 @@ function TaserLogicAttack._chk_wants_to_take_cover(data, my_data)
 
 	if not my_data.tasing then	
 		if ammo <= 0 then
-			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
+			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised or my_data.walking_to_optimal_pos
 		
 			if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
 				if not data.unit:anim_data().reload then
@@ -134,21 +185,35 @@ function TaserLogicAttack._chk_wants_to_take_cover(data, my_data)
 	
 	local aggro_level = LIES.settings.enemy_aggro_level
 	
+	if my_data.attitude ~= "engage" then
+		return true
+	end
+	
 	if aggro_level > 3 then
 		return
 	end
-
-	if my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
+	
+	if data.unit:anim_data().reload then
 		return true
 	end
-
+	
 	if aggro_level < 3 then
+		if data.is_suppressed then
+			return true
+		end
+		
 		if ammo / ammo_max < 0.2 then
 			return true
 		end
+		
+		if data.attention_obj.verified then
+			if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
+				if my_data.firing then
+					return true
+				end
+			end
+		end
 	end
-	
-	return CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 end
 
 function TaserLogicAttack._upd_aim(data, my_data, reaction)

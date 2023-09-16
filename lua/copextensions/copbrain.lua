@@ -538,7 +538,7 @@ function CopBrain:request_stillness(t)
 end
 
 function CopBrain:is_criminal()
-	if self._unit:in_slot(16) or self._logic_data.team.id == tweak_data.levels:get_default_team_ID("player") or self._logic_data.team and self._logic_data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
+	if self._unit:in_slot(16) or self._logic_data.team and (self._logic_data.team.id == tweak_data.levels:get_default_team_ID("player") or self._logic_data.team.friends[tweak_data.levels:get_default_team_ID("player")]) then
 		return true
 	end
 end

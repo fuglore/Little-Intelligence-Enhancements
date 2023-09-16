@@ -27,13 +27,11 @@ function SpoocLogicAttack.enter(data, new_logic_name, enter_params)
 	CopLogicIdle._chk_has_old_action(data, my_data)
 
 	local objective = data.objective
-
-	if objective then
-		my_data.attitude = data.objective.attitude or "avoid"
-	end
+	my_data.attitude = "engage"
 
 	my_data.weapon_range = data.char_tweak.weapon[data.unit:inventory():equipped_unit():base():weapon_tweak_data().usage].range
-
+	my_data.wanted_attack_range = 1500
+	
 	data.unit:movement():set_cool(false)
 
 	if my_data ~= data.internal_data then
@@ -127,7 +125,7 @@ function SpoocLogicAttack.update(data)
 		local charge_dis = my_data.want_to_take_cover and 1500 or 2500
 		local focus_enemy_dis = data.attention_obj.dis
 		local lerp = math.clamp(focus_enemy_dis / charge_dis, 0, 1)
-		local react_t = math.lerp(3, 0, lerp)
+		local react_t = math.lerp(2, 0, lerp)
 
 		if data.t - data.attention_obj.react_t < react_t then
 			do_spooc_attack = nil
@@ -162,7 +160,7 @@ function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 
 	if not my_data.spooc_attack then	
 		if ammo <= 0 then
-			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised
+			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised or my_data.walking_to_optimal_pos
 		
 			if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
 				if not data.unit:anim_data().reload then
@@ -192,17 +190,33 @@ function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 	
 	local aggro_level = LIES.settings.enemy_aggro_level
 	
+	if my_data.attitude ~= "engage" then
+		return true
+	end
+	
 	if aggro_level > 3 then
 		return
 	end
-
-	if my_data.attitude ~= "engage" or aggro_level < 3 and data.unit:anim_data().reload then
+	
+	if data.unit:anim_data().reload then
 		return true
 	end
-
+	
 	if aggro_level < 3 then
+		if data.is_suppressed then
+			return true
+		end
+		
 		if ammo / ammo_max < 0.2 then
 			return true
+		end
+		
+		if data.attention_obj.verified then
+			if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
+				if my_data.firing then
+					return true
+				end
+			end
 		end
 	end
 end

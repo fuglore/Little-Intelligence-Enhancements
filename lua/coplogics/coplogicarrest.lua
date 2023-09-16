@@ -140,9 +140,8 @@ function CopLogicArrest._upd_enemy_detection(data)
 
 	local should_arrest = new_reaction == AIAttentionObject.REACT_ARREST
 	local should_stand_close = new_reaction == AIAttentionObject.REACT_SCARED or new_attention and new_attention.criminal_record and new_attention.criminal_record.status
-	local should_call_immediately = LIES.settings.hhtacs and new_reaction == AIAttentionObject.REACT_SCARED and new_attention.unit and new_attention.unit:in_slot(managers.slot:get_mask("enemies"))
 
-	if should_arrest ~= my_data.should_arrest or should_stand_close ~= my_data.should_stand_close or should_call_immediately ~= my_data.should_call_immediately then
+	if should_arrest ~= my_data.should_arrest or should_stand_close ~= my_data.should_stand_close then
 		my_data.should_arrest = should_arrest
 		my_data.should_stand_close = should_stand_close
 		my_data.should_call_immediately = should_call_immediately
@@ -176,7 +175,7 @@ function CopLogicArrest._upd_enemy_detection(data)
 	end
 
 	if new_reaction ~= AIAttentionObject.REACT_ARREST then
-		if (not new_reaction or new_reaction < AIAttentionObject.REACT_SHOOT or not new_attention.verified or new_attention.dis >= 1500) and (my_data.in_position or my_data.should_call_immediately or not my_data.should_arrest and not my_data.should_stand_close) then
+		if (not new_reaction or new_reaction < AIAttentionObject.REACT_SHOOT or not new_attention.verified or new_attention.dis >= 1500) and (my_data.in_position or not my_data.should_arrest and not my_data.should_stand_close) then
 			if data.char_tweak.calls_in and my_data.next_action_delay_t < data.t and not managers.groupai:state():is_police_called() and not my_data.calling_the_police and not my_data.turning and not data.unit:sound():speaking(data.t) then
 				CopLogicArrest._call_the_police(data, my_data, true)
 

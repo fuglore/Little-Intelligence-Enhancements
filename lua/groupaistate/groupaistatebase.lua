@@ -427,7 +427,7 @@ Hooks:PostHook(GroupAIStateBase, "_remove_group_member", "lies_frienddead", func
 		if un_key ~= u_key then
 			local brain = unit_data.unit:brain()
 			
-			if brain:is_important() then
+			if brain:is_important() and not unit_data.unit:anim_data().hands_tied then
 				local current_objective = brain:objective()
 				
 				if unit_data.char_tweak.chatter.suppress and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "teammatedown") then

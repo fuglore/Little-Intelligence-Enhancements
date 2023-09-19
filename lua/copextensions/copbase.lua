@@ -66,11 +66,7 @@ function CopBase:default_weapon_name(selection_name)
 		if not LIES.smg_groups then
 			LIES.smg_groups = {}
 			
-			if LIES.settings.fixed_spawngroups > 2 then
-				LIES.smg_groups["tac_swat_rifle_flank"] = true
-			else
-				LIES.smg_groups["tac_swat_smg"] = true
-			end
+			LIES.smg_groups["tac_swat_smg"] = true
 		end
 		
 		local group_type = self._unit:brain()._logic_data and self._unit:brain()._logic_data.group and self._unit:brain()._logic_data.group.type

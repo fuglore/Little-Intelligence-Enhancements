@@ -553,7 +553,12 @@ function CopLogicAttack._upd_combat_movement(data)
 	
 	if not want_flank_cover or want_flank_cover and have_flank_cover then
 		if not action_taken and move_to_cover and my_data.cover_path then
-			action_taken = CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
+			if not best_cover then
+				--log("path is outdated, something funky happened in taserlogicattack probably")
+				my_data.cover_path = nil
+			else
+				action_taken = CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
+			end
 		elseif not my_data.cover_path and not my_data.cover_path_search_id and not action_taken and best_cover and (not in_cover or best_cover[1] ~= in_cover[1]) and (not my_data.cover_path_failed_t or data.t - my_data.cover_path_failed_t > 2) then
 			my_data.cover_path_search_id = tostring(unit:key()) .. "cover"
 
@@ -1203,28 +1208,40 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 		
 		local dt = data.t - minigunner_firing_buff.last_chk_t
 		
-		if dt > 0.35 then
+		if dt then
 			if shoot then
-				local increase = 0.5 * dt
-				minigunner_firing_buff.amount = math.clamp(minigunner_firing_buff.amount + increase, 0, 2)
+				local increase = 0.25 * dt
+				minigunner_firing_buff.amount = math.clamp(minigunner_firing_buff.amount + increase, 0, 1)
 			else
 				local decrease = -dt
-				minigunner_firing_buff.amount = math.clamp(minigunner_firing_buff.amount + decrease, 0, 2)
+				minigunner_firing_buff.amount = math.clamp(minigunner_firing_buff.amount + decrease, 0, 1)
 			end
 
 			data.unit:base():change_buff_by_id("base_damage", minigunner_firing_buff.id, minigunner_firing_buff.amount)
 			minigunner_firing_buff.last_chk_t = data.t
 		end
-	elseif data.brain._needs_falloff then
+	end
+	
+	if data.brain._needs_falloff then
 		local falloff_sim = data.brain._needs_falloff
 		local old_amount = falloff_sim.amount
 		
 		if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-			if focus_enemy.dis > 2000 then
+			if focus_enemy.dis > 3000 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 0.92
+				else
+					falloff_sim.amount = 1 - (30 / 90)
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif focus_enemy.dis > 2000 then
 				if data.unit:base()._shotgunner then
 					falloff_sim.amount = 0.84
 				else
-					falloff_sim.amount = 0.495
+					falloff_sim.amount = 0.5 --45 zeals rifles, 37 most other dw falloffs
 				end
 				
 				if falloff_sim.amount ~= old_amount then
@@ -1234,7 +1251,17 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 				if data.unit:base()._shotgunner then
 					falloff_sim.amount = 1 - 0.2666666666666667
 				else
-					falloff_sim.amount = 0.33
+					falloff_sim.amount = 1 - (60 / 90)
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif focus_enemy.dis > 500 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 0.64
+				else
+					falloff_sim.amount = 1 - (75 / 90)
 				end
 				
 				if falloff_sim.amount ~= old_amount then
@@ -1358,12 +1385,10 @@ function CopLogicAttack._verify_cover(cover, threat_pos, min_dis, max_dis)
 		return
 	end
 	
-	if LIES.settings.lua_cover < 2 then
-		local cover_dot = mvector3.dot(temp_vec1, cover[2])
+	local cover_dot = mvector3.dot(temp_vec1, cover[2])
 
-		if cover_dot < 0.7 then
-			return
-		end
+	if cover_dot < 0.7 then
+		return
 	end
 
 	return true
@@ -1752,7 +1777,7 @@ function CopLogicAttack._confirm_retreat_position_visless(retreat_pos, threat_po
 
 	mvector3.add(retreat_head_pos, Vector3(0, 0, 90))
 
-	local slotmask = managers.slot:get_mask("bullet_blank_impact_targets")
+	local slotmask = managers.slot:get_mask("AI_visibility") + managers.slot:get_mask("enemy_shield_check")
 	local ray_res = World:raycast("ray", retreat_head_pos, threat_head_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
 
 	if ray_res then
@@ -2246,9 +2271,17 @@ function CopLogicAttack._update_cover(data)
 				
 				if not best_cover or mvec3_dis_sq(best_cover[1][1], friend_pos) > 40000 or not CopLogicAttack._verify_cover(best_cover[1], threat_pos) then
 					local nav_seg_id = managers.navigation:get_nav_seg_from_pos(friend_pos, true)
-					local found_cover = managers.navigation:find_cover_away_from_pos(friend_pos, threat_pos, nav_seg_id)
+					local found_cover
+					
+					if LIES.settings.lua_cover > 1 then
+						local optimal_threat_dis = mvec3_dis(friend_pos, threat_pos) + 30
+						
+						found_cover = managers.navigation:find_cover_from_threat(nav_seg_id, optimal_threat_dis, friend_pos, threat_pos)
+					else
+						found_cover = managers.navigation:find_cover_away_from_pos(friend_pos, threat_pos, nav_seg_id)
+					end
 
-					if found_cover then
+					if found_cover and (not best_cover or best_cover[1] ~= found_cover) then
 						--log("IT'S HAPPY HOUR!!!")
 						satisfied = true
 						local better_cover = {
@@ -2278,7 +2311,7 @@ function CopLogicAttack._update_cover(data)
 					local follow_unit_seg = data.objective.follow_unit:movement():nav_tracker():nav_segment()
 					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_seg, dis, near_pos, threat_pos)
 
-					if found_cover then
+					if found_cover and (not best_cover or best_cover[1] ~= found_cover) then
 						satisfied = true
 						local better_cover = {
 							found_cover
@@ -2380,7 +2413,7 @@ function CopLogicAttack._update_cover(data)
 					
 					local found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)
 
-					if found_cover and (not best_cover or CopLogicAttack._verify_cover(found_cover, threat_pos, min_dis, max_dis)) then
+					if found_cover and (not best_cover or best_cover[1] ~= found_cover) then
 						satisfied = true
 						local better_cover = {
 							found_cover
@@ -2430,6 +2463,8 @@ function CopLogicAttack._update_cover(data)
 				end
 				
 				local peek_pos = offset_pos or in_cover[1][1]
+				
+				local slotmask = data.visibility_slotmask + managers.slot:get_mask("enemy_shield_check")
 				
 				in_cover[3], in_cover[4] = CopLogicAttack._chk_covered(data, peek_pos, threat_pos, data.visibility_slotmask)
 			else

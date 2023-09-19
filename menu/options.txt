@@ -12,8 +12,7 @@
 			"callback" : "callback_lies_lua_cover",
 			"items" : [
                 "menu_lies_cover_off",
-				"menu_lies_cover_basic",
-                "menu_lies_cover_HD"
+				"menu_lies_cover_HD"
             ],
 			"value" : "lua_cover"
 		},

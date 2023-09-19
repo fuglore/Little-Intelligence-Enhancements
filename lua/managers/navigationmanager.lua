@@ -169,7 +169,7 @@ function NavigationManager:generate_cover_fwd(tracker)
 				mvec3_mul(ray_to_pos, 90)
 				mvec3_add(ray_to_pos, fwd_test)
 				
-				if World:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report") then
+				if World:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report") then
 					if i == 6 then --perfect match.
 						return mvec3_cpy(new_fwd)
 					else
@@ -588,6 +588,10 @@ function NavigationManager:_change_funcs()
 		self.find_cover_in_cone_from_threat_pos_1 = self.find_cover_in_cone_from_threat_pos_1_LUA
 		self.find_cover_from_threat = self.find_cover_from_threat_LUA
 		self.find_cover_in_nav_seg_3 = self.find_cover_in_nav_seg_3_LUA
+		
+		if not self._vis_check_slotmask then
+			self._vis_check_slotmask = managers.slot:get_mask("AI_visibility") + managers.slot:get_mask("enemy_shield_check")
+		end
 	end
 end
 
@@ -627,7 +631,7 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 		nav_segs = {nav_seg}
 	end
 	
-	local best_cover, best_dist, best_l_ray, best_h_ray
+	local best_cover, best_dist, best_l_ray, best_h_ray, best_has_good_dir
 	
 	local function _f_check_cover_rays(cover, threat_pos) --this is a visibility check. first checking for crouching positions, then standing.
 		local cover_pos = cover[1]
@@ -643,14 +647,14 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 		mvec3_mul(ray_to_pos, 90)
 		mvec3_add(ray_to_pos, threat_pos)
 
-		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
+		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
 			mvec3_set_z(ray_from, ray_from.z + 90)
 			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
 
-			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
+			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		end
 
 		return low_ray, high_ray
@@ -675,22 +679,27 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 					
 					if not best_dist or cover_dis < best_dist then
 						if math.cos(cone_angle) > mvec3_dot(threat_dir_norm, furthest_pos) then
-							if self._quad_field:is_position_unreserved({radius = 40, position = cover[1], filter = rsrv_filter}) then
-								local low_ray, high_ray
+							local has_good_rotation = mvec3_dot(threat_dir_norm, cover[2]) >= 0.7
+							
+							if has_good_rotation or not best_has_good_dir then
+								if self._quad_field:is_position_unreserved({radius = 40, position = cover[1], filter = rsrv_filter}) then
+									local low_ray, high_ray
 								
-								if LIES.settings.lua_cover > 2 then
-									low_ray, high_ray = _f_check_cover_rays(cover, threat_pos)
-								end
-								
-								if not best_l_ray or low_ray then
-									if not best_h_ray or high_ray then
-										best_l_ray = low_ray
-										best_h_ray = high_ray
-										best_cover = cover
-										best_dist = cover_dis
-								
-										if LIES.settings.lua_cover < 3 and cover_dis <= 10000 or cover_dis <= 10000 and best_l_ray then
-											break
+									if threat_pos then
+										low_ray, high_ray = _f_check_cover_rays(cover, threat_pos)
+									end
+									
+									if not best_l_ray or low_ray then
+										if not best_h_ray or high_ray then
+											best_l_ray = low_ray
+											best_has_good_dir = has_good_rotation
+											best_h_ray = high_ray
+											best_cover = cover
+											best_dist = cover_dis
+									
+											if cover_dis <= 10000 and best_l_ray and has_good_rotation then
+												break
+											end
 										end
 									end
 								end
@@ -710,7 +719,7 @@ end
 function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat_dis, near_pos, threat_pos)
 	local v3_dis_sq = mvec3_dis_sq
 	local world_g = World
-	min_dis = min_dis and min_dis * min_dis or 0
+	optimal_threat_dis = optimal_threat_dis and optimal_threat_dis * optimal_threat_dis or 0
 	local nav_segs
 	
 	if type(nav_seg_id) == "table" then
@@ -719,7 +728,7 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 		nav_segs = {nav_seg_id}
 	end
 	
-	local best_cover, best_dist, best_l_ray, best_h_ray
+	local best_cover, best_dist, best_l_ray, best_h_ray, best_has_good_dir
 	
 	local function _f_check_cover_rays(cover, threat_pos) --this is a visibility check. first checking for crouching positions, then standing.
 		local cover_pos = cover[1]
@@ -735,14 +744,14 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 		mvec3_mul(ray_to_pos, 90)
 		mvec3_add(ray_to_pos, threat_pos)
 
-		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
+		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
 			mvec3_set_z(ray_from, ray_from.z + 90)
 			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
 
-			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
+			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		end
 
 		return low_ray, high_ray
@@ -759,17 +768,25 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 				if threat_pos then
 					threat_dist = v3_dis_sq(cover[1], threat_pos)
 				end
-				
-				if not threat_dist or min_dis < threat_dist then
-					if threat_dist and optimal_threat_dis then
-						cover_dis = cover_dis - optimal_threat_dis
-					end
+
+				if threat_dist and optimal_threat_dis then
+					cover_dis = math.abs(threat_dist - optimal_threat_dis)
+				end
 					
-					if not best_dist or cover_dis < best_dist then
+				if not best_dist or cover_dis < best_dist then
+					local threat_dir = temp_vec3
+					local has_good_rotation
+					
+					if threat_pos then
+						mvec3_dir(threat_dir, cover[1], threat_pos)
+						has_good_rotation = mvec3_dot(threat_dir, cover[2]) >= 0.7
+					end
+				
+					if has_good_rotation or not best_has_good_dir then
 						if self._quad_field:is_position_unreserved({radius = 40, position = cover[1], filter = rsrv_filter}) then
 							local low_ray, high_ray
-								
-							if threat_pos and LIES.settings.lua_cover > 2 then
+							
+							if threat_pos then
 								low_ray, high_ray = _f_check_cover_rays(cover, threat_pos)
 							end
 							
@@ -778,9 +795,10 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 									best_l_ray = low_ray
 									best_h_ray = high_ray
 									best_cover = cover
+									best_has_good_dir = has_good_rotation
 									best_dist = cover_dis
 							
-									if LIES.settings.lua_cover < 3 and cover_dis <= 10000 or cover_dis <= 10000 and best_l_ray then
+									if cover_dis <= 10000 and (not threat_pos or best_l_ray and has_good_rotation) then
 										break
 									end
 								end
@@ -827,14 +845,14 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 		mvec3_mul(ray_to_pos, 90)
 		mvec3_add(ray_to_pos, threat_pos)
 
-		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
+		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
 			mvec3_set_z(ray_from, ray_from.z + 90)
 			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
 
-			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", managers.slot:get_mask("AI_visibility"), "ray_type", "ai_vision", "report")
+			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		end
 
 		return low_ray, high_ray
@@ -855,22 +873,33 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 				if not threat_dist or min_dis < threat_dist then
 					if not max_near_dis or cover_dis < max_near_dis then
 						if not best_dist or cover_dis < best_dist then
-							if self._quad_field:is_position_unreserved({radius = 40, position = cover[1], filter = rsrv_filter}) then
-								local low_ray, high_ray
+							local threat_dir = temp_vec3
+							local has_good_rotation
+							
+							if threat_pos then
+								mvec3_dir(threat_dir, cover[1], threat_pos)
+								has_good_rotation = mvec3_dot(threat_dir, cover[2]) >= 0.7
+							end
+						
+							if has_good_rotation or not best_has_good_dir then
+								if self._quad_field:is_position_unreserved({radius = 40, position = cover[1], filter = rsrv_filter}) then
+									local low_ray, high_ray
 								
-								if threat_pos and LIES.settings.lua_cover > 2 then
-									low_ray, high_ray = _f_check_cover_rays(cover, threat_pos)
-								end
-								
-								if not best_l_ray or low_ray then
-									if not best_h_ray or high_ray then
-										best_l_ray = low_ray
-										best_h_ray = high_ray
-										best_cover = cover
-										best_dist = cover_dis
-								
-										if LIES.settings.lua_cover < 3 and cover_dis <= 10000 or cover_dis <= 10000 and best_l_ray then
-											break
+									if threat_pos then
+										low_ray, high_ray = _f_check_cover_rays(cover, threat_pos)
+									end
+
+									if not best_l_ray or low_ray then
+										if not best_h_ray or high_ray then
+											best_l_ray = low_ray
+											best_h_ray = high_ray
+											best_cover = cover
+											best_dist = cover_dis
+											best_has_good_dir = has_good_rotation
+									
+											if cover_dis <= 10000 and (not threat_pos or best_l_ray and has_good_rotation) then
+												break
+											end
 										end
 									end
 								end

@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.52",
+		version = "V7.53",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -760,7 +760,12 @@ if RequiredScript == "lib/managers/menumanager" then
 		
 		if type(LIES.settings.lua_cover) ~= "number" then
 			log("LIES: Thanks for downloading the newest version. <3")
-			LIES.settings.lua_cover = LIES.settings.lua_cover == true and 3 or 1
+			LIES.settings.lua_cover = LIES.settings.lua_cover == true and 2 or 1
+			
+			LIES:Save()
+		elseif LIES.settings.lua_cover > 2 then
+			log("LIES: Thanks for downloading the newest version. <3")
+			LIES.settings.lua_cover = 2
 			
 			LIES:Save()
 		end

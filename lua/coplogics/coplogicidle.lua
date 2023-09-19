@@ -1357,6 +1357,10 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				end
 				
 				if hhtacs then
+					if status == "electrified" then
+						weight_mul = (weight_mul or 1) * 1.5
+					end
+				
 					if crim_record and attention_data.nav_tracker and AIAttentionObject.REACT_COMBAT <= reaction then
 						local hostages = 0
 						local hostage_blocked = false

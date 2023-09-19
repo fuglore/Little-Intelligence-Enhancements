@@ -1,5 +1,4 @@
 Hooks:PreHook(GroupAIManager, "set_state", "lies_groupsetup", function(self, name)
-	log("LIES: Initializing tweak_data...")
 	tweak_data.group_ai:_LIES_setup()
 	
 	if self._state then

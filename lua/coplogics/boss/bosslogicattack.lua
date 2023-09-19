@@ -697,7 +697,7 @@ function LIESBossLogicAttack._confirm_retreat_position_visless(retreat_pos, thre
 
 	mvector3.add(retreat_head_pos, Vector3(0, 0, 160))
 
-	local slotmask = managers.slot:get_mask("bullet_blank_impact_targets")
+	local slotmask = managers.slot:get_mask("AI_visibility") + managers.slot:get_mask("enemy_shield_check")
 	local ray_res = World:raycast("ray", retreat_head_pos, threat_head_pos, "slot_mask", slotmask, "ray_type", "ai_vision", "report")
 
 	if ray_res then

@@ -30,7 +30,7 @@ Hooks:PostHook(CopBrain, "_reset_logic_data", "lies_reset_logic_data", function(
 	if LIES.settings.hhtacs and self._unit:base()._tweak_table == "tank_mini" then
 		local difficulty_index = tweak_data:difficulty_to_index(Global.game_settings.difficulty)
 		
-		if difficulty_index > 7 then
+		if difficulty_index > 6 then
 			self._minigunner_firing_buff = {
 				id = self._unit:base():add_buff("base_damage", 0),
 				amount = 0,
@@ -99,13 +99,20 @@ local scaling_units = {
 	heavy_swat = true,
 	gangster = true,
 	swat = true,
-	taser = true
+	taser = true,
+	tank_mini = true
 }
 
 local non_scaling_units = {
 	fbi_heavy_swat = "heavy_swat",
 	fbi_swat = "swat",
 	city_swat = "swat"
+}
+
+local no_foff_tank_weapons = {
+	"m249",
+	"rpk_lmg",
+	"saiga" --it'll falloff faster overall due to getting combo'd with real falloff
 }
 
 function CopBrain:_do_hhtacs_damage_modifiers()
@@ -130,6 +137,13 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 		else
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5)
 		end
+	elseif self._unit:base()._tweak_table == "tank" and difficulty_index > 6 then
+		if self._unit:base()._current_weapon_id == "benelli" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --225 damage base
+		elseif self._unit:base()._current_weapon_id == "saiga" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.45) --around 140-ish damage base
+			self._unit:base()._shotgunner = true
+		end
 	elseif self._unit:base()._current_weapon_id == "raging_bull" and scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
 		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5)
 	elseif ludicrous_damage[self._unit:base()._current_weapon_id] and scaling_units[self._unit:base()._tweak_table] and Global.game_settings.difficulty == "sm_wish" then
@@ -140,9 +154,19 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 	elseif self._unit:base()._current_weapon_id == "g36" and Global.game_settings.difficulty == "sm_wish" then 
 		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --g36 users deal 75 damage with "good" preset compared to zeal's 90
 	elseif mayhem_rifles[self._unit:base()._current_weapon_id] and Global.game_settings.difficulty == "easy_wish" then
-		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) 
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) --45
 	elseif self._unit:base()._current_weapon_id == "ak47_ass" and Global.game_settings.difficulty == "easy_wish" then
-		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) 
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) --45
+	elseif self._unit:base()._current_weapon_id == "scar" then
+		--scar deals 30 past initial falloff on overkill and below
+
+		if difficulty_index == 8 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2.3) --99
+		elseif difficulty_index == 7 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5) --75
+		elseif difficulty_index == 6 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.7) --51
+		end
 	end
 end
 
@@ -163,6 +187,13 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 		end
 		
 		if scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
+			self._needs_falloff = {
+				id = self._unit:base():add_buff("base_damage", 0),
+				amount = 0
+			}
+		end
+		
+		if self._unit:base()._tweak_table == "tank" and no_foff_tank_weapons[self._unit:base()._current_weapon_id] then
 			self._needs_falloff = {
 				id = self._unit:base():add_buff("base_damage", 0),
 				amount = 0

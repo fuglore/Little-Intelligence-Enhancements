@@ -3,6 +3,7 @@ function GroupAITweakData:_LIES_setup()
 		return
 	end
 	
+	log("LIES: Initializing tweak_data...")
 	local faction = tweak_data.levels:get_ai_group_type()
 	self._not_america = faction ~= "america" and faction or false
 	
@@ -50,7 +51,7 @@ function GroupAITweakData:_LIES_setup()
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	
-	if LIES.settings.fixed_spawngroups > 2 and not self._LIES_fix then
+	if not LIES.settings.hhtacs and LIES.settings.fixed_spawngroups > 2 and not self._LIES_fix then
 		log("LIES: Attempting to fix spawngroups...")
 		
 		if self.enemy_spawn_groups.tac_swat_shotgun_rush then
@@ -762,79 +763,25 @@ function GroupAITweakData:_LIES_setup()
 			"murder"
 		}
 		
-		if LIES.settings.fixed_spawngroups < 3 then
-			if difficulty_index > 5 then
-				self._tactics.swat_rifle_flank = { --this is the group ever
-					"ranged_fire",
-					"flank",
-					"provide_coverfire",
-					"provide_support",
-					"flash_grenade",
-					"smoke_grenade",
-					"harass"
-				}
-			else
-				self._tactics.swat_rifle_flank = { --this is the group ever
-					"ranged_fire",
-					"flank",
-					"provide_coverfire",
-					"provide_support",
-					"flash_grenade",
-					"smoke_grenade",
-				}
-			end
+		if difficulty_index > 5 then
+			self._tactics.swat_rifle_flank = { --this is the group ever
+				"ranged_fire",
+				"flank",
+				"provide_coverfire",
+				"provide_support",
+				"flash_grenade",
+				"smoke_grenade",
+				"harass"
+			}
 		else
-			if difficulty_index > 5 then
-				self._tactics.swat_rifle = {
-					"ranged_fire",
-					"provide_coverfire",
-					"provide_support",
-					"smoke_grenade",
-					"harass"
-				}
-				self._tactics.swat_rifle_flank = {
-					"flank",
-					"provide_coverfire",
-					"provide_support",
-					"smoke_grenade",
-					"harass"
-				}
-				self._tactics.swat_shotgun_rush = {
-					"charge",
-					"provide_coverfire",
-					"provide_support",
-					"deathguard",
-					"flash_grenade",
-					"harass"
-				}
-				self._tactics.shield_support_charge = {
-					"shield_cover",
-					"charge",
-					"harass",
-					"provide_coverfire",
-					"flash_grenade"
-				}
-			else
-				self._tactics.swat_rifle = {
-					"ranged_fire",
-					"provide_coverfire",
-					"provide_support",
-					"smoke_grenade"
-				}
-				self._tactics.swat_rifle_flank = {
-					"flank",
-					"provide_coverfire",
-					"provide_support",
-					"smoke_grenade"
-				}
-				self._tactics.swat_shotgun_rush = {
-					"charge",
-					"provide_coverfire",
-					"provide_support",
-					"deathguard",
-					"flash_grenade"
-				}
-			end
+			self._tactics.swat_rifle_flank = { --this is the group ever
+				"ranged_fire",
+				"flank",
+				"provide_coverfire",
+				"provide_support",
+				"flash_grenade",
+				"smoke_grenade",
+			}
 		end
 		
 		self._tactics.tazer_charge = {
@@ -3212,335 +3159,334 @@ function GroupAITweakData:_LIES_setup()
 			end
 		end
 		
-		if LIES.settings.fixed_spawngroups < 3 then
-			self._tactics.smg = {
-				"flank",
-				"smoke_grenade",
-				"flash_grenade"
+
+		self._tactics.smg = {
+			"flank",
+			"smoke_grenade",
+			"flash_grenade"
+		}
+	
+		if difficulty_index <= 2 then
+			self.enemy_spawn_groups.tac_swat_smg = {
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						amount_min = 2,
+						freq = 1,
+						amount_max = 2,
+						rank = 2,
+						unit = "CS_swat_MP5",
+						tactics = self._tactics.smg
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+		elseif difficulty_index == 3 then
+			self.enemy_spawn_groups.tac_swat_smg = {
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 2,
+						unit = "CS_swat_MP5",
+						tactics = self._tactics.smg
+					},
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 2,
+						unit = "CS_heavy_M4",
+						tactics = self._tactics.smg
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+		elseif difficulty_index == 4 then
+			self.enemy_spawn_groups.tac_swat_smg = {
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1.75,
+						amount_max = 2,
+						rank = 2,
+						unit = "FBI_swat_M4",
+						tactics = self._tactics.smg
+					},
+					{
+						freq = 0.25,
+						amount_max = 1,
+						rank = 2,
+						unit = "FBI_swat_R870",
+						tactics = self._tactics.smg
+					},
+					{
+						freq = 0.25,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_heavy_G36",
+						tactics = self._tactics.smg
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+		elseif difficulty_index == 5 then
+			self.enemy_spawn_groups.tac_swat_smg = {
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						freq = 1.25,
+						amount_max = 2,
+						rank = 2,
+						unit = "FBI_swat_M4",
+						tactics = self._tactics.smg
+					},
+					{
+						freq = 0.75,
+						amount_max = 1,
+						rank = 2,
+						unit = "FBI_swat_R870",
+						tactics = self._tactics.smg
+					},
+					{
+						freq = 0.75,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_heavy_G36",
+						tactics = self._tactics.smg
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+		elseif difficulty_index <= 7 then
+			self.unit_categories.FBI_SMG = { --use city_swat_3
+				unit_types = {
+					america = {
+						Idstring("units/payday2/characters/ene_city_swat_3/ene_city_swat_3")
+					},
+					russia = {
+						Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_swat_dw_ak47_ass/ene_akan_fbi_swat_dw_ak47_ass")
+					},
+					zombie = {
+						Idstring("units/pd2_dlc_hvh/characters/ene_fbi_swat_hvh_1/ene_fbi_swat_hvh_1")
+					},
+					murkywater = {
+						Idstring("units/pd2_dlc_bph/characters/ene_murkywater_light_city/ene_murkywater_light_city")
+					},
+					federales = {
+						Idstring("units/pd2_dlc_bex/characters/ene_swat_policia_federale_city/ene_swat_policia_federale_city")
+					}
+				},
+				access = access_type_all
 			}
 		
-			if difficulty_index <= 2 then
-				self.enemy_spawn_groups.tac_swat_smg = {
-					amount = {
-						2,
-						2
+			self.enemy_spawn_groups.tac_swat_smg = {
+				amount = {
+					2,
+					2
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 2,
+						unit = "FBI_SMG",
+						tactics = self._tactics.smg
 					},
-					spawn = {
-						{
-							amount_min = 2,
-							freq = 1,
-							amount_max = 2,
-							rank = 2,
-							unit = "CS_swat_MP5",
-							tactics = self._tactics.smg
-						}
+					{
+						freq = 0.34,
+						amount_max = 1,
+						rank = 2,
+						unit = "FBI_swat_R870",
+						tactics = self._tactics.smg
 					},
-					spawn_point_chk_ref = table.list_to_set({
-						"tac_swat_rifle_flank",
-						"tac_swat_rifle"
-					})
-				}
-			elseif difficulty_index == 3 then
-				self.enemy_spawn_groups.tac_swat_smg = {
-					amount = {
-						2,
-						2
+					{
+						freq = 0.33,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_heavy_G36",
+						tactics = self._tactics.smg
 					},
-					spawn = {
-						{
-							amount_min = 1,
-							freq = 1,
-							amount_max = 1,
-							rank = 2,
-							unit = "CS_swat_MP5",
-							tactics = self._tactics.smg
-						},
-						{
-							amount_min = 1,
-							freq = 1,
-							amount_max = 1,
-							rank = 2,
-							unit = "CS_heavy_M4",
-							tactics = self._tactics.smg
-						}
+					{
+						freq = 0.33,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_heavy_R870",
+						tactics = self._tactics.smg
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
+		else
+			self.enemy_spawn_groups.tac_swat_smg = {
+				amount = {
+					2,
+					3
+				},
+				spawn = {
+					{
+						freq = 1,
+						amount_max = 2,
+						rank = 2,
+						unit = "FBI_swat_M4",
+						tactics = self._tactics.smg
 					},
-					spawn_point_chk_ref = table.list_to_set({
-						"tac_swat_rifle_flank",
-						"tac_swat_rifle"
-					})
-				}
-			elseif difficulty_index == 4 then
-				self.enemy_spawn_groups.tac_swat_smg = {
-					amount = {
-						2,
-						2
+					{
+						freq = 1,
+						amount_max = 2,
+						rank = 2,
+						unit = "FBI_swat_R870",
+						tactics = self._tactics.smg
 					},
-					spawn = {
-						{
-							amount_min = 1,
-							freq = 1.75,
-							amount_max = 2,
-							rank = 2,
-							unit = "FBI_swat_M4",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.25,
-							amount_max = 1,
-							rank = 2,
-							unit = "FBI_swat_R870",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.25,
-							amount_max = 1,
-							rank = 3,
-							unit = "FBI_heavy_G36",
-							tactics = self._tactics.smg
-						}
+					{
+						freq = 0.75,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_heavy_G36",
+						tactics = self._tactics.smg
 					},
-					spawn_point_chk_ref = table.list_to_set({
-						"tac_swat_rifle_flank",
-						"tac_swat_rifle"
-					})
-				}
-			elseif difficulty_index == 5 then
-				self.enemy_spawn_groups.tac_swat_smg = {
-					amount = {
-						2,
-						2
-					},
-					spawn = {
-						{
-							freq = 1.25,
-							amount_max = 2,
-							rank = 2,
-							unit = "FBI_swat_M4",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.75,
-							amount_max = 1,
-							rank = 2,
-							unit = "FBI_swat_R870",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.75,
-							amount_max = 1,
-							rank = 3,
-							unit = "FBI_heavy_G36",
-							tactics = self._tactics.smg
-						}
-					},
-					spawn_point_chk_ref = table.list_to_set({
-						"tac_swat_rifle_flank",
-						"tac_swat_rifle"
-					})
-				}
-			elseif difficulty_index <= 7 then
-				self.unit_categories.FBI_SMG = { --use city_swat_3
-					unit_types = {
-						america = {
-							Idstring("units/payday2/characters/ene_city_swat_3/ene_city_swat_3")
-						},
-						russia = {
-							Idstring("units/pd2_dlc_mad/characters/ene_akan_fbi_swat_dw_ak47_ass/ene_akan_fbi_swat_dw_ak47_ass")
-						},
-						zombie = {
-							Idstring("units/pd2_dlc_hvh/characters/ene_fbi_swat_hvh_1/ene_fbi_swat_hvh_1")
-						},
-						murkywater = {
-							Idstring("units/pd2_dlc_bph/characters/ene_murkywater_light_city/ene_murkywater_light_city")
-						},
-						federales = {
-							Idstring("units/pd2_dlc_bex/characters/ene_swat_policia_federale_city/ene_swat_policia_federale_city")
-						}
-					},
-					access = access_type_all
-				}
-			
-				self.enemy_spawn_groups.tac_swat_smg = {
-					amount = {
-						2,
-						2
-					},
-					spawn = {
-						{
-							amount_min = 1,
-							freq = 1,
-							amount_max = 1,
-							rank = 2,
-							unit = "FBI_SMG",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.34,
-							amount_max = 1,
-							rank = 2,
-							unit = "FBI_swat_R870",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.33,
-							amount_max = 1,
-							rank = 3,
-							unit = "FBI_heavy_G36",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.33,
-							amount_max = 1,
-							rank = 3,
-							unit = "FBI_heavy_R870",
-							tactics = self._tactics.smg
-						}
-					},
-					spawn_point_chk_ref = table.list_to_set({
-						"tac_swat_rifle_flank",
-						"tac_swat_rifle"
-					})
-				}
-			else
-				self.enemy_spawn_groups.tac_swat_smg = {
-					amount = {
-						2,
-						3
-					},
-					spawn = {
-						{
-							freq = 1,
-							amount_max = 2,
-							rank = 2,
-							unit = "FBI_swat_M4",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 1,
-							amount_max = 2,
-							rank = 2,
-							unit = "FBI_swat_R870",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.75,
-							amount_max = 1,
-							rank = 3,
-							unit = "FBI_heavy_G36",
-							tactics = self._tactics.smg
-						},
-						{
-							freq = 0.75,
-							amount_max = 1,
-							rank = 3,
-							unit = "FBI_heavy_R870",
-							tactics = self._tactics.smg
-						}
-					},
-					spawn_point_chk_ref = table.list_to_set({
-						"tac_swat_rifle_flank",
-						"tac_swat_rifle"
-					})
-				}
-			end
-			
-			if difficulty_index <= 2 then
-				self.besiege.assault.groups.tac_swat_smg = {
-					0.2,
-					0.2,
-					0.2
-				}
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					0.6,
-					0.6,
-					0.6
-				}
-			elseif difficulty_index == 3 then
-				self.besiege.assault.groups.tac_swat_smg = {
-					0.125,
-					0.125,
-					0.125
-				}
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					0.375,
-					0.375,
-					0.375
-				}
-			elseif difficulty_index == 4 then
-				local weight_smg = 0.77 / 3 --im not doing this fucking math die
-				local weight_rifle = 0.77 - weight_smg
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					weight_rifle,
-					weight_rifle,
-					weight_rifle
-				}
-				self.besiege.assault.groups.tac_swat_smg = {
-					weight_smg,
-					weight_smg,
-					weight_smg
-				}
-			elseif difficulty_index == 5 then
-				local weight_smg = 0.77 / 3 --im not doing this fucking math die
-				local weight_rifle = 0.77 - weight_smg
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					weight_rifle,
-					weight_rifle,
-					weight_rifle
-				}
-				self.besiege.assault.groups.tac_swat_smg = {
-					weight_smg,
-					weight_smg,
-					weight_smg
-				}
-			elseif difficulty_index == 6 then
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					0.24,
-					0.24,
-					0.24
-				}
-				self.besiege.assault.groups.tac_swat_smg = {
-					0.48,
-					0.48,
-					0.48,
-				}
-			elseif difficulty_index == 7 then
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					0.24,
-					0.24,
-					0.24
-				}
-				self.besiege.assault.groups.tac_swat_smg = {
-					0.48,
-					0.48,
-					0.48,
-				}
-			elseif difficulty_index == 8 then
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					0.24,
-					0.24,
-					0.24
-				}
-				self.besiege.assault.groups.tac_swat_smg = {
-					0.48,
-					0.48,
-					0.48,
-				}
-			else
-				local weight_smg = 0.52 / 3
-				local weight_rifle = 0.52 - weight_smg
-				self.besiege.assault.groups.tac_swat_rifle_flank = {
-					weight_rifle,
-					weight_rifle,
-					weight_rifle
-				}
-				self.besiege.assault.groups.tac_swat_smg = {
-					weight_smg,
-					weight_smg,
-					weight_smg
-				}
-			end
+					{
+						freq = 0.75,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_heavy_R870",
+						tactics = self._tactics.smg
+					}
+				},
+				spawn_point_chk_ref = table.list_to_set({
+					"tac_swat_rifle_flank",
+					"tac_swat_rifle"
+				})
+			}
 		end
 		
+		if difficulty_index <= 2 then
+			self.besiege.assault.groups.tac_swat_smg = {
+				0.2,
+				0.2,
+				0.2
+			}
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				0.6,
+				0.6,
+				0.6
+			}
+		elseif difficulty_index == 3 then
+			self.besiege.assault.groups.tac_swat_smg = {
+				0.125,
+				0.125,
+				0.125
+			}
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				0.375,
+				0.375,
+				0.375
+			}
+		elseif difficulty_index == 4 then
+			local weight_smg = 0.77 / 3 --im not doing this fucking math die
+			local weight_rifle = 0.77 - weight_smg
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				weight_rifle,
+				weight_rifle,
+				weight_rifle
+			}
+			self.besiege.assault.groups.tac_swat_smg = {
+				weight_smg,
+				weight_smg,
+				weight_smg
+			}
+		elseif difficulty_index == 5 then
+			local weight_smg = 0.77 / 3 --im not doing this fucking math die
+			local weight_rifle = 0.77 - weight_smg
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				weight_rifle,
+				weight_rifle,
+				weight_rifle
+			}
+			self.besiege.assault.groups.tac_swat_smg = {
+				weight_smg,
+				weight_smg,
+				weight_smg
+			}
+		elseif difficulty_index == 6 then
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				0.24,
+				0.24,
+				0.24
+			}
+			self.besiege.assault.groups.tac_swat_smg = {
+				0.48,
+				0.48,
+				0.48,
+			}
+		elseif difficulty_index == 7 then
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				0.24,
+				0.24,
+				0.24
+			}
+			self.besiege.assault.groups.tac_swat_smg = {
+				0.48,
+				0.48,
+				0.48,
+			}
+		elseif difficulty_index == 8 then
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				0.24,
+				0.24,
+				0.24
+			}
+			self.besiege.assault.groups.tac_swat_smg = {
+				0.48,
+				0.48,
+				0.48,
+			}
+		else
+			local weight_smg = 0.52 / 3
+			local weight_rifle = 0.52 - weight_smg
+			self.besiege.assault.groups.tac_swat_rifle_flank = {
+				weight_rifle,
+				weight_rifle,
+				weight_rifle
+			}
+			self.besiege.assault.groups.tac_swat_smg = {
+				weight_smg,
+				weight_smg,
+				weight_smg
+			}
+		end
+
 		local cartel_heists = { 
 			constantine_dwtd_lvl = true,
 			constantine_suburbia_lvl = true,
@@ -3560,11 +3506,14 @@ function GroupAITweakData:_LIES_setup()
 		
 		if tweak_data.skirmish then
 			tweak_data.skirmish:setup_hhtacs()
+			log("Holdout tweakdata initialized.")
 		end
 	end
 
 	self.street = deep_clone(self.besiege)
 	self.safehouse = deep_clone(self.besiege)
+	
+	self._LIES_fix = true
 end
 
 function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)

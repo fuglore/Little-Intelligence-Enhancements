@@ -73,6 +73,101 @@ function CopLogicBase.should_duck_on_alert(data, alert_data)
 	return --let other things tell to crouch
 end
 
+function CopLogicBase.upd_falloff_sim(data)
+	local my_data = data.internal_data
+	local focus_enemy = data.attention_obj
+	data.t = TimerManager:game():time()
+	
+	if data.brain._minigunner_firing_buff then
+		local minigunner_firing_buff = data.brain._minigunner_firing_buff
+		
+		local dt = data.t - minigunner_firing_buff.last_chk_t
+		
+		--log(dt)
+		
+		if dt > 0.35 then
+			if dt > 1 then
+				minigunner_firing_buff.amount = 0
+			elseif my_data.firing then
+				local increase = 0.25 * dt
+				minigunner_firing_buff.amount = math.clamp(minigunner_firing_buff.amount + increase, 0, 1)
+			else
+				local decrease = -dt
+				minigunner_firing_buff.amount = math.clamp(minigunner_firing_buff.amount + decrease, 0, 1)
+			end
+
+			data.unit:base():change_buff_by_id("base_damage", minigunner_firing_buff.id, minigunner_firing_buff.amount)
+			minigunner_firing_buff.last_chk_t = data.t
+		end
+	end
+	
+	if data.brain._needs_falloff then
+		local falloff_sim = data.brain._needs_falloff
+		local old_amount = falloff_sim.amount
+		
+		if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
+			focus_enemy.dis = mvec3_dis(data.m_pos, focus_enemy.m_pos)
+			
+			if focus_enemy.dis > 3000 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 0.92
+				else
+					falloff_sim.amount = 1 - (30 / 90)
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif focus_enemy.dis > 2000 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 0.84
+				else
+					falloff_sim.amount = 0.5 --45 zeals rifles, 37 most other dw falloffs
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif focus_enemy.dis > 1000 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 1 - 0.2666666666666667
+				else
+					falloff_sim.amount = 1 - (60 / 90)
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif focus_enemy.dis > 500 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 0.64
+				else
+					falloff_sim.amount = 1 - (75 / 90)
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif data.unit:base()._shotgunner then
+				falloff_sim.amount = 0.6
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
+			elseif falloff_sim.amount > 0 then
+				falloff_sim.amount = 0
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, 0)
+				end
+			end
+		elseif falloff_sim.amount > 0 then
+			falloff_sim.amount = 0
+			data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, 0)
+		end
+	end
+end
+
 function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	local my_data = data.internal_data
 	attention = attention or data.attention_obj

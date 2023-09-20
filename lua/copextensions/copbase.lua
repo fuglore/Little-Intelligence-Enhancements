@@ -236,6 +236,39 @@ function CopBase:default_weapon_name(selection_name)
 	end
 end
 
+function CopBase:_refresh_buff_total(name)
+	local buff_list = self._buffs[name]
+	local sum = 0
+
+	for _, buff in pairs(buff_list.buffs) do
+		if buff >= 0 then
+			sum = sum + buff
+		else
+			if sum >= 0 then
+				sum = sum + buff
+			else
+				if buff >= 0 then
+					sum = sum + buff
+				else
+					--log(sum)
+					local mulsum = math.abs(buff) * (1 - math.abs(sum))
+					local new_sum = 1 - mulsum
+					sum = -new_sum
+					--log(sum)
+				end
+			end
+		end
+	end
+	
+	--log(sum)
+	
+	buff_list._total = sum
+
+	if Network:is_server() then
+		managers.network:session():send_to_peers_synched("sync_enemy_buff", self._unit, name, math.round(buff_list._total * 1000))
+	end
+end
+
 function CopBase:change_buff_by_id(name, id, value)
 	if not Network:is_server() then
 		return

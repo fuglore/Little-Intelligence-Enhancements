@@ -113,7 +113,7 @@ function TaserLogicAttack.queued_update(data)
 				if shoot then
 					local tase_dis = data.char_tweak.weapon.is_rifle.tase_distance
 					local focus_enemy_dis = focus_enemy.dis
-					local lerp = math.clamp(focus_enemy_dis / tase_dis, 0.25, 1)
+					local lerp = math.clamp(focus_enemy_dis / tase_dis, 0, 1)
 					react_t = react_t * lerp
 
 					if data.t - focus_enemy.react_t < react_t then

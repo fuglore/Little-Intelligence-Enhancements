@@ -14,6 +14,8 @@ Hooks:PostHook(CopMovement, "_upd_actions", "lies_actions", function(self, t)
 			self:upd_m_head_pos()
 		end
 	end
+	
+	self._unit:brain():upd_falloff_sim()
 end)
 
 local action_req_orig = CopMovement.action_request

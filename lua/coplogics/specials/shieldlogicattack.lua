@@ -350,13 +350,13 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 		my_data.optimal_pos = managers.navigation:clamp_position_to_field(my_data.optimal_pos)
 		
 		local reservation = {
-			radius = 30,
+			radius = 70,
 			position = my_data.optimal_pos,
 			filter = data.pos_rsrv_id
 		}
 
 		if not managers.navigation:is_pos_free(reservation) then
-			my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 120)
+			my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 140)
 		end
 	end
 end
@@ -480,7 +480,7 @@ function ShieldLogicAttack.queued_update(data)
 				if do_move then
 					my_data.pathing_to_optimal_pos = true
 					my_data.optimal_path_search_id = tostring(unit:key()) .. "optimal"
-					to_pos = managers.navigation:pad_out_position(to_pos, 4, data.char_tweak.wall_fwd_offset)
+
 					local reservation = managers.navigation:reserve_pos(nil, nil, to_pos, callback(ShieldLogicAttack, ShieldLogicAttack, "_reserve_pos_step_clbk", {
 						unit_pos = data.m_pos
 					}), 70, data.pos_rsrv_id)
@@ -489,7 +489,7 @@ function ShieldLogicAttack.queued_update(data)
 						to_pos = reservation.position
 					else
 						reservation = {
-							radius = 60,
+							radius = 70,
 							position = mvector3.copy(to_pos),
 							filter = data.pos_rsrv_id
 						}

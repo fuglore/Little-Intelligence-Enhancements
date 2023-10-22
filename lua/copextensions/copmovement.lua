@@ -3,19 +3,19 @@ Hooks:PostHook(CopMovement, "_upd_actions", "lies_actions", function(self, t)
 		local ext_anim = self._ext_anim
 		
 		self._need_upd = ext_anim.fumble and true
-		
-		if not self._need_upd then
-			if managers.groupai:state():whisper_mode() and self._ext_base:lod_stage() then
-				self._need_upd = true
-			end
-		end
-		
+
 		if self._need_upd then
 			self:upd_m_head_pos()
 		end
 	end
 	
-	self._unit:brain():upd_falloff_sim()
+	if not Network:is_server() then
+		return
+	end
+	
+	if LIES.settings.hhtacs then
+		self._unit:brain():upd_falloff_sim()
+	end
 end)
 
 local action_req_orig = CopMovement.action_request

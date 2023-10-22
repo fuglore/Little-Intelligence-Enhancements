@@ -107,7 +107,7 @@ function CopLogicAttack.queued_update(data)
 end
 
 function CopLogicAttack.queue_update(data, my_data)
-	CopLogicBase.queue_task(my_data, my_data.update_queue_id, data.logic.queued_update, data, data.t + (data.important and 0.2 or 0.7), true)
+	CopLogicBase.queue_task(my_data, my_data.update_queue_id, data.logic.queued_update, data, data.t + (data.important and 0 or 0.2), true)
 end
 
 local safe_dmg_types = {

@@ -105,7 +105,14 @@ function CivilianLogicIdle._upd_detection(data)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
-	local delay = CopLogicBase._upd_attention_obj_detection(data, nil, nil)
+	CopLogicBase._upd_attention_obj_detection(data, nil, nil)
+	
+	local delay = 0
+	
+	if not managers.groupai:state():whisper_mode() then
+		delay = 1.4
+	end
+	
 	local new_attention, new_reaction = CivilianLogicIdle._get_priority_attention(data, data.detected_attention_objects)
 
 	CivilianLogicIdle._set_attention_obj(data, new_attention, new_reaction)
@@ -156,7 +163,7 @@ function CivilianLogicIdle._upd_detection(data)
 		return
 	end
 	
-	if not managers.groupai:state():enemy_weapons_hot() or not my_data.acting or CivilianLogicIdle._objective_can_be_interrupted(data) then
+	if managers.groupai:state():whisper_mode() or not my_data.acting or CivilianLogicIdle._objective_can_be_interrupted(data) then
 		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t + delay)
 	else
 		my_data.detection_task_key = nil

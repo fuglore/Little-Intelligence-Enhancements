@@ -1,5 +1,5 @@
 function TeamAIInventory:equip_selection(selection_index, instant)
-	if selection_index == 1 and not self._unit:movement():cool() then --telling them to equip their npc-weapon secondary during loud, no.
+	if selection_index == 1 and not self._unit:movement():cool() and self._available_selections[2] then --telling them to equip their npc-weapon secondary during loud, no.
 		selection_index = 2
 	end
 

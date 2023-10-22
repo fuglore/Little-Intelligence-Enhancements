@@ -315,7 +315,7 @@ function CivilianLogicTravel.queued_update(data)
 		return
 	end
 	
-	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 0.7)
+	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CivilianLogicTravel.queued_update, data, data.t + 1)
 end
 
 function CivilianLogicTravel._check_for_scare(data, my_data)

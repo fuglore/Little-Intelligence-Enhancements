@@ -1375,9 +1375,7 @@ function CopLogicTravel.get_pathing_prio(data)
 	local prio = 0
 	local objective = data.objective
 	
-	if objective and objective.forced then
-		prio = 12
-	elseif data.is_converted or data.unit:in_slot(16) then
+	if data.is_converted or data.unit:in_slot(16) then
 		if objective and objective.type == "follow" then
 			prio = 11
 		else

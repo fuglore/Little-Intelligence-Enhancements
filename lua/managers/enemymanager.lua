@@ -348,7 +348,7 @@ function EnemyManager:_update_queued_tasks(t, dt)
 	local n_tasks = #self._queued_tasks
 	
 	if n_tasks > 0 then
-		local whisper = managers.groupai:state():whisper_mode()
+		--local whisper = managers.groupai:state():whisper_mode()
 
 		if whisper then
 			while #self._queued_tasks > 0 do

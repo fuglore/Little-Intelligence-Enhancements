@@ -3506,6 +3506,47 @@ function GroupAITweakData:_LIES_setup()
 		
 		if tweak_data.skirmish then
 			tweak_data.skirmish:setup_hhtacs()
+			self.besiege.assault.force = {
+				8,
+				8,
+				8
+			}
+			self.skirmish.assault.force = {
+				8,
+				8,
+				8
+			}
+			self.besiege.assault.force_pool = {
+				72,
+				72,
+				72
+			}
+			self.skirmish.assault.force_pool = {
+				72,
+				72,
+				72
+			}
+			self.besiege.assault.sustain_duration_min = {
+				105,
+				105,
+				105
+			}
+			self.skirmish.assault.sustain_duration_min = {
+				105,
+				105,
+				105
+			}
+			self.besiege.assault.sustain_duration_max = {
+				105,
+				105,
+				105
+			}
+			self.skirmish.assault.sustain_duration_max = {
+				105,
+				105,
+				105
+			}
+			
 			log("Holdout tweakdata initialized.")
 		end
 	end

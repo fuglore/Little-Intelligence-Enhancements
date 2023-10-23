@@ -82,6 +82,29 @@ function GroupAIStateBase:set_importance_weight(u_key, wgt_report)
 	end
 end
 
+function GroupAIStateBase:_get_balancing_multiplier_hhtacs(balance_multipliers)
+	local nr_players = 0
+
+	for u_key, u_data in pairs(self:all_player_criminals()) do
+		if not u_data.status then
+			nr_players = nr_players + 1
+		end
+	end
+
+	local nr_ai = 0
+
+	for u_key, u_data in pairs(self:all_AI_criminals()) do
+		if not u_data.status then
+			nr_ai = nr_ai + 1
+		end
+	end
+
+	nr_players = nr_players + nr_ai
+	nr_players = math.clamp(nr_players, 1, 4)
+
+	return balance_multipliers[nr_players]
+end
+
 function GroupAIStateBase:_calculate_difficulty_ratio_hhtacs()
 	local ramp = tweak_data.group_ai.difficulty_curve_points
 	local diff = self._difficulty_value

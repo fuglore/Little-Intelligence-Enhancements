@@ -836,7 +836,7 @@ function LIESBossLogicAttack._chk_use_throwable(data, my_data, focus)
 	
 	local obstructed = nil
 	
-	if throwable == "launcher_frag" then
+	if throwable == "launcher_frag" or throwable == "launcher_incendiary" then
 		obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "slot_mask", slotmask, "report")
 	else
 		mvec3_set_z(last_seen_pos, last_seen_pos.z + 15)

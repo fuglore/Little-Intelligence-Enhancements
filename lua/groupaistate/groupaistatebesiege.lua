@@ -406,7 +406,8 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		if blockade_start_maps[level_id] then
 			self._blockade = true
 		end
-	
+		
+		self._get_balancing_multiplier = self._get_balancing_multiplier_hhtacs
 		self._calculate_difficulty_ratio = self._calculate_difficulty_ratio_hhtacs
 		self._check_phalanx_damage_reduction_increase = self._check_phalanx_damage_reduction_increase_LIES
 		self.phalanx_damage_reduction_disable = self.phalanx_damage_reduction_disable_LIES
@@ -2477,7 +2478,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 	local objective_area = nil
 	local target_area = nil
 
-	if obstructed_area and not current_objective.blockading then
+	if obstructed_area and not current_objective.blockading and (not current_objective.area or current_objective.area.id ~= obstructed_area.id) then
 		if phase_is_anticipation then
 			pull_back = true
 		elseif tactics_map.ranged_fire or tactics_map.sniper then
@@ -3033,7 +3034,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			local can_push = used_grenade
 			
 			if not can_push then
-				if not tactics_map.ranged_fire and not tactics_map.sniper or charge then
+				if not LIES.settings.hhtacs or not tactics_map.ranged_fire and not tactics_map.sniper or charge then
 					can_push = true
 				elseif self._task_data.assault.cs_grenade_active_t and self._task_data.assault.cs_grenade_active_t < self._t or self._drama_data.amount <= tweak_data.drama.low and aggression_level > 2 then
 					can_push = charge or self._drama_data.amount <= tweak_data.drama.low

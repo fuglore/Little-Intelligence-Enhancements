@@ -558,7 +558,8 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 
 	for u_key, u_data in pairs(data.group.units) do
 		if u_key ~= data.key then
-			local his_objective = u_data.unit:brain():objective()
+			local his_brain = u_data.unit:brain()
+			local his_objective = his_brain:objective()
 
 			if his_objective and his_objective.grp_objective == my_objective.grp_objective and his_objective.area and not his_objective.in_place then
 				local his_pos = u_data.unit:movement():nav_tracker():field_position()
@@ -571,6 +572,20 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 					if my_dis < his_dis then
 						can_continue = nil
 						
+						break
+					end
+					
+					local his_logic_data = his_brain._logic_data
+				
+					if his_logic_data and his_logic_data._internal_data and his_logic_data._internal_data.cover_leave_t then
+						can_continue = nil
+						
+						break
+					end
+					
+					if his_logic_data.next_mov_time and his_logic_data.next_mov_time > his_logic_data.t then
+						can_continue = nil
+
 						break
 					end
 				end
@@ -778,7 +793,7 @@ function CopLogicTravel.upd_advance(data)
 		if objective then
 			if objective.nav_seg or objective.type == "follow" then
 				if my_data.coarse_path then
-					if my_data.coarse_path_index == #my_data.coarse_path or CopLogicTravel._chk_coarse_objective_reached(data) then
+					if my_data.coarse_path_index == #my_data.coarse_path then
 						CopLogicTravel._on_destination_reached(data)
 					else
 						CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
@@ -1458,7 +1473,7 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				my_data.in_cover = true
 				
 				if not data.objective.forced and LIES.settings.enemy_aggro_level < 3 then
-					if CopLogicTravel._chk_close_to_criminal(data, my_data) or data.is_suppressed then
+					if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction or data.is_suppressed then
 						local cover_wait_time = my_data.coarse_path_index == #my_data.coarse_path - 1 and 0.3 or 0.6 + 0.4 * math.random()
 						
 						my_data.cover_leave_t = data.t + cover_wait_time

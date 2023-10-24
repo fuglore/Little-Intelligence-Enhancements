@@ -27,6 +27,12 @@ function SpoocLogicIdle._upd_enemy_detection(data)
 
 	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
 
+	SpoocLogicIdle._chk_exit_hiding(data)
+
+	if my_data ~= data.internal_data then
+		return delay
+	end
+
 	if new_reaction and AIAttentionObject.REACT_SUSPICIOUS < new_reaction then
 		local objective = data.objective
 		local wanted_state = nil
@@ -53,12 +59,6 @@ function SpoocLogicIdle._upd_enemy_detection(data)
 		if my_data ~= data.internal_data then
 			return delay
 		end
-	end
-
-	SpoocLogicIdle._chk_exit_hiding(data)
-
-	if my_data ~= data.internal_data then
-		return delay
 	end
 
 	return delay
@@ -94,19 +94,7 @@ end
 function SpoocLogicIdle.damage_clbk(data, damage_info)
 	local res = SpoocLogicIdle.super.damage_clbk(data, damage_info)
 	
-	local hiding = data.unit:anim_data().hide_loop or data.unit:anim_data().hide
-	
-	if not hiding then
-		local act_act = data.unit:movement():get_action(1)
-		
-		if act_act and act_act:type() == "act" then
-			local variant = act_act._action_desc.variant
-			
-			if hide_anims[variant] then
-				hiding = true
-			end
-		end
-	end
+	local hiding = data.unit:anim_data().hide_loop
 
 	if hiding then
 		SpoocLogicIdle._exit_hiding(data)
@@ -116,41 +104,31 @@ function SpoocLogicIdle.damage_clbk(data, damage_info)
 end
 
 function SpoocLogicIdle.exit(data, new_logic_name, enter_params)
-	local hiding = data.unit:anim_data().hide_loop or data.unit:anim_data().hide
-	
-	if not hiding then
-		local act_act = data.unit:movement():get_action(1)
+	if new_logic_name ~= "inactive" then
+		local hiding = data.unit:anim_data().hide_loop
 		
-		if act_act and act_act:type() == "act" then
-			local variant = act_act._action_desc.variant
-			
-			if hide_anims[variant] then
-				hiding = true
-			end
+		if hiding then
+			local action = {
+				variant = "idle",
+				body_part = 1,
+				type = "act",
+				blocks = {
+					heavy_hurt = -1,
+					idle = -1,
+					action = -1,
+					turn = -1,
+					light_hurt = -1,
+					walk = -1,
+					fire_hurt = -1,
+					hurt = -1,
+					expl_hurt = -1
+				}
+			}
+
+			data.unit:brain():action_request(action)
 		end
 	end
-	
-	if hiding then
-		local action = {
-			variant = "idle",
-			body_part = 1,
-			type = "act",
-			blocks = {
-				heavy_hurt = -1,
-				idle = -1,
-				action = -1,
-				turn = -1,
-				light_hurt = -1,
-				walk = -1,
-				fire_hurt = -1,
-				hurt = -1,
-				expl_hurt = -1
-			}
-		}
-
-		data.unit:brain():action_request(action)
-	end
-	
+		
 	CopLogicBase.exit(data, new_logic_name, enter_params)
 
 	local my_data = data.internal_data
@@ -171,19 +149,7 @@ function SpoocLogicIdle.exit(data, new_logic_name, enter_params)
 end
 
 function SpoocLogicIdle._chk_exit_hiding(data)
-	local hiding = data.unit:anim_data().hide_loop or data.unit:anim_data().hide
-	
-	if not hiding then
-		local act_act = data.unit:movement():get_action(1)
-		
-		if act_act and act_act:type() == "act" then
-			local variant = act_act._action_desc.variant
-			
-			if hide_anims[variant] then
-				hiding = true
-			end
-		end
-	end
+	local hiding = data.unit:anim_data().hide_loop
 
 	if hiding then		
 		for u_key, attention_data in pairs(data.detected_attention_objects) do

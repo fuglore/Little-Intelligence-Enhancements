@@ -143,7 +143,9 @@ function TaserLogicAttack.queued_update(data)
 
 		CopLogicAttack._update_cover(data)
 		
-		CopLogicAttack._upd_combat_movement(data)
+		if not data.next_mov_time or data.next_mov_time < data.t then
+			CopLogicAttack._upd_combat_movement(data)
+		end
 	end
 
 	CopLogicBase.queue_task(my_data, my_data.update_task_key, TaserLogicAttack.queued_update, data, data.t + delay, data.important)

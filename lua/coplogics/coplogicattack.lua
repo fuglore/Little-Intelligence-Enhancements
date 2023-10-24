@@ -457,25 +457,32 @@ function CopLogicAttack._upd_combat_movement(data)
 				else
 					height = 82.5
 				end
-
 				
 				local aim_pos = focus_enemy.verified_pos
 				
 				--make this into a loop to save updates
+				local reservation = {
+					radius = 30,
+					filter = data.pos_rsrv_id
+				}
+				
 				while my_data.cover_test_step < 3 do
 					local shoot_from_pos = CopLogicAttack._peek_for_pos_sideways(data, my_data, my_tracker, aim_pos, height)
 
 					if shoot_from_pos then
-						local path = {
-							m_tracker_pos,
-							shoot_from_pos
-						}
-						action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "walk")
+						reservation.position = shoot_from_pos
+						if not managers.navigation:is_pos_free(reservation) then
+							local path = {
+								m_tracker_pos,
+								shoot_from_pos
+							}
+							action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "walk")
 
-						break
-					else
-						my_data.cover_test_step = my_data.cover_test_step + 1
+							break
+						end
 					end
+					
+					my_data.cover_test_step = my_data.cover_test_step + 1
 				end
 			elseif not enemy_visible_soft then
 				move_to_cover = true
@@ -1466,7 +1473,7 @@ function CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 	}
 
 	if not managers.navigation:is_pos_free(reservation) then
-		local to_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 500)
+		local to_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 500, nil, nil, nil, data.pos_rsrv_id)
 
 		if to_pos then
 			local path = {
@@ -1594,6 +1601,7 @@ function CopLogicAttack._find_retreat_position(data, from_pos, threat_pos, threa
 		tracker_from = from_tracker
 	}
 	local rsrv_desc = {
+		filter = data.pos_rsrv_id,
 		radius = 60
 	}
 	local fail_position = nil

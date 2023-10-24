@@ -356,7 +356,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 		}
 
 		if not managers.navigation:is_pos_free(reservation) then
-			my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 140)
+			my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 280, nil, nil, nil, data.pos_rsrv_id)
 		end
 	end
 end

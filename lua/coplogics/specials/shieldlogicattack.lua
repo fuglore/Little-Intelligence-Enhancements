@@ -424,9 +424,6 @@ function ShieldLogicAttack.queued_update(data)
 
 	if not action_taken and unit:anim_data().stand then
 		action_taken = CopLogicAttack._chk_request_action_crouch(data)
-	else
-		--turning has less priority if they wanna move, shields turn faster when moving anyways
-		action_taken = data.unit:movement():chk_action_forbidden("walk") or my_data.walking_to_optimal_pos
 	end
 
 	ShieldLogicAttack._process_pathing_results(data, my_data)

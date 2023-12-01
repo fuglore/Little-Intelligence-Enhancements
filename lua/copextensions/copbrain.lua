@@ -108,8 +108,8 @@ local scaling_units = {
 	shield = true,
 	cop = true,
 	fbi = true,
-	swat = true,
-	heavy_swat = true,
+	zeal_swat = true,
+	zeal_heavy_swat = true,
 	gangster = true,
 	swat = true,
 	taser = true,
@@ -117,9 +117,9 @@ local scaling_units = {
 }
 
 local non_scaling_units = {
-	fbi_heavy_swat = "heavy_swat",
-	fbi_swat = "swat",
-	city_swat = "swat"
+	fbi_heavy_swat = "zeal_heavy_swat",
+	fbi_swat = "zeal_swat",
+	city_swat = "zeal_swat"
 }
 
 local no_foff_tank_weapons = {

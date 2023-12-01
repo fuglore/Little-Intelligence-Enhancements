@@ -176,8 +176,7 @@ function CopLogicAttack._upd_enemy_detection(data, is_synchronous)
 	end
 	
 	if data.attention_obj and data.attention_obj.verified then
-		my_data.cover_test_step = 0
-		my_data.flank_cover = nil
+		my_data.charging = my_data.charging or my_data.flank_cover
 		
 		--stop the charge, we are not chargers we do not push unless nescessary
 		if my_data.charging and not data.unit:movement():chk_action_forbidden("walk") then 
@@ -193,6 +192,9 @@ function CopLogicAttack._upd_enemy_detection(data, is_synchronous)
 				my_data.at_cover_shoot_pos = true
 			end
 		end
+		
+		my_data.cover_test_step = 0
+		my_data.flank_cover = nil
 	end
 	
 	data.logic._upd_aim(data, my_data)
@@ -638,22 +640,6 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 
 	if ammo <= 0 then
-		local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised or my_data.walking_to_optimal_pos
-	
-		if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
-			if not data.unit:anim_data().reload and my_data.shooting then
-				local new_action = {
-					body_part = 2,
-					type = "idle"
-				}
-
-				data.unit:brain():action_request(new_action)
-			
-				CopLogicAttack._cancel_cover_pathing(data, my_data)
-				CopLogicAttack._cancel_charge(data, my_data)
-			end
-		end
-		
 		return true
 	end
 

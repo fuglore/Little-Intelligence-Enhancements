@@ -625,9 +625,11 @@ function CopLogicTravel.upd_advance(data)
 			end
 		end
 		
-		if not my_data.coarse_path or my_data.coarse_path_index and my_data.coarse_path_index < #my_data.coarse_path then
-			if not CopLogicAttack._check_needs_reload(data, my_data) then
-				return
+		if not data.unit:in_slot(16) then
+			if not my_data.coarse_path or my_data.coarse_path_index and my_data.coarse_path_index < #my_data.coarse_path then
+				if my_data.in_cover and (data.unit:anim_data().reload or not CopLogicAttack._check_needs_reload(data, my_data)) then
+					return
+				end
 			end
 		end
 		

@@ -129,7 +129,7 @@ end
 
 function CopLogicIdle._chk_has_old_action(data, my_data)
 	local anim_data = data.unit:anim_data()
-	my_data.has_old_action = anim_data.act or anim_data.act_idle
+	my_data.has_old_action = anim_data.to_idle or anim_data.act
 	local lower_body_action = data.unit:movement()._active_actions[2]
 	my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
 	

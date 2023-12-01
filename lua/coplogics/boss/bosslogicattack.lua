@@ -219,19 +219,10 @@ function LIESBossLogicAttack.update(data)
 	
 	local can_keep_moving = data.char_tweak.reload_while_moving_tmp or data.unit:anim_data().reload or ammo > 0
 	
-	if can_keep_moving then
-		if cur_att_obj and AI_REACT_COMBAT <= cur_att_obj.reaction then
-			LIESBossLogicAttack._upd_combat_movement(data, my_data)
-		else
-			LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
-		end
-	elseif my_data.walking_to_chase_pos then
-		local new_action = {
-			body_part = 2,
-			type = "idle"
-		}
-
-		data.unit:brain():action_request(new_action)
+	if cur_att_obj and AI_REACT_COMBAT <= cur_att_obj.reaction then
+		LIESBossLogicAttack._upd_combat_movement(data, my_data)
+	else
+		LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 	end
 	
 	--this isn't even working anyways lol

@@ -797,7 +797,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 					end
 				end
 
-				local delta_prog = nil
+				local delta_prog = 0
 				local dt = t - attention_info.prev_notice_chk_t
 				
 				attention_info.real_pos = mvector3.copy(attention_pos)

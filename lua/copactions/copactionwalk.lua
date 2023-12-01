@@ -21,7 +21,6 @@ function CopActionWalk:_init()
 	end
 
 	self._init_called = true
-	self._walk_velocity = self:_get_max_walk_speed()
 	local action_desc = self._action_desc
 	local common_data = self._common_data
 
@@ -53,20 +52,27 @@ function CopActionWalk:_init()
 
 		self._nav_path = nav_path
 	else
+		local t_ins = table.insert
+		local new_nav_points = self._simplified_path
+
+		if new_nav_points then
+			for _, nav_point in ipairs(new_nav_points) do
+				t_ins(self._nav_path, nav_point.x and mvec3_cpy(nav_point) or nav_point)
+			end
+		end
+
 		if not action_desc.interrupted or not self._nav_path[1].x then
-			table.insert(self._nav_path, 1, mvec3_cpy(common_data.pos))
+			t_ins(self._nav_path, 1, mvec3_cpy(common_data.pos))
 		else
 			self._nav_path[1] = mvec3_cpy(common_data.pos)
 		end
 
 		for i, nav_point in ipairs(self._nav_path) do
 			if not nav_point.x then
-				-- Lines 337-337
 				function nav_point.element.value(element, name)
 					return element[name]
 				end
 
-				-- Lines 338-338
 				function nav_point.element.nav_link_wants_align_pos(element)
 					return element.from_idle
 				end
@@ -80,7 +86,7 @@ function CopActionWalk:_init()
 			}
 
 			if managers.navigation:raycast(ray_params) then
-				table.insert(self._nav_path, 2, mvec3_cpy(self._ext_movement:m_host_stop_pos()))
+				t_ins(self._nav_path, 2, mvec3_cpy(self._ext_movement:m_host_stop_pos()))
 
 				self._host_stop_pos_ahead = true
 			end
@@ -88,25 +94,9 @@ function CopActionWalk:_init()
 	end
 
 	if action_desc.path_simplified and action_desc.persistent then
-		if self._sync then
-			local t_ins = table.insert
-			local original_path = self._nav_path
-			local new_nav_points = self._simplified_path
-			local s_path = {}
-			self._simplified_path = s_path
-
-			for _, nav_point in ipairs(original_path) do
-				t_ins(s_path, nav_point.x and mvec3_cpy(nav_point) or nav_point)
-			end
-
-			if new_nav_points then
-				for _, nav_point in ipairs(new_nav_points) do
-					t_ins(s_path, nav_point.x and mvec3_cpy(nav_point) or nav_point)
-				end
-			end
-		else
-			self._simplified_path = self._nav_path
-		end
+		self._simplified_path = self._nav_path
+	elseif not managers.groupai:state():enemy_weapons_hot() then
+		self._simplified_path = self._nav_path
 	else
 		local good_pos = mvector3.copy(common_data.pos)
 		self._simplified_path = self._calculate_simplified_path(good_pos, self._nav_path, (not self._sync or self._common_data.stance.name == "ntl") and 2 or 1, self._sync, true)
@@ -133,7 +123,7 @@ function CopActionWalk:_init()
 		}
 	end
 
-	if #self._simplified_path == 2 and not self._NO_RUN_STOP and not self._no_walk and self._haste ~= "walk" and mvec3_dis(self._curve_path[2], self._curve_path[1]) >= 120 then
+	if #self._simplified_path == 2 and not self._was_interrupted and not self._NO_RUN_STOP and not self._no_walk and self._haste ~= "walk" and mvec3_dis(self._curve_path[2], self._curve_path[1]) >= 210 then
 		self._chk_stop_dis = 210
 	end
 
@@ -151,11 +141,7 @@ function CopActionWalk:_init()
 		end
 
 		local sync_haste = self._haste == "walk" and 1 or 2
-		local nav_link_act_index = 0
-		local nav_link_act_yaw = 1
-		local next_nav_point = self._simplified_path[2]
-		local nav_link_from_idle = false
-		
+		local next_nav_point = self._nav_point_pos(self._simplified_path[2])
 		local pose_code = nil
 
 		if not action_desc.pose then
@@ -176,7 +162,7 @@ function CopActionWalk:_init()
 			end_pose_code = 2
 		end
 
-		self._ext_network:send("action_walk_start", self._nav_point_pos(next_nav_point), nav_link_act_yaw, nav_link_act_index, nav_link_from_idle, sync_haste, sync_yaw, self._no_walk and true or false, self._no_strafe and true or false, pose_code, end_pose_code)
+		self._ext_network:send("action_walk_start", self._nav_point_pos(next_nav_point), 1, 0, false, sync_haste, sync_yaw, self._no_walk and true or false, self._no_strafe and true or false, pose_code, end_pose_code)
 	else
 		local pose = action_desc.pose
 

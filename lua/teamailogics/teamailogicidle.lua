@@ -276,7 +276,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								else
 									target_priority_slot = 6
 								end
-							elseif attention_unit:base():has_tag("tank") then
+							elseif attention_unit:base():has_tag("tank") or attention_unit:base()._tweak_table == "marshal_shield_break" then
 								local dozer_type = attention_unit:base()._tweak_table
 								
 								if near then
@@ -289,6 +289,14 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 									end
 								else
 									target_priority_slot = 8
+								end
+							elseif attention_unit:base():has_tag("marksman") then
+								if has_damaged then
+									target_priority_slot = 6
+								elseif has_alerted then
+									target_priority_slot = 7
+								else
+									target_priority_slot = 9
 								end
 							elseif near and (has_alerted and has_damaged) then
 								target_priority_slot = 7
@@ -834,10 +842,11 @@ function TeamAILogicIdle.on_long_dis_interacted(data, other_unit, secondary)
 
 	if objective_type == "follow" then
 		if data.unit:movement():carrying_bag() and not data.unit:movement()._should_stay then
-			local throw_distance = tweak_data.ai_carry.throw_distance * data.unit:movement():carry_tweak().throw_distance_multiplier
+			local carry_type_tweak = data.unit:movement():carry_type_tweak()
+			local throw_distance = tweak_data.ai_carry.throw_distance * (carry_type_tweak and carry_type_tweak.throw_distance_multiplier or 1)
 			local dist = data.unit:position() - other_unit:position()
 			local throw_bag = mvector3.dot(dist, dist) < throw_distance * throw_distance
-
+			
 			if throw_bag then
 				if other_unit == managers.player:player_unit() then
 					if other_unit:movement():current_state_name() == "carry" then
@@ -924,8 +933,13 @@ function TeamAILogicIdle.on_long_dis_interacted(data, other_unit, secondary)
 	if objective and objective.type == "revive" and objective_action ~= "untie" then
 		if data.unit:movement():carrying_bag() then
 			local speed = 670
-			local can_run = tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type].can_run
-			local speed_mul = tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type].move_speed_modifier
+			local can_run = true
+			local speed_mul = 1
+
+			if tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type] then
+				speed_mul = tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type].move_speed_modifier
+				can_run = tweak_data.carry.types[tweak_data.carry[data.unit:movement():carry_id()].type].can_run
+			end
 
 			if not can_run then
 				speed = 285

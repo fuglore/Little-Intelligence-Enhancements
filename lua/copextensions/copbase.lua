@@ -9,6 +9,12 @@ local shotguns = {
 	benelli = true
 }
 
+local rifles = {
+	m4 = true,
+	ak47_ass = true,
+	g36 = true
+}
+
 local shotgun_unit_types = {
 	CS_swat_R870 = true,
 	FBI_swat_R870 = true,
@@ -78,8 +84,10 @@ function CopBase:default_weapon_name(selection_name)
 			
 			if m_weapon_id == "m4" or m_weapon_id == "mp5" or m_weapon_id == "ak47_ass" or m_weapon_id == "g36" then	
 				local zeal_types = {
-					swat = true,
-					heavy_swat = true
+					swat = tweak_data.group_ai._not_america,
+					heavy_swat = tweak_data.group_ai._not_america,
+					zeal_swat = true,
+					zeal_heavy_swat = true
 				}
 				
 				--log(self._tweak_table)
@@ -98,7 +106,7 @@ function CopBase:default_weapon_name(selection_name)
 						m_weapon_id = "ump"
 					end
 					
-					if m_weapon_id == "m4" or m_weapon_id == "ak47_ass" or m_weapon_id == "g36" then
+					if self._tweak_table == "zeal_heavy_swat" and rifles[m_weapon_id] then
 						m_weapon_id = "sg417"
 
 						if not self._char_tweak.throwable then

@@ -80,8 +80,13 @@ function PlayerBleedOut:on_rescue_SO_administered(revive_SO_data, receiver_unit)
 
 	if receiver_unit:movement():carrying_bag() then
 		local speed = 670
-		local can_run = tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type].can_run
-		local speed_mul = tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type].move_speed_modifier
+		local can_run = true
+		local speed_mul = 1
+		
+		if tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type] then
+			can_run = tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type].can_run
+			speed_mul = tweak_data.carry.types[tweak_data.carry[receiver_unit:movement():carry_id()].type].move_speed_modifier
+		end
 
 		if not can_run then
 			speed = 285

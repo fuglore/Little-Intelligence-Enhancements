@@ -127,7 +127,7 @@ function CharacterTweakData:setup_hhtacs()
 		self.tank.enrages = true
 
 		local heavy_adv = {
-			speed = 1,
+			speed = 1.3,
 			occasions = {
 				hit = {
 					chance = 0.75,
@@ -207,11 +207,11 @@ function CharacterTweakData:setup_hhtacs()
 			}
 		}
 		
-		self.heavy_swat.dodge = heavy_adv
+		self.zeal_heavy_swat.dodge = heavy_adv
 		self.fbi_heavy_swat.dodge = heavy_adv
 		
 		local light_adv = {
-			speed = 1.3,
+			speed = 1.6,
 			occasions = {
 				hit = {
 					chance = 1,
@@ -291,7 +291,7 @@ function CharacterTweakData:setup_hhtacs()
 			}
 		}
 		
-		self.swat.dodge = light_adv
+		self.zeal_swat.dodge = light_adv
 		self.fbi_swat.dodge = light_adv
 		self.city_swat.dodge = light_adv
 		self.taser.dodge = light_adv

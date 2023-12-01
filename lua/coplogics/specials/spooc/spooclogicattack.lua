@@ -159,23 +159,7 @@ function SpoocLogicAttack._chk_wants_to_take_cover(data, my_data)
 	local ammo_max, ammo = data.unit:inventory():equipped_unit():base():ammo_info()
 
 	if not my_data.spooc_attack then	
-		if ammo <= 0 then
-			local has_walk_actions = my_data.advancing or my_data.walking_to_cover_shoot_pos or my_data.moving_to_cover or my_data.surprised or my_data.walking_to_optimal_pos
-		
-			if has_walk_actions and not data.unit:movement():chk_action_forbidden("walk") then
-				if not data.unit:anim_data().reload then
-					local new_action = {
-						body_part = 2,
-						type = "idle"
-					}
-
-					data.unit:brain():action_request(new_action)
-				
-					CopLogicAttack._cancel_cover_pathing(data, my_data)
-					CopLogicAttack._cancel_charge(data, my_data)
-				end
-			end
-			
+		if ammo <= 0 then		
 			return true
 		end
 	end

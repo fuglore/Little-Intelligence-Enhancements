@@ -127,9 +127,8 @@ function CopLogicAttack.damage_clbk(data, damage_info)
 	if data.important and not data.is_converted then
 		if not data.unit:movement():chk_action_forbidden("walk") then
 			local my_data = data.internal_data
-			local moving_to_cover = my_data.moving_to_cover or my_data.at_cover_shoot_pos
 
-			if not moving_to_cover and not my_data.tasing and not my_data.spooc_attack then
+			if not my_data.tasing and not my_data.spooc_attack then
 				CopLogicBase.chk_start_action_dodge(data, "hit")
 			end
 		end
@@ -749,7 +748,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 	if focus_enemy and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 		local last_sup_t = data.unit:character_damage():last_suppression_t()
 
-		if LIES.settings.hhtacs and focus_enemy.verified_t and data.t - focus_enemy.verified_t < 2 or my_data.shooting then
+		if LIES.settings.hhtacs and (focus_enemy.verified_t and data.t - focus_enemy.verified_t < 2 or my_data.shooting) then
 			if focus_enemy.hostage_blocked then
 				if data.important then
 					if data.char_tweak.chatter and data.char_tweak.chatter.ready then
@@ -1027,7 +1026,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 end
 
 function CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, my_pos, enemy_pos)
-	local fwd = data.unit:movement():m_rot():y()
+	local fwd = data.unit:movement():m_fwd()
 	local target_vec = temp_vec1
 	mvector3.direction(target_vec, my_pos, enemy_pos)
 	mvec3_set_z(target_vec, 0)

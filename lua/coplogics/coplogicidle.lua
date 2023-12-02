@@ -76,7 +76,7 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	
 	if objective then
 		my_data.scan = objective.scan
-		my_data.rubberband_rotation = objective.rubberband_rotation and data.unit:movement():m_rot():y()
+		my_data.rubberband_rotation = objective.rubberband_rotation and mvector3.copy(data.unit:movement():m_fwd())
 	else
 		my_data.scan = true
 	end
@@ -333,7 +333,7 @@ function CopLogicIdle._upd_stop_old_action(data, my_data, objective)
 		return
 	end
 
-	local can_stop_action = not my_data.action_started and objective and objective.action
+	local can_stop_action = not my_data.action_started and objective and objective.action and true or false
 
 	if objective and objective.type == "free" then
 		can_stop_action = true
@@ -362,19 +362,6 @@ function CopLogicIdle._upd_stop_old_action(data, my_data, objective)
 	end
 
 	CopLogicIdle._chk_has_old_action(data, my_data)
-end
-
-function CopLogicIdle._chk_turn_needed(data, my_data, my_pos, look_pos)
-	local fwd = data.unit:movement():m_rot():y()
-	local target_vec = temp_vec1
-	mvec3_dir(target_vec, my_pos, look_pos)
-	mvec3_set_z(target_vec, 0)
-	local error_spin = target_vec:to_polar_with_reference(fwd, math.UP).spin
-	
-	if math.abs(error_spin) > 27 then
-		--log("jungus")
-		return error_spin
-	end
 end
 
 function CopLogicIdle._chk_focus_on_attention_object(data, my_data)
@@ -484,11 +471,9 @@ function CopLogicIdle._upd_scan(data, my_data)
 		return
 	end
 	
-	do return end
-
 	if not my_data.stare_pos or not my_data.next_scan_t or data.t < my_data.next_scan_t then
 		if not my_data.turning and my_data.fwd_offset then
-			local return_spin = my_data.rubberband_rotation:to_polar_with_reference(data.unit:movement():m_rot():y(), math.UP).spin
+			local return_spin = my_data.rubberband_rotation:to_polar_with_reference(data.unit:movement():m_fwd(), math.UP).spin
 
 			if math.abs(return_spin) < 15 then
 				my_data.fwd_offset = nil
@@ -1033,6 +1018,18 @@ function CopLogicIdle.exit(data, new_logic_name, enter_params)
 
 	if my_data.nearest_cover then
 		managers.navigation:release_cover(my_data.nearest_cover[1])
+	end
+	
+	local current_attention = data.unit:movement():attention()
+
+	if current_attention then
+		if current_attention.pos then
+			my_data.attention_unit = mvector3.copy(current_attention.pos)
+		elseif current_attention.u_key then
+			my_data.attention_unit = current_attention.u_key
+		elseif current_attention.unit then
+			my_data.attention_unit = current_attention.unit:key()
+		end
 	end
 
 	data.brain:rem_pos_rsrv("path")
@@ -1683,7 +1680,7 @@ function CopLogicIdle._chk_relocate(data)
 			return
 		end
 
-		if data.is_tied and data.objective.lose_track_dis and data.objective.lose_track_dis * data.objective.lose_track_dis < mvector3.distance_sq(data.m_pos, data.objective.follow_unit:movement():m_pos()) then
+		if data.is_tied and data.objective.lose_track_dis and data.objective.lose_track_dis * data.objective.lose_track_dis < mvector3.distance_sq(data.m_pos, data.objective.follow_unit:movement():m_newest_pos()) then
 			data.brain:set_objective(nil)
 
 			return true
@@ -1692,7 +1689,7 @@ function CopLogicIdle._chk_relocate(data)
 		local relocate = nil
 		local follow_unit = data.objective.follow_unit
 		local advance_pos = follow_unit:brain() and follow_unit:brain():is_advancing()
-		local follow_unit_pos = advance_pos or follow_unit:movement():m_pos()
+		local follow_unit_pos = advance_pos or follow_unit:movement():m_newest_pos()
 
 		if data.objective.relocated_to and mvector3.distance_sq(data.objective.relocated_to, follow_unit_pos) < 3600 then
 			return
@@ -1741,7 +1738,7 @@ function CopLogicIdle.action_complete_clbk(data, action)
 		data.internal_data.turning = nil
 
 		if data.internal_data.fwd_offset then
-			local return_spin = data.internal_data.rubberband_rotation:to_polar_with_reference(data.unit:movement():m_rot():y(), math.UP).spin
+			local return_spin = data.internal_data.rubberband_rotation:to_polar_with_reference(data.unit:movement():m_fwd(), math.UP).spin
 
 			if math.abs(return_spin) < 15 then
 				data.internal_data.fwd_offset = nil

@@ -130,7 +130,7 @@ function CharacterTweakData:setup_hhtacs()
 			speed = 1.3,
 			occasions = {
 				hit = {
-					chance = 0.75,
+					chance = 1,
 					check_timeout = {
 						0,
 						0
@@ -155,7 +155,7 @@ function CharacterTweakData:setup_hhtacs()
 					}
 				},
 				preemptive = {
-					chance = 0.7,
+					chance = 1,
 					check_timeout = {
 						0,
 						0
@@ -173,7 +173,7 @@ function CharacterTweakData:setup_hhtacs()
 					}
 				},
 				scared = {
-					chance = 0.8,
+					chance = 0.75,
 					check_timeout = {
 						0,
 						0
@@ -248,7 +248,7 @@ function CharacterTweakData:setup_hhtacs()
 						side_step = {
 							chance = 3,
 							shoot_chance = 1,
-							shoot_accuracy = 0.7,
+							shoot_accuracy = 0.8,
 							timeout = {
 								0.2,
 								1
@@ -298,7 +298,7 @@ function CharacterTweakData:setup_hhtacs()
 		self.medic.dodge = light_adv
 		
 		local ninja_adv = {
-			speed = 1.6,
+			speed = 2,
 			occasions = {
 				hit = {
 					chance = 1,

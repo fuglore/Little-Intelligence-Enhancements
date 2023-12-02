@@ -4143,21 +4143,6 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 	end
 
 	local time = TimerManager:game():time()
-	local timer_can_spawn = task_data == "phalanx" or false
-
-	for id in pairs(valid_spawn_groups) do
-		if not self._spawn_group_timers[id] or self._spawn_group_timers[id] <= time then
-			timer_can_spawn = true
-
-			break
-		end
-	end
-
-	if LIES.settings.spawngroupdelays < 2 then
-		if not timer_can_spawn then
-			self._spawn_group_timers = {}
-		end
-	end
 	
 	if task_data ~= "phalanx" then
 		for id in pairs(valid_spawn_groups) do
@@ -4266,7 +4251,7 @@ function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
 				spawn_timers = spawn_timers / div
 				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + spawn_timers
 			else
-				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + math.random(15, 20)
+				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + 5
 			end
 			
 			best_grp = candidate.group

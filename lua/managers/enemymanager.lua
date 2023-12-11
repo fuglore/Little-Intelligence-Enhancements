@@ -377,7 +377,7 @@ function EnemyManager:_update_queued_tasks(t, dt)
 		else
 			local tick_rate = tweak_data.group_ai.ai_tick_rate
 			local max_buffer = tick_rate * n_tasks
-			self._queue_buffer = math.min(self._queue_buffer + dt, tick_rate * n_tasks)
+			self._queue_buffer = math.min(self._queue_buffer + dt, max_buffer)
 			
 			while tick_rate <= self._queue_buffer do
 				if #self._queued_tasks > 0 then

@@ -128,6 +128,12 @@ local no_foff_tank_weapons = {
 	saiga = true --it'll falloff faster overall due to getting combo'd with real falloff
 }
 
+smgs = {
+	mp5 = true,
+	ump = true,
+	akmsu_smg = true
+}
+
 function CopBrain:_do_hhtacs_damage_modifiers()
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
@@ -169,17 +175,21 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6) --90
 				elseif self._unit:base()._current_weapon_id == "sg417" then
 					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --90
+				elseif smgs[self._unit:base()._current_weapon_id] then
+					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 				end
 			end
 		elseif difficulty_index == 8 then
 			if self._unit:base()._current_weapon_id == "g36" then
-				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5) --g36 users deal 75 damage with "good" preset compared to zeal's 90
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --g36 users deal 75 damage with "good" preset compared to zeal's 90
 			elseif self._unit:base()._current_weapon_id == "scar" then
-				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2.3) --99
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2) --90
 			end
 		elseif difficulty_index == 7 then
 			if self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5) --75
+			elseif smgs[self._unit:base()._current_weapon_id] then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5)
 			end
 		end
 	elseif difficulty_index == 6 then
@@ -196,6 +206,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 		elseif self._unit:base()._current_weapon_id == "scar" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
 		end
+	elseif smgs[self._unit:base()._current_weapon_id] then
+		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 	end
 end
 

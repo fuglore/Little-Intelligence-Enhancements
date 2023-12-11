@@ -123,7 +123,7 @@ function CopLogicAttack.damage_clbk(data, damage_info)
 	if not safe_dmg_types[damage_info.variant] then
 		return
 	end
-	
+
 	if data.important and not data.is_converted then
 		if not data.unit:movement():chk_action_forbidden("walk") then
 			local my_data = data.internal_data

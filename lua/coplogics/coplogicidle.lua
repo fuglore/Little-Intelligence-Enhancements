@@ -364,100 +364,6 @@ function CopLogicIdle._upd_stop_old_action(data, my_data, objective)
 	CopLogicIdle._chk_has_old_action(data, my_data)
 end
 
-function CopLogicIdle._chk_focus_on_attention_object(data, my_data)
-	local current_attention = data.attention_obj
-
-	if not current_attention then
-		local set_attention = data.unit:movement():attention()
-
-		if set_attention and set_attention.handler then
-			CopLogicBase._reset_attention(data)
-		end
-
-		return
-	end
-
-	if my_data.turning then
-		return
-	end
-
-	if (current_attention.reaction == AIAttentionObject.REACT_CURIOUS or current_attention.reaction == AIAttentionObject.REACT_SUSPICIOUS) and CopLogicIdle._upd_curious_reaction(data) then
-		return true
-	end
-
-	if data.logic.is_available_for_assignment(data) and not data.unit:movement():chk_action_forbidden("walk") then
-		local attention_pos = current_attention.handler:get_attention_m_pos(current_attention.settings)
-		local turn_angle = CopLogicIdle._chk_turn_needed(data, my_data, data.m_pos, attention_pos)
-
-		if turn_angle and current_attention.reaction < AIAttentionObject.REACT_CURIOUS then
-			if math.abs(turn_angle) > 70 then
-				return
-			end
-		end
-
-		if turn_angle then
-			local err_to_correct_abs = math.abs(turn_angle)
-			local angle_str = nil
-
-			if err_to_correct_abs > 27 then
-				if not CopLogicIdle._turn_by_spin(data, my_data, turn_angle) then
-					return
-				end
-
-				if my_data.rubberband_rotation then
-					my_data.fwd_offset = true
-				end
-			end
-		end
-	end
-
-	local set_attention = data.unit:movement():attention()
-
-	if not set_attention or set_attention.u_key ~= current_attention.u_key then
-		CopLogicBase._set_attention(data, current_attention, nil)
-	end
-
-	return true
-end
-
-function CopLogicIdle._upd_curious_reaction(data)
-	local my_data = data.internal_data
-	local unit = data.unit
-	local my_pos = data.unit:movement():m_head_pos()
-	--local turn_spin = 27
-	local attention_obj = data.attention_obj
-	local dis = attention_obj.dis
-	local is_suspicious = data.cool and attention_obj.reaction == AIAttentionObject.REACT_SUSPICIOUS
-	local set_attention = data.unit:movement():attention()
-
-	if not set_attention or set_attention.u_key ~= attention_obj.u_key then
-		CopLogicBase._set_attention(data, attention_obj)
-	end
-
-	local turned_around = nil
-
-	if (not attention_obj.settings.turn_around_range or dis < attention_obj.settings.turn_around_range) and (not data.objective or not data.objective.rot) then
-	
-		if data.logic.is_available_for_assignment(data) and not data.unit:movement():chk_action_forbidden("walk") then
-			local turn_angle = CopLogicIdle._chk_turn_needed(data, my_data, data.m_pos, attention_obj.m_pos)
-
-			if turn_angle then
-				CopLogicIdle._turn_by_spin(data, my_data, turn_angle)
-
-				if my_data.rubberband_rotation then
-					my_data.fwd_offset = true
-				end
-
-				turned_around = true
-			end
-		end
-	end
-
-	if is_suspicious then
-		return CopLogicBase._upd_suspicion(data, my_data, attention_obj)
-	end
-end
-
 function CopLogicIdle._upd_scan(data, my_data)
 	if CopLogicIdle._chk_focus_on_attention_object(data, my_data) then
 		return
@@ -750,7 +656,7 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 				chase_pos = managers.navigation:clamp_position_to_field(to_chase_pos)
 				local chase_pos_vis = chase_pos:with_z(attention_info.real_pos.z)
 				
-				if mvec3_dis_sq(data.m_pos, chase_pos) < 3600 or mvec3_dis_sq(data.unit:movement():m_head_pos(), chase_pos_vis) < 160000 and not data.unit:raycast("ray", data.unit:movement():m_head_pos(), chase_pos_vis, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report") then
+				if mvec3_dis_sq(data.m_pos, chase_pos) < 3600 or mvec3_dis_sq(data.unit:movement():m_head_pos(), chase_pos_vis) < 90000 and not data.unit:raycast("ray", data.unit:movement():m_head_pos(), chase_pos_vis, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report") then
 					--log("chase failed 2")
 					should_chase = nil
 					turn_to_real_pos = true
@@ -902,7 +808,6 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 		return true
 	end
 end
-
 
 function CopLogicIdle._upd_stance_and_pose(data, my_data, objective)
 	if data.unit:movement():chk_action_forbidden("walk") then

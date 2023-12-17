@@ -95,11 +95,9 @@ function CopActionWalk:_init()
 
 	if action_desc.path_simplified and action_desc.persistent then
 		self._simplified_path = self._nav_path
-	elseif not managers.groupai:state():enemy_weapons_hot() then
-		self._simplified_path = self._nav_path
 	else
 		local good_pos = mvector3.copy(common_data.pos)
-		self._simplified_path = self._calculate_simplified_path(good_pos, self._nav_path, (not self._sync or self._common_data.stance.name == "ntl") and 2 or 1, self._sync, true)
+		self._simplified_path = self._calculate_simplified_path(good_pos, self._nav_path, (not self._sync or self._common_data.stance.name == "ntl") and 3 or 2, self._sync, true)
 	end
 
 	if not self._simplified_path[2].x then

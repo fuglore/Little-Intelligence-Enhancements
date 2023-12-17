@@ -392,7 +392,7 @@ function CopLogicAttack._upd_combat_movement(data)
 		my_data.cover_test_step = 0
 	end
 
-	if my_data.stay_out_time and (enemy_visible or not my_data.at_cover_shoot_pos or action_taken or want_to_take_cover) then
+	if my_data.stay_out_time and (enemy_visible and focus_enemy.aimed_at or not my_data.at_cover_shoot_pos or action_taken or want_to_take_cover) then
 		my_data.stay_out_time = nil
 	elseif my_data.attitude == "engage" and not my_data.stay_out_time and not enemy_visible and my_data.at_cover_shoot_pos and not action_taken and not want_to_take_cover then
 		my_data.stay_out_time = t + 7
@@ -401,7 +401,7 @@ function CopLogicAttack._upd_combat_movement(data)
 	local can_charge
 	
 	if not data.tactics or not data.tactics.sniper then
-		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge or wanted_attack_range and focus_enemy.dis > wanted_attack_range
+		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge or wanted_attack_range and focus_enemy.dis > wanted_attack_range or wanted_attack_range and not enemy_visible
 	end
 
 	if action_taken then
@@ -676,7 +676,7 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		end
 		
 		if data.attention_obj.verified then
-			if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
+			if aggro_level < 2 and data.attention_obj.aimed_at or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
 				if my_data.firing then
 					return true
 				end

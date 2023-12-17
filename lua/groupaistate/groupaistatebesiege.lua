@@ -65,8 +65,20 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 		if l_data.internal_data and l_data.internal_data.attitude then
 			text_str = text_str .. ":" .. l_data.internal_data.attitude
 		end
+
+		if l_data.internal_data and l_data.internal_data.coarse_path then
+			text_str = text_str .. ":coarse_path_size:" .. tostring(#l_data.internal_data.coarse_path)
+		end
 		
-		if l_data.internal_data then
+		if l_data.internal_data and l_data.internal_data.coarse_path_index then
+			text_str = text_str .. ":coarse_path_index:" .. l_data.internal_data.coarse_path_index
+		end
+		
+		if l_data.internal_data and l_data.internal_data.going_to_index then
+			text_str = text_str .. ":going_to_index:" .. l_data.internal_data.going_to_index
+		end
+		
+		if l_data.internal_data and not l_data.cool then
 			local add_str = "..."
 			
 			if l_data.internal_data.want_to_take_cover then

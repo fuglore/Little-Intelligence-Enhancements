@@ -689,10 +689,54 @@ function CopLogicTravel.upd_advance(data)
 			end]]
 		end
 	elseif my_data.advance_path then
+		if objective then --gotta add a stop check here due to pathing complete clbk causing small amounts of discord when paired with action complete clbk due to function ordering here
+			if objective.nav_seg or objective.type == "follow" then
+				if my_data.coarse_path then
+					if my_data.coarse_path_index == #my_data.coarse_path then
+						CopLogicTravel._on_destination_reached(data)
+					end
+				end
+			else
+				local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
+
+				CopLogicBase._exit(data.unit, wanted_state)
+			end
+		else
+			local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
+
+			CopLogicBase._exit(data.unit, wanted_state)
+		end
+		
+		if my_data ~= data.internal_data then
+			return
+		end
+	
 		if data.cool or CopLogicTravel.chk_group_ready_to_move(data, my_data) then --to-do, make chk_close_to_criminal make more sense...
 			CopLogicTravel._chk_begin_advance(data, my_data)
 		end
-	elseif my_data.processing_advance_path or my_data.processing_coarse_path then
+	elseif not data.unit:movement():chk_action_forbidden("walk") and (my_data.processing_advance_path or my_data.processing_coarse_path) then
+		if objective then --gotta add a stop check here due to pathing complete clbk causing small amounts of discord when paired with action complete clbk due to function ordering here
+			if objective.nav_seg or objective.type == "follow" then
+				if my_data.coarse_path then
+					if my_data.coarse_path_index == #my_data.coarse_path then
+						CopLogicTravel._on_destination_reached(data)
+					end
+				end
+			else
+				local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
+
+				CopLogicBase._exit(data.unit, wanted_state)
+			end
+		else
+			local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
+
+			CopLogicBase._exit(data.unit, wanted_state)
+		end
+		
+		if my_data ~= data.internal_data then
+			return
+		end
+	
 		local was_processing_advance_path = my_data.processing_advance_path
 	
 		CopLogicTravel._upd_pathing(data, my_data)
@@ -1382,10 +1426,10 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				my_data.coarse_path_index = my_data.coarse_path_index - 1
 			end
 		end
-		
-		my_data.going_to_index = nil
+
 		my_data.advancing = nil
 		my_data.old_action_advancing = nil
+		my_data.going_to_index = nil
 
 		if my_data.moving_to_cover then
 			if action:expired() then
@@ -1432,37 +1476,35 @@ function CopLogicTravel.action_complete_clbk(data, action)
 				my_data.best_cover = nil
 			end
 		end
+		
+		CopLogicTravel._update_cover(nil, data)
 
 		if action:expired() and not my_data.starting_advance_action then
 			--log("wee")
 			if my_data == data.internal_data then 
-				CopLogicTravel.upd_advance(data)
 				my_data.waiting_for_navlink = nil
+				CopLogicTravel.upd_advance(data)
 			end
-		end
-		
-		if my_data == data.internal_data then
-			CopLogicTravel._update_cover(nil, data)
 		end
 	elseif action_type == "turn" then
 		data.internal_data.turning = nil
 
 		if action:expired() then
-			CopLogicTravel.upd_advance(data)
 			my_data.waiting_for_navlink = nil
+			CopLogicTravel.upd_advance(data)
 		end
 	elseif action_type == "shoot" then
 		data.internal_data.shooting = nil
 	elseif action_type == "heal" then
 		if action:expired() then
-			CopLogicTravel.upd_advance(data)
 			my_data.waiting_for_navlink = nil
+			CopLogicTravel.upd_advance(data)
 		end
 	elseif action_type == "hurt" or action_type == "healed" or action_type == "act" and not my_data.advancing then
 		if action:expired() then	
 			if my_data == data.internal_data then
-				CopLogicTravel.upd_advance(data)
 				my_data.waiting_for_navlink = nil
+				CopLogicTravel.upd_advance(data)
 			end
 		end
 	elseif action_type == "dodge" then
@@ -1488,8 +1530,8 @@ function CopLogicTravel.action_complete_clbk(data, action)
 		
 		if my_data == data.internal_data then
 			if action:expired() then
-				CopLogicTravel.upd_advance(data)
 				my_data.waiting_for_navlink = nil
+				CopLogicTravel.upd_advance(data)
 			end
 		end
 	end

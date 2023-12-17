@@ -2533,7 +2533,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.CS_cops = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
+				initial_spawn_delay = 30,
 				amount = {
 					2,
 					4
@@ -2567,7 +2567,7 @@ function GroupAITweakData:_LIES_setup()
 				
 			if difficulty_index > 5 then
 				if self.enemy_spawn_groups.CS_cops then
-					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
+					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 10
 					self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
 				end
 			
@@ -2712,7 +2712,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.CS_cops = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
+				initial_spawn_delay = 30,
 				amount = {
 					2,
 					4
@@ -2745,7 +2745,7 @@ function GroupAITweakData:_LIES_setup()
 			}
 			
 			if difficulty_index > 5 then
-				self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
+				self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 10
 				self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
 				self.enemy_spawn_groups.CS_cops.spawn = {
 					{
@@ -2797,7 +2797,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.Murkies = {
 				spawn_cooldown = 60,
 				max_nr_simultaneous_groups = 3,
-				initial_spawn_delay = 90,
+				initial_spawn_delay = 30,
 				amount = {
 					2,
 					4
@@ -2831,7 +2831,7 @@ function GroupAITweakData:_LIES_setup()
 			}
 			
 			if difficulty_index > 5 then
-				self.enemy_spawn_groups.Murkies.initial_spawn_delay = 60
+				self.enemy_spawn_groups.Murkies.initial_spawn_delay = 15
 				self.enemy_spawn_groups.Murkies.spawn_cooldown = 45
 
 				self.enemy_spawn_groups.FBI_tank_and_backup = {
@@ -2887,7 +2887,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.FBI_infil = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 3,
-				initial_spawn_delay = 90,
+				initial_spawn_delay = 30,
 				amount = {
 					2,
 					3
@@ -2920,7 +2920,7 @@ function GroupAITweakData:_LIES_setup()
 			}
 		
 			if difficulty_index > 5 then
-				self.enemy_spawn_groups.FBI_infil.initial_spawn_delay = 60
+				self.enemy_spawn_groups.FBI_infil.initial_spawn_delay = 10
 				
 				self.enemy_spawn_groups.spoocs_145 = { --the power rangers insta-down squad
 					spawn_cooldown = 240,
@@ -2962,7 +2962,7 @@ function GroupAITweakData:_LIES_setup()
 				self.enemy_spawn_groups.CS_cops = {
 					spawn_cooldown = 30,
 					max_nr_simultaneous_groups = 2,
-					initial_spawn_delay = 90,
+					initial_spawn_delay = 30,
 					amount = {
 						2,
 						4
@@ -2997,7 +2997,7 @@ function GroupAITweakData:_LIES_setup()
 		
 			if difficulty_index > 5 then
 				if self.enemy_spawn_groups.CS_cops then
-					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 40
+					self.enemy_spawn_groups.CS_cops.initial_spawn_delay = 10
 					self.enemy_spawn_groups.CS_cops.max_nr_simultaneous_groups = 3
 					self.enemy_spawn_groups.CS_cops.spawn = {
 						{

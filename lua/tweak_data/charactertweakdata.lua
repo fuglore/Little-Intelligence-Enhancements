@@ -1,5 +1,5 @@
 Hooks:PostHook(CharacterTweakData, "init", "lies_fix_nosup", function(self, tweak_data)
-	self:fix_no_supress()
+	self:fix_escort()
 	
 	self.security.chatter.contact = nil
 	self.security.chatter.criminalhasgun = true
@@ -24,15 +24,7 @@ Hooks:PostHook(CharacterTweakData, "init", "lies_fix_nosup", function(self, twea
 	self.tank_medic.chatter.entrance = "entrance"
 end)
 
-function CharacterTweakData:fix_no_supress()
-	if self.medic then
-		self.medic.no_suppressed_reaction = true
-	end
-	
-	if self.inside_man then
-		self.inside_man.no_suppressed_reaction = true
-	end
-	
+function CharacterTweakData:fix_escort()
 	if self.old_hoxton_mission then
 		self.old_hoxton_mission.no_suppressed_reaction = true
 		self.old_hoxton_mission.buddy = true
@@ -63,7 +55,8 @@ local fry_vars = {
 	"security",
 	"security_mex",
 	"security_mex_no_pager",
-	"fbi"
+	"fbi",
+	"fbi_female"
 }
 local swat_vars = {
 	"swat",

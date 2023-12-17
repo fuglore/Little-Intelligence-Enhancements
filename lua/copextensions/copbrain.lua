@@ -85,6 +85,11 @@ function CopBrain:upd_falloff_sim()
 	self._current_logic.upd_falloff_sim(self._logic_data)
 end
 
+local fbi_3_units = {
+	[Idstring("units/payday2/characters/ene_fbi_3/ene_fbi_3"):key()] = true,
+	[Idstring("units/pd2_dlc_hvh/characters/ene_fbi_hvh_3/ene_fbi_hvh_3"):key()] = true
+}
+
 local supposedly_shitty_guns = {
 	c45 = true,
 	mac11 = true
@@ -217,6 +222,10 @@ Hooks:PostHook(CopBrain, "set_group", "lies_reset_weapons", function(self, group
 	end
 
 	if LIES.settings.hhtacs then
+		if fbi_3_units[self._unit:name():key()] then
+			self._unit:base():change_and_sync_char_tweak("fbi")
+		end
+	
 		local not_america = tweak_data.group_ai._not_america
 		local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 		local difficulty_index = tweak_data:difficulty_to_index(difficulty)

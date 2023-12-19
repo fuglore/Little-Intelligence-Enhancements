@@ -419,6 +419,10 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 			self._blockade = true
 		end
 		
+		if level_id == "hvh" then
+			self._no_tear_gas = true
+		end
+		
 		self._get_balancing_multiplier = self._get_balancing_multiplier_hhtacs
 		self._calculate_difficulty_ratio = self._calculate_difficulty_ratio_hhtacs
 		self._check_phalanx_damage_reduction_increase = self._check_phalanx_damage_reduction_increase_LIES
@@ -456,7 +460,7 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 	if Network:is_server() then
 		Hooks:PostHook(GroupAIStateBesiege, "_perform_group_spawning", "lies_upd_group_early", function(self, spawn_task, force, use_last)
 			if spawn_task.group.has_spawned and self._groups[spawn_task.group.id] then
-				self:_upd_group(spawn_task.group)
+				self:_upd_group(self._groups[spawn_task.group.id])
 			end
 		end)
 		
@@ -1488,12 +1492,22 @@ function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
 		})
 	end
 	
-	local u_key = unit:key()
-	local unit_data = self._police[u_key]
 	
-	if unit_data then
-		if unit_data.char_tweak.chatter.ready then
-			self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "in_pos")
+	
+	if objective and (not objective.grp_objective or objective.grp_objective.type ~= "retire") then
+		local u_key = unit:key()
+		local unit_data = self._police[u_key]
+		
+		if unit_data then
+			if unit_data.char_tweak.chatter.ready then
+				self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "in_pos")
+			end
+		end
+		
+		local valid_and_alive = unit_data and unit:brain():is_active() and not unit:character_damage():dead()
+		
+		if valid_and_alive and unit_data.group and self._groups[unit_data.group.id] and not unit_data.unit:movement():cool() then
+			self:_upd_group(self._groups[unit_data.group.id])
 		end
 	end
 end
@@ -3889,6 +3903,10 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 end
 
 function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detonate_pos)
+	if self._no_tear_gas then
+		return true
+	end
+
 	local shooter_pos, shooter_u_data, shooter_dis_sq = nil
 	local duration = tweak_data.group_ai.smoke_grenade_lifetime
 	

@@ -48,6 +48,67 @@ function CopLogicArrest.enter(data, new_logic_name, enter_params)
 	CopLogicArrest.queued_update(data)
 end
 
+function CopLogicArrest._mark_call_in_event(data, my_data, attention_obj)
+	if not attention_obj then
+		return
+	end
+
+	if attention_obj.reaction == AIAttentionObject.REACT_ARREST then
+		my_data.call_in_event = "criminal"
+	elseif AIAttentionObject.REACT_SCARED <= attention_obj.reaction then
+		local unit_base = attention_obj.unit:base()
+		local unit_brain = attention_obj.unit:brain()
+
+		if attention_obj.unit:in_slot(17) then
+			my_data.call_in_event = managers.enemy:get_corpse_unit_data_from_key(attention_obj.unit:key()).is_civilian and "dead_civ" or "dead_cop"
+		elseif attention_obj.unit:in_slot(managers.slot:get_mask("enemies")) then
+			my_data.call_in_event = "w_hot"
+		elseif unit_brain and unit_brain.is_hostage and unit_brain:is_hostage() then
+			my_data.call_in_event = managers.enemy:is_civilian(attention_obj.unit) and "hostage_civ" or "hostage_cop"
+		elseif unit_base and unit_base.is_drill then
+			my_data.call_in_event = "drill"
+		elseif unit_base and unit_base.sentry_gun then
+			my_data.call_in_event = "sentry_gun"
+		elseif unit_base and unit_base.is_hacking_device then
+			my_data.call_in_event = "computer"
+		elseif unit_base and unit_base.is_tripmine then
+			my_data.call_in_event = "trip_mine"
+		elseif attention_obj.unit:carry_data() then
+			if attention_obj.unit:carry_data():carry_id() == "person" then
+				my_data.call_in_event = "body_bag"
+			else
+				my_data.call_in_event = "bag"
+			end
+		elseif attention_obj.unit:in_slot(21) then
+			my_data.call_in_event = "civilian"
+		end
+	end
+end
+
+function CopLogicArrest._say_call_the_police(data, my_data)
+	if data.SO_access_str == "taser" then
+		return
+	end
+
+	local blame_list = {
+		bag = "a22",
+		body_bag = "a19",
+		drill = "a25",
+		criminal = "a09",
+		computer = "a24",
+		trip_mine = "a21",
+		w_hot = data.unit:base():has_tag("law") and "a16" or "a09",
+		civilian = "a15",
+		sentry_gun = "a20",
+		dead_cop = data.unit:base():has_tag("law") and "a12" or "a15",
+		hostage_cop = data.unit:base():has_tag("law") and "a14" or "a15",
+		hostage_civ = "a13",
+		dead_civ = "a11"
+	}
+
+	data.unit:sound():say(blame_list[my_data.call_in_event] or "a23", true)
+end
+
 
 function CopLogicArrest._upd_enemy_detection(data)
 	managers.groupai:state():on_unit_detection_updated(data.unit)
@@ -230,6 +291,52 @@ function CopLogicArrest.queued_update(data)
 	CopLogicArrest._upd_cover(data)
 	CopLogicBase.queue_task(my_data, my_data.update_task_key, CopLogicArrest.queued_update, data, data.t + delay, data.important)
 	CopLogicBase._report_detections(data.detected_attention_objects)
+end
+
+function CopLogicArrest._chk_reaction_to_attention_object(data, attention_data, stationary)
+	local record = attention_data.criminal_record
+
+	if not record or not attention_data.is_person then
+		return attention_data.settings.reaction
+	end
+
+	local att_unit = attention_data.unit
+
+	if attention_data.is_deployable or data.t < record.arrest_timeout then
+		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_SHOOT)
+	end
+
+	local can_disarm = not stationary
+	local can_arrest = CopLogicBase._can_arrest(data)
+	local visible = attention_data.verified
+
+	if record.status == "dead" then
+		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+	elseif record.status == "disabled" then
+		if record.assault_t and record.assault_t - record.disabled_t > 0.6 then
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
+		else
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+		end
+	elseif record.being_arrested then
+		local my_data = data.internal_data
+
+		if record.being_arrested[data.key] then
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
+		end
+
+		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+	end
+
+	if can_arrest and (not record.assault_t or att_unit:base():arrest_settings().aggression_timeout < data.t - record.assault_t) and record.arrest_timeout < data.t and not record.status then
+		if attention_data.dis < 2000 and visible then
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
+		else
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+		end
+	end
+
+	return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
 end
 
 function CopLogicArrest._call_the_police(data, my_data, paniced)

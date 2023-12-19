@@ -87,6 +87,10 @@ Hooks:PostHook(AttentionTweakData, "init", "lies_fix_badaimobjs", function(self)
 end)
 
 function AttentionTweakData:setup_hhtacs()
+	self.settings.team_enemy_cbt.weight_mul = nil
+	self.settings.custom_enemy_suburbia_shootout.weight_mul = nil
+	self.settings.sentry_gun_enemy_cbt_hacked.weight_mul = nil
+
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	

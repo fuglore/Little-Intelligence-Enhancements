@@ -43,8 +43,48 @@ function CharacterTweakData:_setup_extra_chatter_tweak()
 	self.sniper.spawn_sound_event = "mga_deploy_snipers"
 	
 	self.marshal_marksman.die_sound_event = "mga_death_scream"
+	
+	self.marshal_shield.chatter = {
+		clear = true,
+		ready = true,
+		contact = true,
+		suppress = true,
+		smoke = true,
+		retreat = true,
+		go_go = true,
+		aggressive = true,
+		follow_me = true
+	}
+	self.marshal_shield.speech_prefix_p1 = "l5d"
+	self.marshal_shield.speech_prefix_p2 = nil
+	self.marshal_shield.speech_prefix_count = nil
 	self.marshal_shield.die_sound_event = "mga_death_scream"
+	
+	self.marshal_shield_break.chatter = {
+		clear = true,
+		ready = true,
+		contact = true,
+		suppress = true,
+		smoke = true,
+		retreat = true,
+		go_go = true,
+		aggressive = true,
+		follow_me = true
+	}
+	
+	self.marshal_shield_break.speech_prefix_p1 = "l5d"
+	self.marshal_shield_break.speech_prefix_p2 = nil
+	self.marshal_shield_break.speech_prefix_count = nil
 	self.marshal_shield_break.die_sound_event = "mga_death_scream"
+	local ganger = {
+		contact = true,
+		aggressive = true	
+	}
+	
+	self.gangster.chatter = ganger
+	self.mobster.chatter = ganger
+	self.biker.chatter = ganger
+	self.biker_escape.chatter = ganger
 end
 
 local fry_vars = {

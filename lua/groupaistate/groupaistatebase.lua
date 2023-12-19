@@ -194,9 +194,9 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 		fail_clbk(unit)
 	end
 	
-	--if valid_and_alive and u_data.group and not u_data.unit:movement():cool() then
-	--	self:_upd_group(u_data.group)
-	--end
+	if valid_and_alive and u_data.group and self._groups[u_data.group.id] and not u_data.unit:movement():cool() then
+		self:_upd_group(self._groups[u_data.group.id])
+	end
 end
 
 function GroupAIStateBase:report_aggression(unit)
@@ -270,34 +270,6 @@ end
 
 function GroupAIStateBase:_set_rescue_state(state) --this causes a crash in vanilla randomly
 	return
-end
-
-
-function GroupAIStateBase:chk_say_teamAI_combat_chatter(unit)
-	if not self:is_detection_persistent() then
-		return
-	end
-
-	local drama_amount = self._drama_data.amount
-	local frequency_lerp = drama_amount
-	local delay_tweak = tweak_data.sound.criminal_sound.combat_callout_delay
-	local delay = math.lerp(delay_tweak[1], delay_tweak[2], frequency_lerp)
-	local delay_t = self._teamAI_last_combat_chatter_t + delay
-
-	if self._t < delay_t then
-		return
-	end
-
-	local frequency_lerp_clamp = math.clamp(frequency_lerp^2, 0, 1)
-	local chance_tweak = tweak_data.sound.criminal_sound.combat_callout_chance
-	local chance = math.lerp(chance_tweak[1], chance_tweak[2], frequency_lerp_clamp)
-
-	if chance < math.random() then
-		return
-	end
-	
-	self._teamAI_last_combat_chatter_t = self._t
-	unit:sound():say("g90", true, true)
 end
 
 function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)

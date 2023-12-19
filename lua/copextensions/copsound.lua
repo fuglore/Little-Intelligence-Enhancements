@@ -1,4 +1,42 @@
+local mex_gang = {
+	[Idstring("units/payday2/characters/ene_gang_mexican_1/ene_gang_mexican_1"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_2/ene_gang_mexican_2"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_3/ene_gang_mexican_3"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_4/ene_gang_mexican_4"):key()] = true
+}
+
+local cobra_gang = {
+	[Idstring("units/payday2/characters/ene_gang_black_1/ene_gang_black_1"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_2/ene_gang_black_2"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_3/ene_gang_black_3"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_4/ene_gang_black_4"):key()] = true
+}
+
+local biker_gang = {
+	[Idstring("units/payday2/characters/ene_biker_1/ene_biker_1"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_2/ene_biker_2"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_3/ene_biker_3"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_4/ene_biker_4"):key()] = true
+}
+
+local hotline_gang = {
+	[Idstring("units/payday2/characters/ene_gang_mobster_1/ene_gang_mobster_1"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_2/ene_gang_mobster_2"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_3/ene_gang_mobster_3"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_4/ene_gang_mobster_4"):key()] = true
+}
+
 Hooks:PostHook(CopSound, "init", "lies_init", function(self, unit)
+	if mex_gang[self._unit:name():key()] then
+		self._prefix = "lt" .. tostring(math.random(2)) .. "_"
+	elseif cobra_gang[self._unit:name():key()] then
+		self._prefix = "ict" .. tostring(math.random(2)) .. "_"
+	elseif biker_gang[self._unit:name():key()] then
+		self._prefix = "bik" .. tostring(math.random(2)) .. "_"
+	elseif hotline_gang[self._unit:name():key()] then
+		self._prefix = "rt" .. tostring(math.random(2)) .. "_"
+	end
+	
 	self.speaking = self.speaking_fix
 	self.say = self.say_fix
 	self._play = self._play_fixed
@@ -130,6 +168,8 @@ local important_sounds = {
 	a08 = true,
 	x02a_any_3p = true,
 	x01a_any_3p = true,
+	burnhurt = true,
+	burndeath = true,
 	cloaker_taunt_during_assault = true,
 	cloaker_taunt_after_assault = true,
 	rcloaker_taunt_during_assault = true,
@@ -165,8 +205,18 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 	local full_sound = nil
 
 	if not skip_prefix then
+		if self._prefix == "ict1_" or self._prefix == "bik1_" or self._prefix == "bik2_" then
+			if sound_name == "burnhurt" then
+				full_sound = "l5n_burnhurt"
+			elseif sound_name == "burndeath" then
+				full_sound = "l5n_burndeath"
+			end
+		end
+	
 		if self._prefix == "l5d_" then
-			if sound_name == "c01" or sound_name == "att" then
+			if sound_name == "c01" then
+				sound_name = "i01"
+			elseif sound_name == "att" then
 				sound_name = "g90"
 			elseif sound_name == "rrl" then
 				sound_name = "pus"
@@ -185,6 +235,14 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 				fixed_sound = true
 			elseif sound_name == "x01a_any_3p" then
 				sound_name = "x02a_any_3p"
+			end
+		end
+		
+		if self._prefix == "l2n_" then --these are flipped for l2n for some reason, because of bnk typos probably
+			if sound_name == "lk3a" then
+				sound_name = "lk3b"
+			elseif sound_name == "lk3b" then
+				sound_name = "lk3a"
 			end
 		end
 		
@@ -222,7 +280,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 				full_sound = "shd_x02a_any_3p_01"
 			elseif sound_name == "x01a_any_3p" then
 				full_sound = "bdz_x01a_any_3p"
-			elseif sound_name ~= "x01a_any_3p" and sound_name ~= "x02a_any_3p" then
+			elseif sound_name ~= "x01a_any_3p" and sound_name ~= "x02a_any_3p" and sound_name ~= "burndeath" and sound_name ~= "burnhurt" then
 				local sounds = {
 					"g90",
 					"mov",
@@ -235,9 +293,9 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 			end
 		end
 			
-		if self._prefix == "f1n_" then
+		if self._prefix == "fl1n_" then
 			if sound_name == "x02a_any_3p" then
-				full_sound = "f1n_x01a_any_3p_01"
+				full_sound = "fl1n_x01a_any_3p_01"
 			end
 		end
 

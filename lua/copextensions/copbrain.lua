@@ -110,21 +110,20 @@ local mayhem_rifles = {
 }
 local scaling_units = {
 	security = true,
-	shield = true,
 	cop = true,
 	fbi = true,
 	zeal_swat = true,
 	zeal_heavy_swat = true,
 	gangster = true,
-	swat = true,
-	taser = true,
 	tank_mini = true
 }
 
 local non_scaling_units = {
 	fbi_heavy_swat = "zeal_heavy_swat",
 	fbi_swat = "zeal_swat",
-	city_swat = "zeal_swat"
+	city_swat = "zeal_swat",
+	swat = "zeal_swat",
+	heavy_swat = "zeal_heavy_swat"
 }
 
 local no_foff_tank_weapons = {
@@ -133,7 +132,7 @@ local no_foff_tank_weapons = {
 	saiga = true --it'll falloff faster overall due to getting combo'd with real falloff
 }
 
-smgs = {
+local smgs = {
 	mp5 = true,
 	ump = true,
 	akmsu_smg = true
@@ -154,8 +153,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6) --almost all guns in this game deal the same fucking damage, its dumb
 		else
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5)
-		end
-	elseif self._unit:base()._tweak_table ~= "marshal_shield" and self._unit:base()._current_weapon_id == "deagle" then
+		end	
+	elseif self._unit:base()._tweak_table ~= "marshal_shield" and self._unit:base()._tweak_table ~= "marshal_shield_break" and self._unit:base()._current_weapon_id == "deagle" then
 		if scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 		else
@@ -189,12 +188,18 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --g36 users deal 75 damage with "good" preset compared to zeal's 90
 			elseif self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2) --90
+			elseif self._unit:base()._current_weapon_id == "mossberg" then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --180
 			end
 		elseif difficulty_index == 7 then
 			if self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5) --75
 			elseif smgs[self._unit:base()._current_weapon_id] then
-				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5)
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
+			elseif self._unit:base()._current_weapon_id == "benelli" then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.2) --120 5 meters
+			elseif self._unit:base()._current_weapon_id == "mossberg" then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.25) --150
 			end
 		end
 	elseif difficulty_index == 6 then
@@ -204,12 +209,16 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) --45
 		elseif self._unit:base()._current_weapon_id == "scar" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.7) --51
+		elseif self._unit:base()._current_weapon_id == "mossberg" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.25) --150
 		end
 	elseif difficulty_index == 5 then
 		if ovk_rifles[self._unit:base()._current_weapon_id] then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --30
 		elseif self._unit:base()._current_weapon_id == "scar" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
+		elseif self._unit:base()._current_weapon_id == "benelli" or self._unit:base()._current_weapon_id == "r870" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.25) --75 on 5 meters
 		end
 	elseif smgs[self._unit:base()._current_weapon_id] then
 		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)

@@ -65,7 +65,7 @@ function CopLogicBase.upd_falloff_sim(data)
 			
 			if focus_enemy.dis > 3000 then
 				if data.unit:base()._shotgunner then
-					falloff_sim.amount = 0.92
+					falloff_sim.amount = 1 - (15 / 375)
 				else
 					falloff_sim.amount = 1 - (30 / 90)
 				end
@@ -75,17 +75,7 @@ function CopLogicBase.upd_falloff_sim(data)
 				end
 			elseif focus_enemy.dis > 2000 then
 				if data.unit:base()._shotgunner then
-					falloff_sim.amount = 0.84
-				else
-					falloff_sim.amount = 0.5 --45 zeals rifles, 37 most other dw falloffs
-				end
-				
-				if falloff_sim.amount ~= old_amount then
-					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
-				end
-			elseif focus_enemy.dis > 1000 then
-				if data.unit:base()._shotgunner then
-					falloff_sim.amount = 1 - 0.2666666666666667
+					falloff_sim.amount = 1 - (45 / 375)
 				else
 					falloff_sim.amount = 1 - (60 / 90)
 				end
@@ -93,18 +83,28 @@ function CopLogicBase.upd_falloff_sim(data)
 				if falloff_sim.amount ~= old_amount then
 					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
 				end
+			elseif focus_enemy.dis > 1000 then
+				if data.unit:base()._shotgunner then
+					falloff_sim.amount = 1 - (60 / 375)
+				else
+					falloff_sim.amount = 1 - (70 / 90)
+				end
+				
+				if falloff_sim.amount ~= old_amount then
+					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
+				end
 			elseif focus_enemy.dis > 500 then
 				if data.unit:base()._shotgunner then
-					falloff_sim.amount = 0.64
+					falloff_sim.amount = 1 - (120 / 375)
 				else
-					falloff_sim.amount = 1 - (75 / 90)
+					falloff_sim.amount = 1 - (80 / 90)
 				end
 				
 				if falloff_sim.amount ~= old_amount then
 					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
 				end
 			elseif data.unit:base()._shotgunner then
-				falloff_sim.amount = 0.6
+				falloff_sim.amount = 1 - (150 / 375)
 				
 				if falloff_sim.amount ~= old_amount then
 					data.unit:base():change_buff_by_id("base_damage", falloff_sim.id, -falloff_sim.amount)
@@ -354,7 +354,7 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 		if data.char_tweak.chatter and AIAttentionObject.REACT_SHOOT <= new_reaction and new_att_obj.verified and new_att_obj.is_person then
 			if data.char_tweak.chatter.contact and contact_chatter_time_ok then
 				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "contact")
-			elseif new_crim_rec then
+			elseif new_crim_rec and data.char_tweak.chatter then
 				if not new_crim_rec.gun_called_out and data.char_tweak.chatter.criminalhasgun then
 					new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
 				end

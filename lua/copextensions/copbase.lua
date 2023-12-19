@@ -37,6 +37,7 @@ function CopBase:default_weapon_name(selection_name)
 		if weapon_id then
 			for i_weap_id, weap_id in ipairs(weap_ids) do
 				if weapon_id == weap_id then
+					self._current_weapon_id = weapon_id
 					return weap_unit_names[i_weap_id]
 				end
 			end
@@ -247,34 +248,38 @@ end
 function CopBase:_refresh_buff_total(name)
 	local buff_list = self._buffs[name]
 	local sum = 0
+	local nega_sum = 0
 
 	for _, buff in pairs(buff_list.buffs) do
 		if buff >= 0 then
 			sum = sum + buff
 		else
-			if sum >= 0 then
-				sum = sum + buff
+			if nega_sum == 0 then
+				local add_sum = 1 - math.abs(buff)
+				nega_sum = nega_sum + add_sum
 			else
-				if buff >= 0 then
-					sum = sum + buff
-				else
-					--log(sum)
-					local mulsum = math.abs(buff) * (1 - math.abs(sum))
-					local new_sum = 1 - mulsum
-					sum = -new_sum
-					--log(sum)
-				end
+				local mul_sum = 1 - math.abs(buff)
+				nega_sum = nega_sum * mul_sum
 			end
 		end
 	end
 	
-	--log(sum)
-	
-	buff_list._total = sum
-
-	if Network:is_server() then
-		managers.network:session():send_to_peers_synched("sync_enemy_buff", self._unit, name, math.round(buff_list._total * 1000))
+	if nega_sum > 0 then
+		if sum > 0 then
+			local pos_sum = 1 - (1 / (1 + sum))
+			sum = -nega_sum
+			sum = sum + pos_sum
+		else
+			local neg_sum = 1 - math.abs(nega_sum)
+			sum = -neg_sum
+		end
 	end
+
+	local sync_value = math.round(sum * 1000)
+	buff_list._total = sync_value * 0.001
+	--log(buff_list._total)
+
+	managers.network:session():send_to_peers_synched("sync_enemy_buff", self._unit, name, sync_value)
 end
 
 function CopBase:change_buff_by_id(name, id, value)

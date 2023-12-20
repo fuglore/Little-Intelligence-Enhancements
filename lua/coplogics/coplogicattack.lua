@@ -246,8 +246,16 @@ function CopLogicAttack.update(data)
 		local want_to_take_cover = CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 			
 		if data.char_tweak.chatter and data.char_tweak.chatter.suppress and my_data.attitude == "engage" and want_to_take_cover then
-			if data.important and want_to_take_cover ~= my_data.want_to_take_cover and not my_data.want_to_take_cover then
-				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "wantcover")
+			if (data.important or data.unit:base():has_tag("special")) and want_to_take_cover ~= my_data.want_to_take_cover and not my_data.want_to_take_cover then
+				local said = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "wantcover")
+				
+				if not said and data.unit:base():has_tag("special") then
+					if not data.next_priority_speak_t or data.next_priority_speak_t < data.t then
+						if data.unit:sound():say("hlp", true) then
+							data.next_priority_speak_t = data.t + 4
+						end
+					end
+				end
 			end
 		end
 		
@@ -952,7 +960,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
 	else
-		if data.unit:movement():chk_action_forbidden("action") or not data.unit:anim_data().reload and CopLogicAttack._check_needs_reload(data, my_data) then
+		if not data.unit:movement():chk_action_forbidden("action") and not data.unit:anim_data().reload and CopLogicAttack._check_needs_reload(data, my_data) then
 			if my_data.shooting then
 				local new_action = {
 					body_part = 3,
@@ -1205,9 +1213,17 @@ function CopLogicAttack.aim_allow_fire(shoot, aim, data, my_data)
 				if alive(focus_enemy.unit) and focus_enemy.unit:base() and focus_enemy.unit:base().sentry_gun and data.char_tweak.chatter.ready then
 					managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "sentry")
 				elseif data.char_tweak.chatter.aggressive then
-					if managers.groupai:state():is_detection_persistent() or data.unit:base().has_tag and not data.unit:base():has_tag("law") then
-						if data.important then
-							managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "aggressive")
+					if managers.groupai:state():is_detection_persistent() or not data.unit:base():has_tag("law") then
+						if data.important or data.unit:base():has_tag("special") then
+							local said = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "aggressive")
+							
+							if not said and data.unit:base():has_tag("special") then
+								if not data.next_priority_speak_t or data.next_priority_speak_t < data.t then
+									if data.unit:sound():say("g90", true) then
+										data.next_priority_speak_t = data.t + 4
+									end
+								end
+							end
 						end
 					end
 				end

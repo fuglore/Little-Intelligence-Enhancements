@@ -861,7 +861,7 @@ function CopLogicTravel._chk_say_clear(data)
 		end
 	end
 	
-	if not data.entrance and data.char_tweak.chatter and data.char_tweak.chatter.entrance then
+	if not data.entrance and data.char_tweak.chatter and data.char_tweak.chatter.entrance and data.char_tweak.chatter.entrance ~= true then
 		if not data.attention_obj or data.attention_obj.reaction <= AIAttentionObject.REACT_AIM or not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 15 then
 			if data.unit:sound():say(data.char_tweak.chatter.entrance, true) then
 				data.entrance = true

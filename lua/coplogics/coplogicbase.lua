@@ -353,7 +353,15 @@ function CopLogicBase._set_attention_obj(data, new_att_obj, new_reaction)
 
 		if data.char_tweak.chatter and AIAttentionObject.REACT_SHOOT <= new_reaction and new_att_obj.verified and new_att_obj.is_person then
 			if data.char_tweak.chatter.contact and contact_chatter_time_ok then
-				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "contact")
+				local said = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "contact")
+							
+				if not said and data.unit:base().has_tag and data.unit:base():has_tag("special") then
+					if not data.next_priority_speak_t or data.next_priority_speak_t < data.t then
+						if data.unit:sound():say("c01", true) then
+							data.next_priority_speak_t = data.t + 4
+						end
+					end
+				end
 			elseif new_crim_rec and data.char_tweak.chatter then
 				if not new_crim_rec.gun_called_out and data.char_tweak.chatter.criminalhasgun then
 					new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")

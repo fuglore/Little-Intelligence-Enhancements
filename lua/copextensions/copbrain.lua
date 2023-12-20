@@ -135,7 +135,8 @@ local no_foff_tank_weapons = {
 local smgs = {
 	mp5 = true,
 	ump = true,
-	akmsu_smg = true
+	akmsu_smg = true,
+	mp9 = true
 }
 
 function CopBrain:_do_hhtacs_damage_modifiers()
@@ -180,7 +181,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 				elseif self._unit:base()._current_weapon_id == "sg417" then
 					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --90
 				elseif smgs[self._unit:base()._current_weapon_id] then
-					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
+					local wanted_dmg = 1 - (50 / 75)
+					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -wanted_dmg)
 				end
 			end
 		elseif difficulty_index == 8 then
@@ -190,6 +192,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2) --90
 			elseif self._unit:base()._current_weapon_id == "mossberg" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --180
+			elseif smgs[self._unit:base()._current_weapon_id] then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
 			end
 		elseif difficulty_index == 7 then
 			if self._unit:base()._current_weapon_id == "scar" then

@@ -1112,6 +1112,16 @@ function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, st
 	return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
 end
 
+local bosses = {
+	triad_boss = true,
+	deep_boss = true,
+	drug_lord_boss = true,
+	hector_boss = true,
+	chavez_boss = true,
+	biker_boss = true,
+	mobster_boss = true
+}
+
 function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_func)
 	local best_target, best_target_priority_slot, best_target_priority, best_target_reaction = nil
 	
@@ -1231,6 +1241,18 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				reaction_too_mild = true
 			elseif reaction == AIAttentionObject.REACT_IDLE then
 				reaction_too_mild = true
+			end
+			
+			if bosses[data.unit:base()._tweak_table] then
+				if not crim_record then
+					if hhtacs and att_unit:base() and att_unit:base().has_tag and att_unit:base():has_tag("special") then
+						reaction_too_mild = true
+					end
+				end
+			elseif hhtacs and data.unit:base():has_tag("special") then
+				if att_unit:base() and bosses[att_unit:base()._tweak_table] then
+					reaction_too_mild = true
+				end
 			end
 
 			if not reaction_too_mild then
@@ -1356,6 +1378,12 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					end
 				end
 				
+				if bosses[data.unit:base()._tweak_table] then
+					if not crim_record then
+						weight_mul = (weight_mul or 1) * 0.1 
+					end
+				end
+				
 				if weight_mul and weight_mul ~= 1 then
 					weight_mul = 1 / weight_mul
 					alert_dt = alert_dt and alert_dt * weight_mul
@@ -1375,7 +1403,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				local target_priority = distance
 				local target_priority_slot = 0
 
-				if visible or data.logic._keep_player_focus_t and attention_data.is_human_player and attention_data.verified_t and data.t - attention_data.verified_t < data.logic._keep_player_focus_t then
+				if visible or old_enemy or data.logic._keep_player_focus_t and attention_data.is_human_player and attention_data.verified_t and data.t - attention_data.verified_t < data.logic._keep_player_focus_t then
 					if distance < 500 then
 						target_priority_slot = 2
 					elseif distance < 1500 then
@@ -1407,7 +1435,9 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						target_priority_slot = target_priority_slot - 3
 					end
 					
-					if data.logic._keep_player_focus_t and not attention_data.is_human_player then
+					if not data.logic._keep_player_focus_t and not visible then
+						target_priority_slot = target_priority_slot + 2
+					elseif data.logic._keep_player_focus_t and not attention_data.is_human_player then
 						target_priority_slot = target_priority_slot + 3
 					end
 

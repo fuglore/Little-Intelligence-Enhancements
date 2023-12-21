@@ -468,7 +468,7 @@ function TaserLogicAttack._chk_reaction_to_attention_object(data, attention_data
 		return AIAttentionObject.REACT_COMBAT
 	end
 	
-	local tase_dis = data.internal_data.tase_distance or data.char_tweak.weapon.is_rifle.tase_distance
+	local tase_dis = data.internal_data.tase_distance or data.char_tweak.weapon.is_rifle.tase_distance or 1000
 	
 	if (attention_data.is_human_player or not attention_data.unit:movement():chk_action_forbidden("hurt")) and attention_data.verified and attention_data.verified_dis < tase_dis * 0.9 then
 		if not data.tase_delay_t or data.tase_delay_t < data.t then

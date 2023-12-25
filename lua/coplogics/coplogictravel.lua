@@ -288,7 +288,7 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 		end
 			
 		if not entry_found then
-			my_data.waiting_for_navlink = best_delay_t
+			my_data.waiting_for_navlink = best_delay_t + 0.1
 			
 			return
 		end
@@ -801,7 +801,8 @@ local precise_objective_types = {
 	act = true,
 	sniper = true,
 	follow = true,
-	phalanx = true
+	phalanx = true,
+	flee = true
 }
 
 function CopLogicTravel._chk_coarse_objective_reached(data)

@@ -406,7 +406,33 @@ Hooks:PostHook(GroupAIStateBase, "unregister_rescueable_hostage", "lies_hrt_unre
 	local rescueable_hostages = self._rescueable_hostages or {}
 	rescueable_hostages[u_key] = nil
 	self._rescueable_hostages = rescueable_hostages
+end)
 
+function GroupAIStateBase:register_boss(unit)
+	if not Network:is_server() then
+		return
+	end
+
+	local u_key = unit:key()
+	local bosses = self._bosses or {}
+	bosses[u_key] = true
+	self._bosses = bosses
+end
+
+function GroupAIStateBase:unregister_boss(u_key)
+	local bosses = self._bosses or {}
+	bosses[u_key] = nil
+	self._bosses = bosses
+end
+
+Hooks:PostHook(GroupAIStateBase, "on_enemy_unregistered", "lies_unregister_boss", function(self, unit)
+	if not Network:is_server() then
+		return
+	end
+
+	local u_key = unit:key()
+	
+	self:unregister_boss(u_key)
 end)
 
 Hooks:PostHook(GroupAIStateBase, "_remove_group_member", "lies_frienddead", function(self, group, u_key, is_casualty)

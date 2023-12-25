@@ -113,7 +113,7 @@ function CharacterTweakData:setup_hhtacs()
 	
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
-	
+
 	for i = 1, #fry_vars do
 		local tweak = fry_vars[i]
 		
@@ -134,6 +134,7 @@ function CharacterTweakData:setup_hhtacs()
 	
 	self.medic.safe_weapon = "raging_bull"
 	self.spooc.safe_weapon = "beretta92"
+	self.spooc.spooc_attack_use_smoke_chance = 0
 	
 	if difficulty_index > 5 then
 		self.civilian.faster_reactions = true

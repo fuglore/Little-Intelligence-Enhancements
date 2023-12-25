@@ -991,6 +991,25 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 		end
 	end
 	
+	if LIES.settings.hhtacs then
+		if self._bosses and next(self._bosses) then
+			if self._hunt_mode ~= "boss" then
+				local old_hunt = self._hunt_mode
+				self._old_hunt_mode = old_hunt
+			end
+			
+			self._hunt_mode = "boss"
+
+			if task_data.phase == "anticipation" or task_data.phase == "fade" or not task_data.active then
+				self:start_extend_assault()
+			end
+		elseif self._hunt_mode == "boss" then
+			local old_hunt = self._old_hunt_mode
+			self._hunt_mode = old_hunt
+			self._old_hunt_mode = nil
+		end
+	end
+	
 	if not copsretire then		
 		return
 	end
@@ -1028,7 +1047,7 @@ function GroupAIStateBesiege:start_extend_assault()
 	end
 	
 	if not self._task_data.assault.active then
-		self._task_data.assault.next_dispatch_t = self._t
+		self._task_data.assault.next_dispatch_t = self._t - 1
 	else
 		local assault_task = self._task_data.assault
 	
@@ -3948,8 +3967,8 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 		local grenade = World:spawn_unit(Idstring("units/pd2_dlc_drm/weapons/smoke_grenade_tear_gas/smoke_grenade_tear_gas"), detonate_pos, rot)
 
 		grenade:base():set_properties({
-			radius = 400,
-			damage = 6,
+			radius = 300,
+			damage = 4.5,
 			duration = duration
 		})
 		grenade:base():detonate()
@@ -3959,27 +3978,6 @@ function GroupAIStateBesiege:_chk_group_use_gas_grenade(group, task_data, detona
 		
 		task_data.cs_grenade_active_t = self._t + duration
 		task_data.next_allowed_cs_grenade_t = self._t + cs_grenade_cooldown
-		
-		if not DeadLocke then
-			local closest_crim_data, closest_crim_dis_sq
-			
-			for c_key, c_data in pairs(self._criminals) do
-				if not c_data.is_deployable then
-					local dis = mvec3_dis_sq(c_data.m_pos, detonate_pos)
-					
-					if dis <= 360000 then
-						if not closest_crim_dis_sq or dis < closest_crim_dis_sq then
-							closest_crim_data = c_data
-							closest_crim_dis_sq = dis
-						end
-					end
-				end
-			end
-			
-			if closest_crim_data then
-				closest_crim_data.unit:sound():say("g42x_any", true)
-			end
-		end
 		
 		if shooter_u_data.unit:movement():play_redirect("throw_grenade") then
 			managers.network:session():send_to_peers_synched("play_distance_interact_redirect", shooter_u_data.unit, "throw_grenade")

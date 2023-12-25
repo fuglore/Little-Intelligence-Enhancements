@@ -66,6 +66,16 @@ local adjust_ids = {
 		[101220] = 0.25,
 		[101221] = 0.375,	
 	},
+	peta = {
+		[100122] = 0.1,
+		[100124] = 0.25,
+		[100125] = 0.5,
+	},
+	peta2	 = {
+		[100122] = 0.1,
+		[100124] = 0.25,
+		[100125] = 0.5,
+	},
 	
 	--transports and other heists sharing element numbers in really obvious ways.
 	pines = {
@@ -115,6 +125,11 @@ local adjust_ids = {
 		[100125] = 0.499
 	},
 }
+local remove_on_exec = {
+	pent = {
+		[101606] = true --yufu wang wont turn off assaults
+	}
+}
 
 Hooks:PostHook(ElementDifficulty, "init", "lies_alter_diff_values", function(self)
 	if not LIES.settings.hhtacs then
@@ -126,6 +141,14 @@ Hooks:PostHook(ElementDifficulty, "init", "lies_alter_diff_values", function(sel
 		
 		if to_adjust[self._id] then
 			self._values.difficulty = to_adjust[self._id]
+		end
+	end
+	
+	if remove_on_exec[Global.level_data.level_id] then
+		local to_adjust = remove_on_exec[Global.level_data.level_id]
+		
+		if remove_on_exec[self._id] then --empty out the on executed table
+			self._values.on_executed = {}
 		end
 	end
 end)

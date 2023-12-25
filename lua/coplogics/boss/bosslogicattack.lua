@@ -726,7 +726,7 @@ function LIESBossLogicAttack.action_complete_clbk(data, action)
 		
 		my_data.walking_to_shoot_pos = nil
 
-		TankCopLogicAttack._cancel_chase_attempt(data, my_data)
+		LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 	elseif action_type == "shoot" then
 		my_data.shooting = nil
 	elseif action_type == "reload" or action_type == "heal" or action_type == "healed" then
@@ -742,11 +742,43 @@ function LIESBossLogicAttack.action_complete_clbk(data, action)
 	elseif action_type == "turn" then
 		my_data.turning = nil
 	elseif action_type == "hurt" then
-		TankCopLogicAttack._cancel_chase_attempt(data, my_data)
+		LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 
 		if action:expired() and action:hurt_type() ~= "death" then
 			LIESBossLogicAttack._upd_aim(data, my_data)
 		end
+	end
+end
+
+function LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
+	my_data.chase_path = nil
+
+	if my_data.walking_to_chase_pos then
+		if not data.unit:movement():chk_action_forbidden("walk") then
+			data.unit:brain():action_request({
+				body_part = 2,
+				type = "idle"
+			})
+		else
+			my_data.old_action_advancing = my_data.advancing
+		end
+	elseif my_data.pathing_to_chase_pos then
+		data.brain:rem_pos_rsrv("path")
+
+		if data.active_searches[my_data.chase_path_search_id] then
+			managers.navigation:cancel_pathing_search(my_data.chase_path_search_id)
+
+			data.active_searches[my_data.chase_path_search_id] = nil
+		elseif data.pathing_results then
+			data.pathing_results[my_data.chase_path_search_id] = nil
+		end
+
+		my_data.chase_path_search_id = nil
+		my_data.pathing_to_chase_pos = nil
+
+		data.unit:brain():cancel_all_pathing_searches()
+	elseif my_data.chase_pos then
+		my_data.chase_pos = nil
 	end
 end
 

@@ -24,19 +24,36 @@ Hooks:PostHook(CopBrain, "post_init", "lies_post", function(self)
 	end
 end)
 
+local loud_bosses = {
+	triad_boss = true,
+	deep_boss = true,
+	drug_lord_boss = true,
+	hector_boss = true,
+	biker_boss = true,
+	mobster_boss = true
+}
+
 Hooks:PostHook(CopBrain, "_reset_logic_data", "lies_reset_logic_data", function(self)
 	self._logic_data.char_tweak = self._unit:base()._char_tweak or tweak_data.character[self._unit:base()._tweak_table]
 	
-	if LIES.settings.hhtacs and self._unit:base()._tweak_table == "tank_mini" then
-		local difficulty_index = tweak_data:difficulty_to_index(Global.game_settings.difficulty)
-		
-		if difficulty_index > 6 then
-			self._minigunner_firing_buff = {
-				id = self._unit:base():add_buff("base_damage", 0),
-				amount = 0,
-				last_chk_t = self._timer:time()
-			}
+	if LIES.settings.hhtacs then
+		if self._unit:base()._tweak_table == "tank_mini" then
+			local difficulty_index = tweak_data:difficulty_to_index(Global.game_settings.difficulty)
+			
+			if difficulty_index > 6 then
+				self._minigunner_firing_buff = {
+					id = self._unit:base():add_buff("base_damage", 0),
+					amount = 0,
+					last_chk_t = self._timer:time()
+				}
+			end
 		end
+		
+		if loud_bosses[self._unit:base()._tweak_table] then
+			managers.groupai:state():register_boss(self._unit)
+		end
+		
+		self:_do_hhtacs_damage_modifiers()
 	end
 	
 	self._logic_data.next_mov_time = self:get_movement_delay()
@@ -160,6 +177,27 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
 		else
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5)
+		end
+	elseif self._unit:base()._tweak_table == "deep_boss" or self._unit:base()._tweak_table == "drug_lord_boss" or self._unit:base()._tweak_table == "mobster_boss" then
+		if difficulty_index > 7 then
+			local wanted_dmg = 60 / 90
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", wanted_dmg)
+		elseif difficulty_index == 7 then
+			local wanted_dmg = 60 / 75
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", wanted_dmg)
+		elseif difficulty_index == 6 then
+			local wanted_dmg = 60 / 70
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", wanted_dmg)
+		end
+	elseif self._unit:base()._tweak_table == "triad_boss" then
+		if difficulty_index > 7 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1)
+		elseif difficulty_index == 7 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.75)
+		elseif difficulty_index == 6 then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5)
+		else
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.25)
 		end
 	elseif self._unit:base()._tweak_table == "tank" then
 		if difficulty_index > 6 then

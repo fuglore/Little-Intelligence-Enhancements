@@ -214,8 +214,8 @@ function CopBase:default_weapon_name(selection_name)
 	elseif m_weapon_id == "m4" or m_weapon_id == "mp5" or m_weapon_id == "ak47_ass" then	
 		if LIES.settings.fixed_spawngroups > 2 and difficulty == "sm_wish" then
 			local zeal_types = {
-				swat = true,
-				heavy_swat = true
+				zeal_swat = true,
+				zeal_heavy_swat = true
 			}
 			
 			if zeal_types[self._tweak_table] then

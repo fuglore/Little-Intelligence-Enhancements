@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.661",
+		version = "V7.67",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -261,7 +261,7 @@ if RequiredScript == "lib/managers/menumanager" then
 
 	function LIES:_upd_assault_task()
 		local task_data = self._task_data.assault
-		
+
 		if LIES.settings.copsretire then
 			local task_data = self._task_data.assault
 			
@@ -273,6 +273,25 @@ if RequiredScript == "lib/managers/menumanager" then
 				self:_assign_assault_groups_to_retire()
 			elseif not task_data or not task_data.active then
 				self:_assign_assault_groups_to_retire()
+			end
+		end
+
+		if LIES.settings.hhtacs then
+			if self._bosses and next(self._bosses) then
+				if self._hunt_mode ~= "boss" then
+					local old_hunt = self._hunt_mode
+					self._old_hunt_mode = old_hunt
+				end
+				
+				self._hunt_mode = "boss"
+
+				if task_data.phase == "anticipation" or task_data.phase == "fade" or not task_data.active then
+					self:start_extend_assault()
+				end
+			elseif self._hunt_mode == "boss" then
+				local old_hunt = self._old_hunt_mode
+				self._hunt_mode = old_hunt
+				self._old_hunt_mode = nil
 			end
 		end
 

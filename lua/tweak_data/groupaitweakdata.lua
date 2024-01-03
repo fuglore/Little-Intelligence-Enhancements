@@ -755,7 +755,8 @@ function GroupAITweakData:_LIES_setup()
 			"ranged_fire",
 			"murder",
 			"hrt",
-			"sniper"
+			"sniper",
+			"shield_cover"
 		}
 		self._tactics.marshal_shield = {
 			"shield",
@@ -3693,10 +3694,10 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 		self.phalanx.respawn_delay = 1200
 		
 		self.phalanx.vip.damage_reduction = {
-			max = 0.75,
+			max = 0.65,
 			start = 0.25,
 			increase_intervall = 5,
-			increase = 0.02
+			increase = 0.05
 		}
 	end
 end

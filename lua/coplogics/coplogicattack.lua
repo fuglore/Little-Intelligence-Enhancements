@@ -2190,7 +2190,7 @@ function CopLogicAttack._update_cover(data)
 			local want_to_take_cover = my_data.want_to_take_cover
 			local friend_pos
 			
-			if want_to_take_cover then
+			if want_to_take_cover or data.tactics and data.tactics.sniper then
 				friend_pos = CopLogicAttack._find_friend_pos(data, my_data)
 			end
 			

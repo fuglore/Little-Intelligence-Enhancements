@@ -172,6 +172,15 @@ end
 
 function TaserLogicAttack._upd_aim(data, my_data, reaction)
 	local focus_enemy = data.attention_obj
+	
+	if not reaction and focus_enemy then
+		if my_data.tasing and my_data.target_u_data == focus_enemy then
+			reaction = AIAttentionObject.REACT_SPECIAL_ATTACK
+		else
+			reaction = focus_enemy.reaction
+		end
+	end
+	
 	local tase = reaction == AIAttentionObject.REACT_SPECIAL_ATTACK
 	
 	if focus_enemy then

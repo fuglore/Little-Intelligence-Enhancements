@@ -259,7 +259,7 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 	
 	if nav_link and alive(my_data.coarse_path[my_data.coarse_path_index + 1][3]) then
 		if nav_link:delay_time() > data.t then
-			my_data.waiting_for_navlink = nav_link:delay_time()
+			my_data.waiting_for_navlink = nav_link:delay_time() + 0.1
 			
 			return
 		end
@@ -275,8 +275,10 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 		if target_door_list then
 			for _, i_door in ipairs(target_door_list) do
 				if type(i_door) == "number" then
+					entry_found = true
 					break
-				elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then					
+				elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then		
+					entry_found = true
 					break
 				elseif alive(i_door) then
 					if not best_delay_t or i_door:delay_time() < best_delay_t then

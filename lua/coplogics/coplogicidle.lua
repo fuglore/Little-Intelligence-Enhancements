@@ -274,6 +274,42 @@ function CopLogicIdle.queued_update(data)
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t + delay, data.important and true)
 end
 
+function CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
+	if my_data.advancing then
+		return
+	end
+
+	local my_tracker = data.unit:movement():nav_tracker()
+	local reservation = {
+		radius = 30,
+		position = data.m_pos,
+		filter = data.pos_rsrv_id
+	}
+
+	if not managers.navigation:is_pos_free(reservation) then
+		local to_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 500, nil, nil, nil, data.pos_rsrv_id)
+
+		if to_pos then
+			local path = {
+				my_tracker:position(),
+				to_pos
+			}
+
+			local new_action_data = {
+				variant = data.cool and "walk" or "run",
+				body_part = 2,
+				type = "walk",
+				nav_path = path
+			}
+			my_data.advancing = data.unit:brain():action_request(new_action_data)
+
+			if my_data.advancing then
+				return true
+			end
+		end
+	end
+end
+
 function CopLogicIdle._upd_pathing(data, my_data)
 	if not data.pathing_results then
 		return

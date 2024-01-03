@@ -607,7 +607,7 @@ Hooks:PostHook(CopBrain, "_add_pathing_result", "lies_pathing", function(self, s
 end)
 
 function CopBrain:_chk_use_cover_grenade(unit)
-	if not Network:is_server() or not self._logic_data.char_tweak.dodge_with_grenade or not self._logic_data.attention_obj then
+	if not Network:is_server() or not self._logic_data.char_tweak.dodge_with_grenade or not self._logic_data.attention_obj or self._unit:character_damage():dead() then
 		return
 	end
 

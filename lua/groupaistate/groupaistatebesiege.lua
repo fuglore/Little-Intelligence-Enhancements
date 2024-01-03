@@ -1510,9 +1510,7 @@ function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
 			unit = unit
 		})
 	end
-	
-	
-	
+
 	if objective and (not objective.grp_objective or objective.grp_objective.type ~= "retire") then
 		local u_key = unit:key()
 		local unit_data = self._police[u_key]
@@ -1799,7 +1797,7 @@ function GroupAIStateBesiege._create_objective_from_group_objective(grp_objectiv
 		objective.interrupt_dis = nil
 		objective.interrupt_health = nil
 		objective.interrupt_suppression = nil
-		objective.attitude = "avoid"
+		objective.attitude = "engage"
 		objective.path_ahead = true
 		
 		objective.no_arrest = true

@@ -1324,19 +1324,6 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ign
 										multiple_nav_links = true
 									}
 								end
-							else
-								if my_weight < found_segs[neighbour_seg_id].weight then
-									local had_nav_links = found_segs[neighbour_seg_id].multiple_nav_links
-								
-									found_segs[neighbour_seg_id] = {
-										weight = my_weight,
-										from = i_seg,
-										i_seg = neighbour_seg_id,
-										pos = end_pos,
-										nav_link = not had_nav_links and i_door or nil,
-										multiple_nav_links = had_nav_links
-									}
-								end
 							end
 						else
 							found_segs[neighbour_seg_id] = {

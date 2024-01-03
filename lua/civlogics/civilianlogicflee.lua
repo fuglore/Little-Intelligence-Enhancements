@@ -27,7 +27,7 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 				return
 			end
 
-			if data.unit:anim_data().react_enter and not data.unit:anim_data().idle then
+			if data.unit:anim_data().react_enter then
 				my_data.delayed_post_react_alert_id = "postreact_alert" .. key_str
 
 				if data.char_tweak.faster_reactions then
@@ -91,7 +91,7 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 
 	CivilianLogicFlee.schedule_run_away_clbk(data)
 
-	if not my_data.delayed_post_react_alert_id and data.unit:movement():stance_name() == "ntl" then
+	if not my_data.delayed_post_react_alert_id and not data.unit:anim_data().panic then
 		my_data.delayed_post_react_alert_id = "postreact_alert" .. key_str
 		
 		if data.char_tweak.faster_reactions then
@@ -148,7 +148,7 @@ function CivilianLogicFlee.on_alert(data, alert_data)
 
 	local anim_data = data.unit:anim_data()
 
-	if anim_data.react_enter and not anim_data.idle then
+	if anim_data.react_enter then
 		if not my_data.delayed_post_react_alert_id then
 			my_data.delayed_post_react_alert_id = "postreact_alert" .. tostring(data.key)
 
@@ -159,37 +159,9 @@ function CivilianLogicFlee.on_alert(data, alert_data)
 		end
 
 		return
-	elseif anim_data.peaceful or data.unit:movement():stance_name() == "ntl" then
-		local action_data = {
-			clamp_to_graph = true,
-			variant = "panic",
-			body_part = 1,
-			type = "act"
-		}
-
-		data.unit:brain():action_request(action_data)
-		data.unit:sound():say("a01x_any", true)
-
-		if data.unit:unit_data().mission_element then
-			data.unit:unit_data().mission_element:event("panic", data.unit)
-		end
-
-		if not managers.groupai:state():enemy_weapons_hot() then
-			local alert = {
-				"vo_distress",
-				data.unit:movement():m_head_pos(),
-				200,
-				data.SO_access,
-				data.unit
-			}
-
-			managers.groupai:state():propagate_alert(alert)
-		end
-
-		return
 	elseif alert_data[1] ~= "bullet" and alert_data[1] ~= "aggression" and alert_data[1] ~= "explosion" then
 		return
-	elseif anim_data.react or anim_data.stand or anim_data.halt then
+	elseif anim_data.react or anim_data.halt then
 		--civilians in drop shouldn't do this because if they're in drop they should be in fucking surrender
 		local action_data = {
 			clamp_to_graph = true,
@@ -213,6 +185,34 @@ function CivilianLogicFlee.on_alert(data, alert_data)
 		CopLogicBase._reset_attention(data)
 
 		if is_dangerous and not managers.groupai:state():enemy_weapons_hot() then
+			local alert = {
+				"vo_distress",
+				data.unit:movement():m_head_pos(),
+				200,
+				data.SO_access,
+				data.unit
+			}
+
+			managers.groupai:state():propagate_alert(alert)
+		end
+
+		return
+	elseif not anim_data.panic then
+		local action_data = {
+			clamp_to_graph = true,
+			variant = "panic",
+			body_part = 1,
+			type = "act"
+		}
+
+		data.unit:brain():action_request(action_data)
+		data.unit:sound():say("a01x_any", true)
+
+		if data.unit:unit_data().mission_element then
+			data.unit:unit_data().mission_element:event("panic", data.unit)
+		end
+
+		if not managers.groupai:state():enemy_weapons_hot() then
 			local alert = {
 				"vo_distress",
 				data.unit:movement():m_head_pos(),
@@ -249,17 +249,13 @@ function CivilianLogicFlee.post_react_alert_clbk(shait, params)
 
 	my_data.delayed_post_react_alert_id = nil
 
-	if not anim_data.react then
-		return
-	end
-
 	if alert_data and alive(alert_data[5]) then
 		CivilianLogicFlee._run_away_from_alert(data, alert_data)
 
 		return
 	end
 	
-	if anim_data.react or anim_data.stand then
+	if anim_data.react or anim_data.panic then
 		if not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and managers.groupai:state():is_police_called() then --faster reactions = just book it
 			if CivilianLogicFlee._get_coarse_flee_path(data) then
 				data.unit:brain():set_update_enabled_state(true)
@@ -271,7 +267,7 @@ function CivilianLogicFlee.post_react_alert_clbk(shait, params)
 		CivilianLogicFlee._find_hide_cover(data)
 		
 		return
-	elseif anim_data.halt then
+	else
 		--drop is not the right anim for this, i think
 		local action_data = {
 			clamp_to_graph = true,
@@ -429,7 +425,7 @@ function CivilianLogicFlee._find_hide_cover(data)
 		data.unit:brain():set_update_enabled_state(true)
 		CopLogicBase._reset_attention(data)
 		--log("waaah!")
-	elseif data.unit:anim_data().react or data.unit:anim_data().halt or data.unit:anim_data().stand then
+	elseif data.unit:anim_data().react or data.unit:anim_data().halt or not data.unit:anim_data().panic then
 		local action_data = {
 			clamp_to_graph = true,
 			variant = "panic",
@@ -668,4 +664,54 @@ function CivilianLogicFlee._run_away_from_alert(data, alert_data)
 
 		CopLogicBase.queue_task(my_data, my_data.cover_search_task_key, CivilianLogicFlee._find_hide_cover, data, data.t + 0.5)
 	end
+end
+
+function CivilianLogicFlee.clbk_chk_call_the_police(ignore_this, data)
+	local my_data = data.internal_data
+
+	CopLogicBase.on_delayed_clbk(my_data, my_data.call_police_clbk_id)
+
+	my_data.call_police_clbk_id = nil
+
+	if managers.groupai:state():is_police_called() then
+		return
+	end
+
+	local my_areas = managers.groupai:state():get_areas_from_nav_seg_id(data.unit:movement():nav_tracker():nav_segment())
+	local already_calling = false
+
+	for u_key, u_data in pairs(managers.enemy:all_civilians()) do
+		local civ_nav_seg = u_data.unit:movement():nav_tracker():nav_segment()
+
+		if my_areas[civ_nav_seg] and u_data.unit:anim_data().call_police then
+			already_calling = true
+
+			break
+		end
+	end
+	
+	if data.unit:anim_data() and data.unit:anim_data().react_enter then
+		my_data.call_police_clbk_id = "civ_call_police" .. tostring(data.key)
+		local call_t = math.max(data.call_police_delay_t or 0, TimerManager:game():time() + 0.5)
+
+		CopLogicBase.add_delayed_clbk(my_data, my_data.call_police_clbk_id, callback(CivilianLogicFlee, CivilianLogicFlee, "clbk_chk_call_the_police", data), call_t)
+	elseif not already_calling and (not my_data.calling_the_police or not data.unit:movement():chk_action_forbidden("walk")) then
+		local action = {
+			variant = "cmf_so_call_police",
+			body_part = 1,
+			type = "act",
+			blocks = {}
+		}
+		my_data.calling_the_police = data.unit:movement():action_request(action)
+
+		if my_data.calling_the_police then
+			CivilianLogicFlee._say_call_the_police(data, my_data)
+			managers.groupai:state():on_criminal_suspicion_progress(nil, data.unit, "calling")
+		end
+	end
+	
+	my_data.call_police_clbk_id = "civ_call_police" .. tostring(data.key)
+	local call_t = math.max(data.call_police_delay_t or 0, TimerManager:game():time() + math.lerp(1, 10, math.random()))
+
+	CopLogicBase.add_delayed_clbk(my_data, my_data.call_police_clbk_id, callback(CivilianLogicFlee, CivilianLogicFlee, "clbk_chk_call_the_police", data), call_t)
 end

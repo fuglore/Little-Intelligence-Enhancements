@@ -56,17 +56,15 @@ function SpoocLogicAttack.update(data)
 
 	if my_data.spooc_attack then
 		local action_data = my_data.spooc_attack.action
-		
-		if action_data._flying_strike_data and not action_data._ext_anim.act and action_data._stroke_t and data.t - action_data._stroke_t > 1 or action_data._beating_end_t and action_data._beating_end_t < TimerManager:game():time() then
-			if action_data._flying_strike_data then
-				SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
-			elseif action_data._beating_end_t and action_data._beating_end_t + 6 < TimerManager:game():time() then
+
+		if action_data:complete() then
+			if action_data._beating_end_t and action_data._beating_end_t + 9 < TimerManager:game():time() then
 				SpoocLogicAttack._cancel_spooc_attempt(data, my_data)
 			else
 				local attention_objects = data.detected_attention_objects
 
 				for u_key, attention_data in pairs(attention_objects) do
-					if AIAttentionObject.REACT_SHOOT <= attention_data.reaction then
+					if AIAttentionObject.REACT_COMBAT <= attention_data.reaction then
 						if not attention_data.criminal_record or not attention_data.criminal_record.status then
 							if attention_data.verified or attention_data.nearly_visible then
 								if attention_data.dis < my_data.weapon_range.close then

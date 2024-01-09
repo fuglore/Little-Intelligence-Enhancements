@@ -1,5 +1,14 @@
 local temp_vec1 = Vector3()
+local temp_vec2 = Vector3()
+local temp_vec3 = Vector3()
+local mvec3_dir = mvector3.direction
+local mvec3_set_z = mvector3.set_z
+local mvec3_dot = mvector3.dot
+local mvec3_dis = mvector3.distance
 local mvec3_dis_sq = mvector3.distance_sq
+local mvec3_add = mvector3.add
+local mvec3_cpy = mvector3.copy
+local mvec3_mul = mvector3.multiply
 
 function CopLogicTravel.enter(data, new_logic_name, enter_params)
 	CopLogicBase.enter(data, new_logic_name, enter_params)
@@ -813,6 +822,10 @@ function CopLogicTravel._chk_coarse_objective_reached(data)
 	if not objective then
 		return
 	end
+	
+	if objective.type == "free" and objective.pos then
+		return
+	end
 
 	if objective.followup_SO or objective.followup_objective and objective.followup_objective.action or objective.action or precise_objective_types[objective.type] or objective.grp_objective and objective.grp_objective.type == "retire" then
 		return
@@ -1287,14 +1300,17 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		local revive_u_rot = is_local_player and Rotation(0, 0, 0) or revive_u_mv:m_rot()
 		local revive_u_fwd = revive_u_rot:y()
 		local revive_u_right = revive_u_rot:x()
-		local revive_u_pos = revive_u_tracker:lost() and revive_u_tracker:field_position() or revive_u_mv:m_newest_pos()
+		local revive_u_pos = nil
 		local ray_params = {
-			trace = true,
-			tracker_from = revive_u_tracker
+			trace = true
 		}
 
 		if revive_u_tracker:lost() then
+			revive_u_pos = revive_u_tracker:field_position()
 			ray_params.pos_from = revive_u_pos
+		else
+			revive_u_pos = revive_u_mv:m_pos()
+			ray_params.tracker_from = revive_u_tracker
 		end
 
 		local stand_dis = nil
@@ -1303,10 +1319,10 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 			stand_dis = 120
 		else
 			stand_dis = 90
-			local mid_pos = mvector3.copy(revive_u_fwd)
+			local mid_pos = mvec3_cpy(revive_u_fwd)
 
-			mvector3.multiply(mid_pos, -20)
-			mvector3.add(mid_pos, revive_u_pos)
+			mvec3_mul(mid_pos, -20)
+			mvec3_add(mid_pos, revive_u_pos)
 
 			ray_params.pos_to = mid_pos
 			local ray_res = managers.navigation:raycast(ray_params)
@@ -1314,26 +1330,26 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		end
 
 		local rand_side_mul = math.random() > 0.5 and 1 or -1
-		local revive_pos = mvector3.copy(revive_u_right)
+		local revive_pos = mvec3_cpy(revive_u_right)
 
-		mvector3.multiply(revive_pos, rand_side_mul * stand_dis)
-		mvector3.add(revive_pos, revive_u_pos)
+		mvec3_mul(revive_pos, rand_side_mul * stand_dis)
+		mvec3_add(revive_pos, revive_u_pos)
 
 		ray_params.pos_to = revive_pos
 		local ray_res = managers.navigation:raycast(ray_params)
 
 		if ray_res then
-			local opposite_pos = mvector3.copy(revive_u_right)
+			local opposite_pos = mvec3_cpy(revive_u_right)
 
-			mvector3.multiply(opposite_pos, -rand_side_mul * stand_dis)
-			mvector3.add(opposite_pos, revive_u_pos)
+			mvec3_mul(opposite_pos, -rand_side_mul * stand_dis)
+			mvec3_add(opposite_pos, revive_u_pos)
 
 			ray_params.pos_to = opposite_pos
 			local old_trace = ray_params.trace[1]
 			local opposite_ray_res = managers.navigation:raycast(ray_params)
 
 			if opposite_ray_res then
-				if mvector3.distance(revive_pos, revive_u_pos) < mvector3.distance(ray_params.trace[1], revive_u_pos) then
+				if mvec3_dis(revive_pos, revive_u_pos) < mvec3_dis(ray_params.trace[1], revive_u_pos) then
 					revive_pos = ray_params.trace[1]
 				else
 					revive_pos = old_trace
@@ -2039,4 +2055,18 @@ function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_rec
 	end
 
 	return from_pos
+end
+
+function CopLogicTravel.is_available_for_assignment(data, new_objective)
+	if new_objective and new_objective.forced then
+		return true
+	elseif data.cool and data.objective and data.objective.type == "act" then
+		if (not new_objective or new_objective and new_objective.type == "free") and data.objective.interrupt_dis == -1 then
+			return true
+		end
+
+		return
+	else
+		return CopLogicAttack.is_available_for_assignment(data, new_objective)
+	end
 end

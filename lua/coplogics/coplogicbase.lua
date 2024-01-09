@@ -123,6 +123,64 @@ function CopLogicBase.upd_falloff_sim(data)
 	end
 end
 
+function CopLogicBase.check_sabotage_objective_not_allowed(data, objective)
+	if not objective then
+		return
+	end
+	
+	local is_civilian = CopDamage.is_civilian(data.unit:base()._tweak_table)
+	
+	if is_civilian then
+		return
+	end
+
+	if data.cool or not data.team.foes[tweak_data.levels:get_default_team_ID("player")] then
+		return
+	end
+
+	if objective.grp_objective then
+		return
+	end
+
+	if objective.type ~= "act" then
+		if (not objective.followup_objective or not objective.followup_objective.action) and not objective.followup_SO then
+			return
+		end
+	end
+
+	if not objective.pos then
+		return
+	end
+
+	if not objective.action then
+		return
+	end
+
+	if data.tactics and data.tactics.hrt then
+		return
+	end
+
+	if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction  then
+		if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, data.attention_obj.m_pos) < 490000 then
+			return true
+		end
+	end
+
+	local objective_nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
+
+	local all_criminals = managers.groupai:state():all_char_criminals()
+
+	for u_key, u_data in pairs(all_criminals) do
+		if not u_data.status or u_data.status == "electrified" then
+			local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+
+			if crim_area.nav_segs[objective_nav_seg] then
+				return true
+			end
+		end
+	end
+end
+
 function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	local my_data = data.internal_data
 	attention = attention or data.attention_obj
@@ -132,6 +190,10 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	end
 
 	if objective.interrupt_suppression and data.is_suppressed then
+		return true, true
+	end
+	
+	if CopLogicBase.check_sabotage_objective_not_allowed(data, objective) then
 		return true, true
 	end
 

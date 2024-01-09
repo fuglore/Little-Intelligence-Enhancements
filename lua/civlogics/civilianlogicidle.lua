@@ -282,15 +282,19 @@ function CivilianLogicIdle.action_complete_clbk(data, action)
 
 	if action:type() == "turn" then
 		my_data.turning = nil
-	elseif action:type() == "act" and my_data.acting == action then
+	elseif action:type() == "act" then
+		local act_action = my_data.acting
+		
 		my_data.acting = nil
-
-		if action:expired() then
-			if not my_data.action_timeout_clbk_id then
-				data.objective_complete_clbk(data.unit, data.objective)
+	
+		if act_action == action then			
+			if action:expired() then				
+				if not my_data.action_timeout_clbk_id then
+					data.objective_complete_clbk(data.unit, data.objective)
+				end
+			else
+				data.objective_failed_clbk(data.unit, data.objective)
 			end
-		else
-			data.objective_failed_clbk(data.unit, data.objective)
 		end
 		
 		if data.internal_data == my_data then

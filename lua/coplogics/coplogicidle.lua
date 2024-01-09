@@ -941,7 +941,11 @@ function CopLogicIdle.is_available_for_assignment(data, objective)
 		return
 	end
 
-	return true
+	if data.cool then
+		return true
+	else
+		return CopLogicAttack.is_available_for_assignment(data, objective)
+	end
 end
 
 function CopLogicIdle.exit(data, new_logic_name, enter_params)

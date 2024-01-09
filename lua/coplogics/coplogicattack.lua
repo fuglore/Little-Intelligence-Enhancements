@@ -1997,6 +1997,10 @@ function CopLogicAttack.is_available_for_assignment(data, new_objective)
 	if data.path_fail_t and data.t - data.path_fail_t > 3 then
 		return
 	end
+	
+	if CopLogicBase.check_sabotage_objective_not_allowed(data, new_objective) then
+		return
+	end
 
 	local att_obj = data.attention_obj
 

@@ -87,6 +87,10 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 			
 			text_str = text_str .. ":" .. add_str
 		end
+		
+		if l_data.internal_data and l_data.internal_data.waiting_for_navlink then
+			text_str = text_str .. ":waiting for navlink:" .. tostring(l_data.internal_data.waiting_for_navlink - self._t)
+		end
 
 		if logic_name_text then
 			logic_name_text:set_text(text_str)
@@ -191,6 +195,7 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 				local text = group.team.id .. ":" .. group_id .. ":" .. group.objective.type
 				
 				local move_type = ":" .. "none"
+				local upd_group_text
 				
 				if group.objective.tactic then
 					move_type = ":" .. group.objective.tactic
@@ -203,13 +208,16 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 				elseif group.objective.moving_out then
 					move_type = ":" .. "moving_out"
 				elseif group.in_place_t then
+					upd_group_text = true
 					move_type = ":" .. "in_place" .. ":" .. tostring(self._t - group.in_place_t)
 				end
 				
 				text = text .. move_type
 				
 				if group_pos_screen.z > 0 then
-					if not gui_text then
+					if gui_text then
+						gui_text:set_text(text)
+					else
 						gui_text = panel:text({
 							name = "text",
 							font_size = 24,
@@ -850,7 +858,7 @@ function GroupAIStateBesiege:_check_phalanx_damage_reduction_increase_LIES()
 						local objective = u_data.unit:brain():objective()
 
 						if objective then
-							if objective.grp_objective ~= group.objective then
+							if objective.grp_objective ~= group.objective or objective.is_default then
 								-- Nothing
 							elseif not objective.in_place then
 								done_moving = false
@@ -1179,7 +1187,7 @@ function GroupAIStateBesiege:_voice_retreat(group)
 		local brain = unit_data.unit:brain()
 		local current_objective = brain:objective()
 		
-		if current_objective and current_objective.grp_objective == group.objective and not current_objective.in_place and unit_data.char_tweak.chatter.go_go and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "retreat") then
+		if brain._logic_data and brain._logic_data.name ~= "attack" and current_objective and current_objective.grp_objective == group.objective and not current_objective.in_place and unit_data.char_tweak.chatter.go_go and self:chk_say_enemy_chatter(unit_data.unit, unit_data.m_pos, "retreat") then
 			return true
 		end
 	end
@@ -1360,7 +1368,7 @@ function GroupAIStateBesiege:_assign_assault_groups_to_retire()
 				
 				group.dialogue_data = nil
 				
-				group.needs_announce_retreat = not self:_voice_retreat(group)
+				group.needs_announce_retreat = true
 			end
 		end
 		
@@ -1392,7 +1400,7 @@ function GroupAIStateBesiege:_assign_assault_groups_to_retire()
 				self:_set_objective_to_enemy_group(group, grp_objective)
 				group.dialogue_data = nil
 				
-				group.needs_announce_retreat = not self:_voice_retreat(group)
+				group.needs_announce_retreat = true
 			end
 		end
 
@@ -2915,7 +2923,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			end
 		end
 	
-		local assault_area, alternate_assault_area, alternate_assault_area_from, assault_path, alternate_assault_path, flank = nil
+		local assault_area, alternate_assault_area, alternate_assault_area_from, assault_path, alternate_assault_path, best_flank_quality, flank = nil
 		local to_search_areas = {
 			objective_area
 		}
@@ -2928,37 +2936,21 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			
 			if next(search_area.criminal.units) then
 				local assault_from_here = true
-
+				local flank_quality = 1
+				local assault_from_area = found_areas[search_area]
+				
 				if not push and tactics_map.flank or not push and LIES.settings.hhtacs then
-					local assault_from_area = found_areas[search_area]
-
 					if assault_from_area ~= "init" then
 						for other_group_id, other_group in pairs(self._groups) do
 							if other_group.has_spawned and other_group ~= group and other_group.objective and other_group.objective.type == "assault_area" and other_group.objective.area and assault_from_area.id == other_group.objective.area.id then
 								assault_from_here = false
 								flank = true
 								
-								if not alternate_assault_area or math.random() < 0.5 then
-									local search_params = {
-										id = "GroupAI_assault",
-										from_seg = objective_area.pos_nav_seg,
-										to_seg = search_area.pos_nav_seg,
-										access_pos = self._get_group_acces_mask(group),
-										verify_clbk = approach and callback(self, self, "is_nav_seg_safe")
-									}
-									alternate_assault_path = managers.navigation:search_coarse(search_params)
-
-									if alternate_assault_path then
-										self:_merge_coarse_path_by_area(alternate_assault_path)
-
-										alternate_assault_area = search_area
-										alternate_assault_area_from = assault_from_area
-									end
+								if not alternate_assault_area then
+									break
 								end
-
-								found_areas[search_area] = nil
-
-								break
+								
+								flank_quality = flank_quality * 0.9
 							end
 						end
 					end
@@ -2981,6 +2973,25 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 						break
 					end
+				elseif not alternate_assault_area or flank_quality > best_flank_quality then
+					local search_params = {
+						id = "GroupAI_assault",
+						from_seg = objective_area.pos_nav_seg,
+						to_seg = search_area.pos_nav_seg,
+						access_pos = self._get_group_acces_mask(group),
+						verify_clbk = approach and callback(self, self, "is_nav_seg_safe")
+					}
+					alternate_assault_path = managers.navigation:search_coarse(search_params)
+
+					if alternate_assault_path then
+						self:_merge_coarse_path_by_area(alternate_assault_path)
+
+						alternate_assault_area = search_area
+						alternate_assault_area_from = assault_from_area
+						best_flank_quality = flank_quality
+					end
+
+					found_areas[search_area] = nil
 				end
 			else
 				for other_area_id, other_area in pairs(search_area.neighbours) do
@@ -2994,7 +3005,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		until #to_search_areas == 0
 
 		if not assault_area and alternate_assault_area then
-			flank = nil
+			flank = best_flank_quality > 0.8
 			assault_area = alternate_assault_area
 			found_areas[assault_area] = alternate_assault_area_from
 			assault_path = alternate_assault_path
@@ -4442,4 +4453,20 @@ function GroupAIStateBesiege:_perform_group_spawning(spawn_task, force, use_last
 			self._groups[spawn_task.group.id] = nil
 		end
 	end
+end
+
+function GroupAIStateBesiege._determine_group_leader(units)
+	local highest_rank, highest_ranking_u_key, highest_ranking_u_data = nil
+	local all_police = managers.enemy:all_enemies()
+	
+	for u_key, _ in pairs(units) do
+		local u_data = all_police[u_key]
+		if u_data and u_data.rank and (not highest_rank or highest_rank < u_data.rank) then
+			highest_rank = u_data.rank
+			highest_ranking_u_key = u_key
+			highest_ranking_u_data = u_data
+		end
+	end
+
+	return highest_ranking_u_key, highest_ranking_u_data
 end

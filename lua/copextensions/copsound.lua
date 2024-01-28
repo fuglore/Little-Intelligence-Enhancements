@@ -2,28 +2,44 @@ local mex_gang = {
 	[Idstring("units/payday2/characters/ene_gang_mexican_1/ene_gang_mexican_1"):key()] = true,
 	[Idstring("units/payday2/characters/ene_gang_mexican_2/ene_gang_mexican_2"):key()] = true,
 	[Idstring("units/payday2/characters/ene_gang_mexican_3/ene_gang_mexican_3"):key()] = true,
-	[Idstring("units/payday2/characters/ene_gang_mexican_4/ene_gang_mexican_4"):key()] = true
+	[Idstring("units/payday2/characters/ene_gang_mexican_4/ene_gang_mexican_4"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_1/ene_gang_mexican_1_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_2/ene_gang_mexican_2_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_3/ene_gang_mexican_3_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mexican_4/ene_gang_mexican_4_husk"):key()] = true
 }
 
 local cobra_gang = {
 	[Idstring("units/payday2/characters/ene_gang_black_1/ene_gang_black_1"):key()] = true,
 	[Idstring("units/payday2/characters/ene_gang_black_2/ene_gang_black_2"):key()] = true,
 	[Idstring("units/payday2/characters/ene_gang_black_3/ene_gang_black_3"):key()] = true,
-	[Idstring("units/payday2/characters/ene_gang_black_4/ene_gang_black_4"):key()] = true
+	[Idstring("units/payday2/characters/ene_gang_black_4/ene_gang_black_4"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_1/ene_gang_black_1_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_2/ene_gang_black_2_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_3/ene_gang_black_3_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_black_4/ene_gang_black_4_husk"):key()] = true
 }
 
 local biker_gang = {
 	[Idstring("units/payday2/characters/ene_biker_1/ene_biker_1"):key()] = true,
 	[Idstring("units/payday2/characters/ene_biker_2/ene_biker_2"):key()] = true,
 	[Idstring("units/payday2/characters/ene_biker_3/ene_biker_3"):key()] = true,
-	[Idstring("units/payday2/characters/ene_biker_4/ene_biker_4"):key()] = true
+	[Idstring("units/payday2/characters/ene_biker_4/ene_biker_4"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_1/ene_biker_1_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_2/ene_biker_2_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_3/ene_biker_3_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_biker_4/ene_biker_4_husk"):key()] = true
 }
 
 local hotline_gang = {
 	[Idstring("units/payday2/characters/ene_gang_mobster_1/ene_gang_mobster_1"):key()] = true,
 	[Idstring("units/payday2/characters/ene_gang_mobster_2/ene_gang_mobster_2"):key()] = true,
 	[Idstring("units/payday2/characters/ene_gang_mobster_3/ene_gang_mobster_3"):key()] = true,
-	[Idstring("units/payday2/characters/ene_gang_mobster_4/ene_gang_mobster_4"):key()] = true
+	[Idstring("units/payday2/characters/ene_gang_mobster_4/ene_gang_mobster_4"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_1/ene_gang_mobster_1_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_2/ene_gang_mobster_2_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_3/ene_gang_mobster_3_husk"):key()] = true,
+	[Idstring("units/payday2/characters/ene_gang_mobster_4/ene_gang_mobster_4_husk"):key()] = true
 }
 
 Hooks:PostHook(CopSound, "init", "lies_init", function(self, unit)
@@ -183,7 +199,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 		return
 	end
 
-	if important_sounds[sound_name] then
+	if skip_prefix and not sync or important_sounds[sound_name] then
 		important = true
 	end
 	

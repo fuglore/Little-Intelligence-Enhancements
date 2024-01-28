@@ -163,6 +163,10 @@ function CivilianLogicIdle._upd_detection(data)
 		return
 	end
 	
+	if my_data ~= data.internal_data then
+		return
+	end
+	
 	if managers.groupai:state():whisper_mode() or not my_data.acting or CivilianLogicIdle._objective_can_be_interrupted(data) then
 		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t + delay)
 	else
@@ -275,6 +279,32 @@ function CivilianLogicIdle._delayed_alert_clbk(ignore_this, params)
 		type = "free",
 		alert_data = alert_data
 	})
+end
+
+function CivilianLogicIdle.is_obstructed(data, aggressor_unit)
+	if data.unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().act_idle then
+		return
+	end
+
+	if not objective or objective.is_default or (objective.in_place or not objective.nav_seg or objective.type == "free") and not objective.action and not objective.action_duration then
+		return true
+	end
+
+	if objective.interrupt_dis == -1 then
+		return true
+	end
+
+	if aggressor_unit and aggressor_unit:movement() and objective.interrupt_dis and mvector3.distance_sq(data.m_pos, aggressor_unit:movement():m_newest_pos()) < objective.interrupt_dis * objective.interrupt_dis then
+		return true
+	end
+
+	if objective.interrupt_health then
+		local health_ratio = data.unit:character_damage():health_ratio()
+
+		if health_ratio < 1 and health_ratio < objective.interrupt_health then
+			return true
+		end
+	end
 end
 
 function CivilianLogicIdle.action_complete_clbk(data, action)

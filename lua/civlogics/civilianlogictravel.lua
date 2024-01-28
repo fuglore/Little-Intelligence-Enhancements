@@ -195,10 +195,6 @@ function CivilianLogicTravel.update(data)
 		elseif my_data.advance_path then
 			CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
 
-			if my_data.is_hostage then
-				my_data.advance_path = LIES:_optimize_path(my_data.advance_path, data)
-			end
-
 			local end_rot = nil
 
 			if my_data.coarse_path_index == #my_data.coarse_path - 1 then
@@ -228,10 +224,6 @@ function CivilianLogicTravel.update(data)
 		--a
 	elseif my_data.advance_path then
 		CopLogicAttack._correct_path_start_pos(data, my_data.advance_path)
-
-		if my_data.is_hostage then
-			my_data.advance_path = LIES:_optimize_path(my_data.advance_path, data)
-		end
 
 		local end_rot = nil
 

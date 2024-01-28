@@ -486,8 +486,10 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 			local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
 			local run_dist = enemy_visible and 800 or 400
 			local speed = "run"
-		
-			if not data.enrage_data or not data.enrage_data.enraged then
+								
+			if data.char_tweak.walk_only then
+				speed = "walk"
+			elseif not data.enrage_data or not data.enrage_data.enraged then
 				speed = enemy_dis < run_dist and "walk" or speed
 			end
 			
@@ -527,7 +529,9 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 
 							my_data.chase_path = retreat_path
 							
-							if LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, "run") then
+							local speed = data.char_tweak.walk_only and "walk" or "run"
+							
+							if LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed) then
 								my_data.defensive_move = true
 								my_data.cover_test_step = 0
 								my_data.at_shoot_pos = nil
@@ -625,8 +629,10 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 								local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
 								local run_dist = enemy_visible and 800 or 400
 								local speed = "run"
-			
-								if not data.enrage_data or not data.enrage_data.enraged then
+								
+								if data.char_tweak.walk_only then
+									speed = "walk"
+								elseif not data.enrage_data or not data.enrage_data.enraged then
 									speed = enemy_dis < run_dist and "walk" or speed
 								end
 								
@@ -656,28 +662,6 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 				LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 				
 				return
-			end
-		end
-	
-		local current_haste = my_data.advancing and my_data.advancing:haste()
-
-		if current_haste then
-			local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
-			local run_dist = enemy_visible and 700 or 300
-			local change_speed = nil
-
-			if current_haste == "run" then
-				if enemy_dis < run_dist then
-					change_speed = "walk"
-				else
-					change_speed = false
-				end
-			else
-				change_speed = run_dist <= enemy_dis and "run"
-			end
-
-			if change_speed then
-				LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 			end
 		end
 	end

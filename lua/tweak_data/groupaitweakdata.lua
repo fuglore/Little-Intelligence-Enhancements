@@ -178,7 +178,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 1,
 							freq = 0.2,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_rush
 						}
@@ -211,7 +211,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 1,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_rush
 						}
@@ -244,7 +244,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 1,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_rush
 						}
@@ -277,7 +277,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 1,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_rush
 						}
@@ -387,7 +387,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.2,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_flank
 						}
@@ -420,7 +420,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_flank
 						}
@@ -453,7 +453,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_flank
 						}
@@ -486,7 +486,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.5,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_R870",
 							tactics = self._tactics.swat_shotgun_flank
 						}
@@ -596,7 +596,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.2,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_M4",
 							tactics = self._tactics.swat_rifle
 						}
@@ -629,7 +629,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_M4",
 							tactics = self._tactics.swat_rifle
 						}
@@ -662,7 +662,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.35,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_M4",
 							tactics = self._tactics.swat_rifle
 						}
@@ -695,7 +695,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 0,
 							freq = 0.5,
 							amount_max = 1,
-							rank = 2,
+							rank = 1,
 							unit = "medic_M4",
 							tactics = self._tactics.swat_rifle
 						}
@@ -708,6 +708,30 @@ function GroupAITweakData:_LIES_setup()
 			self._LIES_fix = true
 		end
 	end
+	
+	self.enemy_spawn_groups.Phalanx = {
+		amount = {
+			self.phalanx.minions.amount + 1,
+			self.phalanx.minions.amount + 1
+		},
+		spawn = {
+			{
+				amount_min = 1,
+				freq = 1,
+				amount_max = 1,
+				rank = 1, --equal ranks so they wait for eachother
+				unit = "Phalanx_vip",
+				tactics = self._tactics.Phalanx_vip
+			},
+			{
+				freq = 1,
+				amount_min = 1,
+				rank = 1,
+				unit = "Phalanx_minion",
+				tactics = self._tactics.Phalanx_minion
+			}
+		}
+	}
 	
 	if LIES.settings.hhtacs then
 		log("LIES: Initializing Hyper Taktikz. Poggers.")
@@ -1040,7 +1064,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.2,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.swat_rifle_flank
 					}
@@ -1073,7 +1097,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.swat_rifle_flank
 					}
@@ -1106,7 +1130,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.swat_rifle_flank
 					}
@@ -1139,7 +1163,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.swat_rifle_flank
 					}
@@ -1257,7 +1281,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.2,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.shield_support_ranged
 					}
@@ -1298,7 +1322,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.shield_support_ranged
 					}
@@ -1339,7 +1363,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.shield_support_ranged
 					}
@@ -1380,7 +1404,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.5,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_M4",
 						tactics = self._tactics.shield_support_ranged
 					}
@@ -1498,7 +1522,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.2,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_R870",
 						tactics = self._tactics.shield_support_charge
 					}
@@ -1539,7 +1563,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_R870",
 						tactics = self._tactics.shield_support_charge
 					}
@@ -1580,7 +1604,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.35,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_R870",
 						tactics = self._tactics.shield_support_charge
 					}
@@ -1621,7 +1645,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 0,
 						freq = 0.5,
 						amount_max = 1,
-						rank = 2,
+						rank = 1,
 						unit = "medic_R870",
 						tactics = self._tactics.shield_support_charge
 					}
@@ -1868,7 +1892,127 @@ function GroupAITweakData:_LIES_setup()
 				}
 			}
 		end
-				
+		
+		if difficulty_index <= 2 then
+			self.enemy_spawn_groups.tac_bull_rush = {
+				amount = {
+					1,
+					1
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_tank",
+						tactics = self._tactics.tank_rush
+					}
+				}
+			}
+		elseif difficulty_index == 3 then
+			self.enemy_spawn_groups.tac_bull_rush = {
+				amount = {
+					1,
+					1
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_tank",
+						tactics = self._tactics.tank_rush
+					}
+				}
+			}
+		elseif difficulty_index == 4 then
+			self.enemy_spawn_groups.tac_bull_rush = {
+				amount = {
+					1,
+					1
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_tank",
+						tactics = self._tactics.tank_rush
+					}
+				}
+			}
+		elseif difficulty_index == 5 then
+			self.enemy_spawn_groups.tac_bull_rush = {
+				amount = {
+					1,
+					1
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_tank",
+						tactics = self._tactics.tank_rush
+					}
+				}
+			}
+		elseif difficulty_index == 6 then
+			self.enemy_spawn_groups.tac_bull_rush = {
+				amount = {
+					1,
+					1
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 1,
+						rank = 3,
+						unit = "FBI_tank",
+						tactics = self._tactics.tank_rush
+					}
+				}
+			}
+		else
+			self.enemy_spawn_groups.tac_bull_rush = {
+				amount = {
+					4,
+					4
+				},
+				spawn = {
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 2,
+						rank = 3,
+						unit = "FBI_tank",
+						tactics = self._tactics.tank_rush
+					},
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 2,
+						rank = 1,
+						unit = "FBI_swat_R870",
+						tactics = self._tactics.tank_rush
+					},
+					{
+						amount_min = 1,
+						freq = 1,
+						amount_max = 2,
+						rank = 2,
+						unit = "FBI_heavy_R870",
+						tactics = self._tactics.tank_rush
+					}
+				}
+			}
+		end
+		
 		local access_type_all = {
 			acrobatic = true,
 			walk = true
@@ -2216,15 +2360,15 @@ function GroupAITweakData:_LIES_setup()
 							respawn_cooldown = 30,
 							amount_min = 1,
 							amount_max = 1,
-							rank = 1,
+							rank = 2,
 							freq = 1,
 							unit = "marshal_shield",
-							tactics = self._tactics.marshal_shield
+							tactics = self._tactics.marshal_marksman
 						},
 						{
 							respawn_cooldown = 30,
 							amount_min = 1,
-							rank = 2,
+							rank = 1,
 							freq = 1,
 							unit = "marshal_marksman",
 							tactics = self._tactics.marshal_marksman
@@ -2250,15 +2394,15 @@ function GroupAITweakData:_LIES_setup()
 							respawn_cooldown = 30,
 							amount_min = 1,
 							amount_max = 1,
-							rank = 1,
+							rank = 2,
 							freq = 1,
 							unit = "marshal_shield",
-							tactics = self._tactics.marshal_shield
+							tactics = self._tactics.marshal_marksman
 						},
 						{
 							respawn_cooldown = 30,
 							amount_min = 1,
-							rank = 2,
+							rank = 1,
 							freq = 1,
 							unit = "marshal_marksman",
 							tactics = self._tactics.marshal_marksman
@@ -2577,13 +2721,13 @@ function GroupAITweakData:_LIES_setup()
 					max_nr_simultaneous_groups = 1,
 					initial_spawn_delay = 180,
 					amount = {
-						4,
-						4
+						2,
+						2
 					},
 					spawn = {
 						{
 							respawn_cooldown = 120,
-							amount_min = 4,
+							amount_min = 2,
 							rank = 1,
 							freq = 1,
 							unit = "spooc_refless",
@@ -2928,13 +3072,13 @@ function GroupAITweakData:_LIES_setup()
 					max_nr_simultaneous_groups = 1,
 					initial_spawn_delay = 180,
 					amount = {
-						4,
-						4
+						2,
+						2
 					},
 					spawn = {
 						{
 							respawn_cooldown = 120,
-							amount_min = 4,
+							amount_min = 2,
 							rank = 1,
 							freq = 1,
 							unit = "spooc_refless",
@@ -3121,13 +3265,13 @@ function GroupAITweakData:_LIES_setup()
 						max_nr_simultaneous_groups = 1,
 						initial_spawn_delay = 180,
 						amount = {
-							4,
-							4
+							2,
+							2
 						},
 						spawn = {
 							{
 								respawn_cooldown = 120,
-								amount_min = 4,
+								amount_min = 2,
 								rank = 1,
 								freq = 1,
 								unit = "spooc_refless",

@@ -69,6 +69,12 @@ function CopBase:default_weapon_name(selection_name)
 				self._unit:movement()._action_common_data.char_tweak = char_tweaks
 			end
 		end
+		
+		if self._tweak_table == "spooc" then
+			if difficulty_index > 6 then
+				m_weapon_id = "s552"
+			end
+		end
 	
 		if not LIES.smg_groups then
 			LIES.smg_groups = {}

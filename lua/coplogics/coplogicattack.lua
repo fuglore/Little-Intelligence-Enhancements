@@ -423,8 +423,10 @@ function CopLogicAttack._upd_combat_movement(data)
 				my_data.charge_path = nil
 				local haste = "walk"
 				
-				if data.tactics and data.tactics.charge or aggro_level > 2 then
-					haste = "run"
+				if not data.char_tweak.walk_only then
+					if data.tactics and data.tactics.charge or aggro_level > 2 then
+						haste = "run"
+					end
 				end
 				
 				action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, haste)
@@ -520,9 +522,11 @@ function CopLogicAttack._upd_combat_movement(data)
 					local path = my_data.charge_path
 					my_data.charge_path = nil
 					local haste = "walk"
-					
-					if data.tactics and data.tactics.charge or aggro_level > 2 then
-						haste = "run"
+				
+					if not data.char_tweak.walk_only then
+						if data.tactics and data.tactics.charge or aggro_level > 2 then
+							haste = "run"
+						end
 					end
 					
 					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, haste)
@@ -802,9 +806,9 @@ function CopLogicAttack._upd_aim(data, my_data)
 			if my_data.low_value_att or data.unit:anim_data().run and my_data.weapon_range.close < focus_enemy.dis and not (data.tactics and data.tactics.sniper) then
 				walk_action = my_data.advancing 
 			
-				if walk_action and walk_action._init_called and walk_action._cur_vel >= 0.1 and not walk_action:stopping() then --do this properly
-					local pos_for_dir = walk_action._footstep_pos or walk_action._last_pos
-					walk_dir = pos_for_dir - walk_action._common_data.pos
+				if walk_action and walk_action._init_called and walk_action._footstep_pos  then --do this properly
+					local pos_for_dir = walk_action._footstep_pos
+					walk_dir = pos_for_dir - data.m_pos
 					walk_dir = walk_dir:with_z(0):normalized()
 
 					mvec3_dir(temp_vec2, data.m_pos, focus_enemy.m_pos)
@@ -820,14 +824,8 @@ function CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
 		
-		local firing_range = 500
+		local firing_range = running and my_data.weapon_range.close or my_data.weapon_range.far
 
-		if data.internal_data.weapon_range then
-			firing_range = running and data.internal_data.weapon_range.close or data.internal_data.weapon_range.far
-		else
-			debug_pause_unit(data.unit, "[CopLogicAttack]: Unit doesn't have data.internal_data.weapon_range")
-		end
-	
 		if focus_enemy.verified or focus_enemy.nearly_visible then
 			if aim == nil and AIAttentionObject.REACT_AIM <= focus_enemy.reaction then
 				if AIAttentionObject.REACT_SHOOT <= focus_enemy.reaction then
@@ -869,7 +867,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 					if time_since_verification < math.lerp(5, 1, math.max(0, focus_enemy.verified_dis - 500) / 600) then
 						aim = true
 					end
-				elseif time_since_verification < 5 then
+				elseif time_since_verification < 10 then
 					aim = true
 				end
 
@@ -939,6 +937,13 @@ function CopLogicAttack._upd_aim(data, my_data)
 
 				my_data.attention_unit = focus_enemy.u_key
 			end
+		elseif focus_enemy.nearly_visible then
+			local look_pos = focus_enemy.verified_pos
+			if my_data.attention_unit ~= look_pos then
+				CopLogicBase._set_attention_on_pos(data, mvector3.copy(look_pos))
+
+				my_data.attention_unit = mvector3.copy(look_pos)
+			end
 		else
 			local look_pos = focus_enemy.last_verified_pos or focus_enemy.verified_pos
 
@@ -974,14 +979,15 @@ function CopLogicAttack._upd_aim(data, my_data)
 		if my_data.advancing then
 			local walk_action = my_data.advancing 
 			
-			if not walk_action._expired and walk_action._init_called and walk_action._cur_vel >= 0.1 and not walk_action:stopping() then --did the init get fucking called properly? yes? please start checking the walk direction
-				local walk_pos = mvector3.copy(data.unit:movement():m_head_pos())
-				local pos_for_dir = walk_action._footstep_pos or walk_action._last_pos
-				local walk_dir_pos = pos_for_dir - walk_action._common_data.pos
+			if not walk_action._expired and walk_action._init_called and walk_action._footstep_pos then --did the init get fucking called properly? yes? please start checking the walk direction
+				local walk_pos = mvector3.copy(data.m_pos)
+				local pos_for_dir = walk_action._footstep_pos
+				local walk_dir_pos = pos_for_dir - walk_pos
 				mvec3_norm(walk_dir_pos)
 				mvec3_mul(walk_dir_pos, 500)
 
 				mvec3_add(walk_pos, walk_dir_pos)
+				mvec3_add(walk_pos, math.UP * 165)
 	
 				if my_data.attention_unit ~= walk_pos then
 					CopLogicBase._set_attention_on_pos(data, mvector3.copy(walk_pos))
@@ -1852,10 +1858,12 @@ function CopLogicAttack._chk_request_action_walk_to_cover_offset_pos(data, my_da
 		end
 	until travel_dis > 160000 or i >= #path
 	
-	if travel_dis > 40000 then
-		haste = "run"
+	if not data.char_tweak.walk_only then
+		if travel_dis > 40000 then
+			haste = "run"
+		end
 	end
-	
+		
 	if travel_dis > 160000 then
 		pose = "stand"
 	else
@@ -1919,8 +1927,10 @@ function CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
 		end
 	until travel_dis > 160000 or i >= #my_data.cover_path
 	
-	if travel_dis > 40000 then
-		haste = "run"
+	if not data.char_tweak.walk_only then
+		if travel_dis > 40000 then
+			haste = "run"
+		end
 	end
 	
 	if travel_dis > 160000 then
@@ -2074,11 +2084,7 @@ function CopLogicAttack._upd_stop_old_action(data, my_data)
 end
 
 function CopLogicAttack._find_friend_pos(data, my_data)
-	local look_for_shields
-			
-	if data.tactics and data.tactics.shield_cover then
-		look_for_shields = true
-	end
+	local look_for_shields = true
 	
 	local best_pos, best_dis, has_shield, has_medic, has_tank, chosen_u_data, best_rank
 	local m_tracker = data.unit:movement():nav_tracker()

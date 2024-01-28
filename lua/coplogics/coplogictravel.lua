@@ -260,6 +260,8 @@ function CopLogicTravel._pathing_complete_clbk(data)
 end
 
 function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
+	my_data.waiting_for_navlink = nil
+
 	if not data.cool and not CopLogicTravel.chk_group_ready_to_move(data, my_data) then
 		return
 	end
@@ -286,10 +288,10 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 				if type(i_door) == "number" then
 					entry_found = true
 					break
-				elseif alive(i_door) and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then		
+				elseif alive(i_door) and not i_door:is_obstructed() and i_door:delay_time() <= TimerManager:game():time() and i_door:check_access(data.char_tweak.access) then		
 					entry_found = true
 					break
-				elseif alive(i_door) then
+				elseif alive(i_door) and not i_door:is_obstructed() and i_door:check_access(data.char_tweak.access) then
 					if not best_delay_t or i_door:delay_time() < best_delay_t then
 						entry_found = nil
 						best_delay_t = i_door:delay_time()
@@ -305,8 +307,6 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 		end
 	end
 	
-	my_data.waiting_for_navlink = nil
-	
 	local index_to_go_to = my_data.coarse_path_index + 1
 	
 	if my_data.allow_long_path then
@@ -315,15 +315,13 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 		local this_dis
 		
 		if data.group and table.size(data.group.units) > 1 then
-			max_dis = 1322500
+			max_dis = 640000
 			total_dis = 0
 		end
 	
 		for i = index_to_go_to + 1, #my_data.coarse_path do
 			if my_data.coarse_path[i][3] or my_data.coarse_path[i][4] then
-				index_to_go_to = i - 1
-				
-				break
+				break	
 			end
 			
 			if i == #my_data.coarse_path then
@@ -333,6 +331,12 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 			end
 			
 			if max_dis then
+				if my_data.coarse_path[i - 1][3] or my_data.coarse_path[i - 1][4] then --gotta wait for my team
+					index_to_go_to = i
+					
+					break
+				end
+			
 				this_dis = mvec3_dis_sq(my_data.coarse_path[i - 1][2], my_data.coarse_path[i][2])
 				
 				if this_dis <= max_dis then
@@ -476,7 +480,7 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 
 	local my_objective = data.objective
 
-	if not my_objective.grp_objective or my_objective.grp_objective.type == "retire" then
+	if not my_objective.grp_objective or my_objective.grp_objective.type == "retire" or my_objective.type == "phalanx" then
 		return true
 	end
 	
@@ -488,50 +492,57 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 		return true
 	end
 	
-	my_dis = my_dis * 1.1 * 1.1
+	my_dis = my_dis * 1.15 * 1.15
 	
-	local can_continue = true	
+	local can_continue = true
+	local say_follow = true
 	local my_tracker = data.unit:movement():nav_tracker()
 	local m_tracker_pos = my_tracker:field_position()
+	local all_police = managers.enemy:all_enemies()
+	local m_rank = all_police[data.key].rank
 
 	for u_key, u_data in pairs(data.group.units) do
 		if u_key ~= data.key then
 			local his_brain = u_data.unit:brain()
 			local his_objective = his_brain:objective()
 
-			if his_objective and his_objective.grp_objective == my_objective.grp_objective and his_objective.area and not his_objective.in_place then
-				local his_pos = u_data.unit:movement():nav_tracker():field_position()
-				local dis_to_me = mvec3_dis(his_pos, m_tracker_pos) 
-				local z_dis = math.abs(his_pos.z - m_tracker_pos.z)
+			if his_objective and not his_objective.is_default and his_objective.grp_objective == my_objective.grp_objective and his_objective.area and not his_objective.in_place then
+				local his_tracker = u_data.unit:movement():nav_tracker()
+				local his_pos = his_tracker:field_position()
+				local his_rank = all_police[u_key].rank
 				
-				if dis_to_me > 640000 or z_dis >= 250 then
-					local his_dis = mvec3_dis(his_objective.area.pos, his_pos)
-					
-					if my_dis < his_dis then
-						can_continue = nil
-						
-						break
+				if m_rank and his_rank then --dead cops can sometimes have data, but no rank assigned, gotta check for that here
+					if his_rank > m_rank then --higher ranks go first
+						if my_tracker:nav_segment() == his_tracker:nav_segment() then
+							if not his_brain:is_advancing() then
+								say_follow = nil
+								can_continue = nil
+								
+								break
+							end
+						end
 					end
-					
-					local his_logic_data = his_brain._logic_data
-				
-					if his_logic_data and his_logic_data._internal_data and his_logic_data._internal_data.cover_leave_t then
-						can_continue = nil
-						
-						break
-					end
-					
-					if his_logic_data.next_mov_time and his_logic_data.next_mov_time > his_logic_data.t then
-						can_continue = nil
+				end
 
-						break
+				if my_tracker:nav_segment() ~= his_tracker:nav_segment() then
+					local dis_to_me = mvec3_dis(his_pos, m_tracker_pos) 
+					local z_dis = math.abs(his_pos.z - m_tracker_pos.z)
+					
+					if dis_to_me > 640000 or z_dis >= 150 then
+						local his_dis = mvec3_dis(his_objective.area.pos, his_pos)
+						
+						if my_dis < his_dis then
+							can_continue = nil
+							
+							break
+						end
 					end
 				end
 			end
 		end
 	end
 	
-	if not can_continue then
+	if not can_continue and say_follow then
 		if data.char_tweak.chatter and data.char_tweak.chatter.ready then
 			managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "follow_me")
 		end
@@ -547,17 +558,46 @@ function CopLogicTravel._chk_begin_advance(data, my_data)
 
 	local objective = data.objective
 	local haste = nil
-
-	if objective and objective.haste then
-		haste = objective.haste
-	elseif data.unit:movement():cool() then
-		haste = "walk"
-	else
-		haste = "run"
-	end
-
 	local pose = nil
-	pose = not data.char_tweak.crouch_move and "stand" or data.char_tweak.allowed_poses and not data.char_tweak.allowed_poses.stand and "crouch" or "stand"
+	
+	if not data.cool and data.group then
+		local group_leader_key, group_leader_data = managers.groupai:state()._determine_group_leader(data.group.units)
+		
+		if group_leader_key and group_leader_key ~= data.key then
+			pose = not group_leader_data.char_tweak.crouch_move and "stand" or group_leader_data.char_tweak.allowed_poses and not group_leader_data.char_tweak.allowed_poses.stand and "crouch" or group_leader_data.char_tweak.walk_only and "walk" or "stand"
+			haste = group_leader_data.char_tweak.walk_only and "walk"
+			
+			local upper_body_action = data.unit:movement()._active_actions[3]
+
+			if not upper_body_action or upper_body_action:type() ~= "shoot" then
+				if group_leader_data.char_tweak.allowed_stances and not data.char_tweak.allowed_stances then
+					for stance_name, state in pairs(group_leader_data.char_tweak.allowed_stances) do
+						if state then
+							data.unit:movement():set_stance(stance_name)
+
+							break
+						end
+					end
+				end
+			end
+				
+		end
+	end
+	
+	pose = not data.char_tweak.crouch_move and "stand" or data.char_tweak.allowed_poses and not data.char_tweak.allowed_poses.stand and "crouch" or pose
+	pose = pose or "stand"
+	
+	if not haste then
+		if data.char_tweak.walk_only then
+			haste = "walk"
+		elseif objective and objective.haste then
+			haste = objective.haste
+		elseif data.unit:movement():cool() then
+			haste = "walk"
+		else
+			haste = "run"
+		end
+	end
 
 	if not data.unit:anim_data()[pose] then
 		CopLogicAttack["_chk_request_action_" .. pose](data)
@@ -1244,6 +1284,19 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		logic.register_in_group_ai(data.unit)
 
 		local phalanx_circle_pos = logic.calc_initial_phalanx_pos(data.m_pos, objective)
+		
+		if data.unit:base()._tweak_table == "phalanx_minion" then
+			local rsrv_desc = {
+				filter = data.pos_rsrv_id,
+				radius = 30,
+				position = phalanx_circle_pos
+			}
+		
+			if not managers.navigation:is_pos_free(rsrv_desc) then
+				phalanx_circle_pos = CopLogicTravel._get_pos_on_wall(phalanx_circle_pos, nil, nil, nil, nil, data.pos_rsrv_id)
+			end
+		end
+		
 		occupation = {
 			type = "defend",
 			seg = objective.nav_seg,
@@ -1710,14 +1763,14 @@ function CopLogicTravel._find_cover(data, search_nav_seg, near_pos)
 				local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
 
 				if crim_area == search_area then
-					threat_pos = u_data.m_pos
+					threat_pos = u_data.unit:movement():m_head_pos()
 
 					break
 				else
 					local crim_dis = mvector3.distance_sq(near_pos, u_data.m_pos)
 
 					if not closest_crim_dis or crim_dis < closest_crim_dis then
-						threat_pos = u_data.m_pos
+						threat_pos = u_data.unit:movement():m_head_pos()
 						closest_crim_dis = crim_dis
 					end
 				end
@@ -1801,12 +1854,18 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 		local area = managers.groupai:state():get_area_from_nav_seg_id(nav_seg)	
 		local cover
 		
-		if not data.cool then
+		if not data.cool and not data.char_tweak.allowed_poses then
 			local end_pos = coarse_path[nav_index + 1][2]
 			local walk_dir = end_pos - data.m_pos
 			local walk_dis = mvector3.normalize(walk_dir)
 			local cover_range = math.min(700, math.max(0, walk_dis - 100))
-			cover = managers.navigation:find_cover_near_pos_1(end_pos, end_pos + walk_dir * 700, cover_range, cover_range)
+
+			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				local threat_pos = data.attention_obj.m_head_pos
+				cover = managers.navigation:find_cover_from_threat(nav_seg, cover_range, end_pos, threat_pos)
+			else
+				cover = managers.navigation:find_cover_in_nav_seg_2(nav_seg, end_pos, walk_dir)
+			end
 		end
 
 		if my_data.moving_to_cover then
@@ -1980,11 +2039,10 @@ function CopLogicTravel.queue_update(data, my_data, delay)
 	end
 	
 	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CopLogicTravel.queued_update, data, data.t + delay, data.important and true)
-	
-	my_data.waiting_for_navlink = nil
 end
 
 function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_recurse, pos_rsrv_id)
+	local is_recurse = is_recurse or 2
 	local nav_manager = managers.navigation
 	local nr_rays = 9
 	local ray_dis = max_dist or 1000
@@ -2050,8 +2108,8 @@ function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_rec
 		return fail_position
 	end
 
-	if not is_recurse then
-		return CopLogicTravel._get_pos_on_wall(from_pos, ray_dis * 0.5, offset + step * 0.5, true, pos_rsrv_id)
+	if is_recurse > 0 then
+		return CopLogicTravel._get_pos_on_wall(from_pos, ray_dis * 0.5, offset + step * 0.5, is_recurse - 1, pos_rsrv_id)
 	end
 
 	return from_pos

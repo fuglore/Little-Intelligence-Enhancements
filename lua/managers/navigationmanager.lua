@@ -1166,20 +1166,11 @@ function NavigationManager:_execute_coarce_search(search_data)
 				if type(i_door) == "number" then
 					entry_found = true
 					nav_link_element = nil
-					has_multiple_navlink_elements = nil
 
 					break
 				elseif i_door:check_access(search_data.access_pos, search_data.access_neg) and not i_door:is_obstructed() then
 					entry_found = true
-					
-					if not has_multiple_navlink_elements then
-						if nav_link_element then
-							has_multiple_navlink_elements = true
-							nav_link_element = nil
-						else
-							nav_link_element = i_door
-						end
-					end
+					nav_link_element = i_door
 				end
 			end
 
@@ -1277,7 +1268,7 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ign
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then
-							if weight < found_segs[neighbour_seg_id].weight or found_segs[neighbour_seg_id].nav_link or found_segs[neighbour_seg_id].multiple_nav_links then
+							if weight < found_segs[neighbour_seg_id].weight then
 								found_segs[neighbour_seg_id] = {
 									weight = weight,
 									from = i_seg,
@@ -1314,16 +1305,14 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ign
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then
-							if found_segs[neighbour_seg_id].nav_link or found_segs[neighbour_seg_id].multiple_nav_links then
-								if my_weight < found_segs[neighbour_seg_id].weight then
-									found_segs[neighbour_seg_id] = {
-										weight = my_weight,
-										from = i_seg,
-										i_seg = neighbour_seg_id,
-										pos = end_pos,
-										multiple_nav_links = true
-									}
-								end
+							if my_weight < found_segs[neighbour_seg_id].weight then
+								found_segs[neighbour_seg_id] = {
+									weight = my_weight,
+									from = i_seg,
+									i_seg = neighbour_seg_id,
+									pos = end_pos,
+									nav_link = i_door
+								}
 							end
 						else
 							found_segs[neighbour_seg_id] = {

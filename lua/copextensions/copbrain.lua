@@ -102,6 +102,31 @@ function CopBrain:upd_falloff_sim()
 	self._current_logic.upd_falloff_sim(self._logic_data)
 end
 
+function CopBrain:check_upd_aim()
+	if self._unit:character_damage():dead() then
+		return
+	end
+	
+	if self._current_logic_name == "disabled" or self._current_logic_name == "arrest" then
+		return
+	end
+	
+	if not self._logic_data.internal_data or not self._logic_data.internal_data.weapon_range then
+		return
+	end
+	
+	self._logic_data.t = self._timer:time()
+	self._logic_data.dt = self._timer:delta_time()
+	
+	if self._current_logic_name == "attack" then
+		self._logics.attack._upd_aim(self._logic_data, self._logic_data.internal_data)
+	elseif self._current_logic_name == "sniper" then
+		self._current_logic._upd_aim(self._logic_data, self._logic_data.internal_data)
+	else
+		CopLogicAttack._upd_aim(self._logic_data, self._logic_data.internal_data)
+	end
+end
+
 local fbi_3_units = {
 	[Idstring("units/payday2/characters/ene_fbi_3/ene_fbi_3"):key()] = true,
 	[Idstring("units/pd2_dlc_hvh/characters/ene_fbi_hvh_3/ene_fbi_hvh_3"):key()] = true
@@ -153,7 +178,11 @@ local smgs = {
 	mp5 = true,
 	ump = true,
 	akmsu_smg = true,
-	mp9 = true
+	mp9 = true,
+	asval_smg = true,
+	akmsu_smg = true,
+	mp5_tactical = true,
+	sr2_smg = true
 }
 
 function CopBrain:_do_hhtacs_damage_modifiers()
@@ -224,7 +253,7 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 				end
 			end
 		elseif difficulty_index == 8 then
-			if self._unit:base()._current_weapon_id == "g36" then
+			if self._unit:base()._current_weapon_id == "g36" or self._unit:base()._current_weapon_id == "smoke" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --g36 users deal 75 damage with "good" preset compared to zeal's 90
 			elseif self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2) --90

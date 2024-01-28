@@ -21,6 +21,7 @@ Hooks:PostHook(CharacterTweakData, "init", "lies_fix_nosup", function(self, twea
 	self.tank.chatter.entrance = "entrance"
 	self.tank_hw.chatter.entrance = "entrance"
 	self.tank_mini.chatter.entrance = "entrance"
+	self.tank_mini.walk_only = true
 	self.tank_medic.chatter.entrance = "entrance"
 end)
 

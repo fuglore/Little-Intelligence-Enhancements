@@ -135,9 +135,14 @@ function CivilianLogicEscort._begin_advance_action(data, my_data)
 		body_part = 2,
 		nav_path = my_data.advance_path,
 		path_simplified = my_data.path_is_precise,
-		variant = haste,
-		end_rot = objective.rot
+		variant = haste
 	}
+	local going_to_index = my_data.coarse_path_index + 1
+	
+	if my_data.coarse_path and going_to_index == #my_data.coarse_path then
+		new_action_data.end_rot = objective.rot
+	end
+	
 	my_data.advancing = data.unit:brain():action_request(new_action_data)
 
 	if my_data.advancing then

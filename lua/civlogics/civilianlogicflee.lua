@@ -230,6 +230,33 @@ function CivilianLogicFlee.on_alert(data, alert_data)
 	CivilianLogicFlee._run_away_from_alert(data, alert_data)
 end
 
+function CivilianLogicFlee.on_intimidated(data, amount, aggressor_unit)
+	if not data.char_tweak.intimidateable or data.unit:base().unintimidateable or data.unit:anim_data().unintimidateable then
+		return
+	end
+
+	local my_data = data.internal_data
+	
+	if data.unit:anim_data().move then
+		local params = {
+			data,
+			amount,
+			aggressor_unit
+		}
+	
+		CivilianLogicFlee._delayed_intimidate_clbk(nil, params)
+	elseif not my_data.delayed_intimidate_id then
+		my_data.delayed_intimidate_id = "intimidate" .. tostring(data.key)
+		local delay = 1 - amount + math.random() * 0.2
+
+		CopLogicBase.add_delayed_clbk(my_data, my_data.delayed_intimidate_id, callback(CivilianLogicFlee, CivilianLogicFlee, "_delayed_intimidate_clbk", {
+			data,
+			amount,
+			aggressor_unit
+		}), TimerManager:game():time() + delay)
+	end
+end
+
 function CivilianLogicFlee.post_react_alert_clbk(shait, params)
 	local data = params.data
 	local alert_data = params.alert_data
@@ -403,7 +430,11 @@ function CivilianLogicFlee._find_hide_cover(data)
 			return
 		end
 	end
-
+	
+	if not my_data.panic_area then
+		my_data.panic_area = managers.groupai:state():get_area_from_nav_seg_id(data.unit:movement():nav_tracker():nav_segment())
+	end
+	
 	local cover = managers.navigation:find_cover_away_from_pos(data.m_pos, avoid_pos, my_data.panic_area.nav_segs)
 
 	if cover then
@@ -673,7 +704,7 @@ function CivilianLogicFlee.clbk_chk_call_the_police(ignore_this, data)
 
 	my_data.call_police_clbk_id = nil
 
-	if managers.groupai:state():is_police_called() then
+	if managers.groupai:state():is_police_called() or not data.unit:movement():nav_tracker() or not alive(data.unit:movement():nav_tracker()) then
 		return
 	end
 

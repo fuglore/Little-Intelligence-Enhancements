@@ -6,6 +6,8 @@ Hooks:PostHook(CopMovement, "_upd_actions", "lies_actions", function(self, t)
 	if LIES.settings.hhtacs then
 		self._unit:brain():upd_falloff_sim()
 	end
+	
+	self._unit:brain():check_upd_aim()
 end)
 
 function CopMovement:force_upd_z_ray()

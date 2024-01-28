@@ -311,7 +311,7 @@ function CivilianLogicSurrender._update_enemy_detection(data, my_data)
 	elseif not data.unit:anim_data().drop and data.char_tweak.faster_reactions then
 		my_data.submission_meter = 0
 	else
-		local subtract = data.char_tweak.faster_reactions and delta_t * 2 or delta_t
+		local subtract = data.char_tweak.faster_reactions and delta_t * 1.25 or delta_t
 		my_data.submission_meter = math.max(0, my_data.submission_meter - subtract)
 	end
 

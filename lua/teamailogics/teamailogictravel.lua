@@ -36,6 +36,7 @@ function TeamAILogicTravel.enter(data, new_logic_name, enter_params)
 	my_data.advance_path_search_id = "TeamAILogicTravel_detailed" .. tostring(data.key)
 	my_data.coarse_path_search_id = "TeamAILogicTravel_coarse" .. tostring(data.key)
 	my_data.path_ahead = data.team.id == tweak_data.levels:get_default_team_ID("player")
+	my_data.allow_long_path = true
 
 	if data.objective then
 		my_data.called = data.objective.called and true

@@ -704,7 +704,7 @@ function CivilianLogicFlee.clbk_chk_call_the_police(ignore_this, data)
 
 	my_data.call_police_clbk_id = nil
 
-	if managers.groupai:state():is_police_called() or not data.unit:movement():nav_tracker() or not alive(data.unit:movement():nav_tracker()) then
+	if managers.groupai:state():is_police_called() or not alive(data.unit) then
 		return
 	end
 
@@ -726,6 +726,8 @@ function CivilianLogicFlee.clbk_chk_call_the_police(ignore_this, data)
 		local call_t = math.max(data.call_police_delay_t or 0, TimerManager:game():time() + 0.5)
 
 		CopLogicBase.add_delayed_clbk(my_data, my_data.call_police_clbk_id, callback(CivilianLogicFlee, CivilianLogicFlee, "clbk_chk_call_the_police", data), call_t)
+		
+		return
 	elseif not already_calling and (not my_data.calling_the_police or not data.unit:movement():chk_action_forbidden("walk")) then
 		local action = {
 			variant = "cmf_so_call_police",

@@ -714,7 +714,17 @@ function CopLogicTravel.upd_advance(data)
 		}
 
 		if unit:movement():action_request(action_desc) then
-			CopLogicTravel._on_destination_reached(data)
+			if objective then
+				CopLogicTravel._on_destination_reached(data)
+				
+				return
+			else
+				local wanted_state = data.logic._get_logic_state_from_reaction(data) or "idle"
+
+				CopLogicBase._exit(data.unit, wanted_state)
+				
+				return
+			end
 		end
 	elseif my_data.advancing then
 		if not my_data.old_action_advancing and my_data.coarse_path then

@@ -285,6 +285,14 @@ function CivilianLogicIdle.is_obstructed(data, aggressor_unit)
 	if data.unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().act_idle then
 		return
 	end
+	
+	local objective = data.objective
+	
+	if objective then ---FFFFFFFFFFFFFFFUCK.
+		if objective.forced or (data.char_tweak.is_escort or data.unit:base()._tweak_table == "drunk_pilot") and objective.element and (objective.nav_seg or objective.pos) then
+			return
+		end
+	end
 
 	if not objective or objective.is_default or (objective.in_place or not objective.nav_seg or objective.type == "free") and not objective.action and not objective.action_duration then
 		return true

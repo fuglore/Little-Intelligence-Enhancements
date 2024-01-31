@@ -54,7 +54,7 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 
 	CivilianLogicFlee._chk_add_delayed_rescue_SO(data, my_data)
 
-	if data.objective and data.objective.was_rescued or not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and managers.groupai:state():is_police_called() then
+	if data.objective and data.objective.was_rescued or not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and not data.char_tweak.is_escort and not data.unit:base()._tweak_table == "drunk_pilot" and managers.groupai:state():is_police_called() then
 		local was_freed = data.objective and data.objective.was_rescued ~= nil
 		
 		if data.objective then
@@ -662,7 +662,7 @@ function CivilianLogicFlee._unregister_rescue_SO(data, my_data)
 end
 
 function CivilianLogicFlee._run_away_from_alert(data, alert_data)
-	if not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and managers.groupai:state():is_police_called() then --faster reactions = just book it
+	if not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and not data.char_tweak.is_escort and not data.unit:base()._tweak_table == "drunk_pilot" and managers.groupai:state():is_police_called() then --faster reactions = just book it
 		if CivilianLogicFlee._get_coarse_flee_path(data) then
 			data.unit:brain():set_update_enabled_state(true)
 			

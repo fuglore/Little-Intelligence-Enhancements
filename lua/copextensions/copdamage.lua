@@ -22,10 +22,8 @@ function CopDamage:damage_explosion(attack_data)
 	end
 	
 	orig_func(self, attack_data)
-end
-
-Hooks:PostHook(CopDamage, "_on_damage_received", "lies_pain_lines", function(self, damage_info)
-	if damage_info.variant == "stun" then
+	
+	if attack_data.variant == "stun" then
 		local t = TimerManager:game():time()
 		
 		if not self._last_said_ecm_t or t - self._last_said_ecm_t > 10 then
@@ -34,4 +32,4 @@ Hooks:PostHook(CopDamage, "_on_damage_received", "lies_pain_lines", function(sel
 			end
 		end
 	end
-end)
+end

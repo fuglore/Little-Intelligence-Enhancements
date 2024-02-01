@@ -288,8 +288,8 @@ function CivilianLogicIdle.is_obstructed(data, aggressor_unit)
 	
 	local objective = data.objective
 	
-	if objective then ---FFFFFFFFFFFFFFFUCK.
-		if objective.forced or (data.char_tweak.is_escort or data.unit:base()._tweak_table == "drunk_pilot") and objective.element and (objective.nav_seg or objective.pos) then
+	if objective and not objective.is_default then ---FFFFFFFFFFFFFFFUCK.
+		if (data.char_tweak.is_escort or data.unit:base()._tweak_table == "drunk_pilot") and objective.element and (objective.nav_seg or objective.pos) then
 			return
 		end
 	end

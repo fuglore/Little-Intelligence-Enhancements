@@ -294,7 +294,7 @@ function CivilianLogicIdle.is_obstructed(data, aggressor_unit)
 		end
 	end
 
-	if not objective or objective.is_default or (objective.in_place or not objective.nav_seg or objective.type == "free") and not objective.action and not objective.action_duration then
+	if not objective or objective.is_default or (objective.in_place or not objective.nav_seg or objective.type == "free" and not objective.pos) and not objective.action and not objective.action_duration and not objective.followup_SO and (not objective.followup_objective or not objective.followup_objective.action) then
 		return true
 	end
 

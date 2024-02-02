@@ -354,13 +354,19 @@ function CopLogicIdle.clbk_action_timeout(ignore_this, data)
 	end
 
 	my_data.action_expired = true
-
-	if data.unit:anim_data().act and data.unit:anim_data().needs_idle and not data.unit:anim_data().to_idle then
-		CopLogicIdle._start_idle_action_from_act(data)
-	end
 	
 	if not my_data.detected_criminal then
 		data.objective_complete_clbk(data.unit, data.objective)
+	end
+	
+	if not data.unit:movement():chk_action_forbidden("idle") and data.unit:anim_data().needs_idle then
+		CopLogicIdle._start_idle_action_from_act(data)
+	elseif data.unit:anim_data().act_idle then
+		data.unit:brain():action_request({
+			sync = true,
+			body_part = 2,
+			type = "idle"
+		})
 	end
 end
 
@@ -941,7 +947,7 @@ function CopLogicIdle.is_available_for_assignment(data, objective)
 		return
 	end
 
-	if data.cool then
+	if data.cool or data.unit:anim_data().act_idle then
 		return true
 	else
 		return CopLogicAttack.is_available_for_assignment(data, objective)
@@ -1459,8 +1465,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					elseif has_alerted then
 						target_priority_slot = target_priority_slot - 1
 					end
-					
-					
+
 					local target_vec = temp_vec3
 					mvec3_dir(target_vec, data.m_pos, attention_data.m_pos)
 					mvec3_set_z(target_vec, 0)
@@ -1476,7 +1481,7 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					end
 					
 					if not data.logic._keep_player_focus_t and not visible then
-						target_priority_slot = target_priority_slot + 2
+						target_priority_slot = target_priority_slot + 3
 					elseif data.logic._keep_player_focus_t and not attention_data.is_human_player then
 						target_priority_slot = target_priority_slot + 3
 					end
@@ -1788,7 +1793,7 @@ function CopLogicIdle.on_alert(data, alert_data)
 
 		local action_data = nil
 
-		if was_cool and is_new and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.stand) and AIAttentionObject.REACT_SURPRISED <= att_obj_data.reaction and data.unit:anim_data().idle and not data.unit:movement():chk_action_forbidden("walk") then
+		if was_cool and is_new and (not data.char_tweak.allowed_poses or data.char_tweak.allowed_poses.stand) and AIAttentionObject.REACT_SURPRISED <= att_obj_data.reaction and (data.unit:anim_data().idle or data.unit:anim_data().act_idle) and not data.unit:movement():chk_action_forbidden("walk") then
 			action_data = {
 				variant = "surprised",
 				body_part = 1,
@@ -1796,19 +1801,19 @@ function CopLogicIdle.on_alert(data, alert_data)
 			}
 
 			data.unit:brain():action_request(action_data)
-		elseif not is_new and att_obj_data.is_person and att_obj_data.verified and att_obj_data.crim_record and not att_obj_data.crim_record.gun_called_out and data.char_tweak.chatter.criminalhasgun then
+		elseif not is_new and att_obj_data.is_person and att_obj_data.verified and att_obj_data.criminal_record and not att_obj_data.criminal_record.gun_called_out and data.char_tweak.chatter.criminalhasgun then
 			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
-				new_crim_rec.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
+				att_obj_data.criminal_record.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
 			end
 		end
 
 		if att_obj_data.criminal_record then
 			if data.group then
 				managers.groupai:state():criminal_spotted(alert_unit)
-
-				if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
-					managers.groupai:state():report_aggression(alert_unit)
-				end
+			end
+			
+			if alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" then
+				managers.groupai:state():report_aggression(alert_unit)
 			end
 		end
 	elseif was_cool and (alert_type == "footstep" or alert_type == "bullet" or alert_type == "aggression" or alert_type == "explosion" or alert_type == "vo_cbt" or alert_type == "vo_intimidate" or alert_type == "vo_distress") then

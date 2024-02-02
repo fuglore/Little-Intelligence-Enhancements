@@ -153,7 +153,9 @@ function CopLogicBase.check_sabotage_objective_not_allowed(data, objective)
 	end
 
 	if not objective.action then
-		return
+		if (not objective.followup_objective or not objective.followup_objective.action) and not objective.followup_SO then
+			return
+		end
 	end
 
 	if data.tactics and data.tactics.hrt then
@@ -670,8 +672,8 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 			mvec3_set(side_vec, my_pos)
 			mvec3_sub(side_vec, detect_pos)
 			mvector3.cross(side_vec, side_vec, math.UP)
-			mvector3.set_length(side_vec, 29)
-			mvector3.set(near_pos, detect_pos)
+			mvector3.set_length(side_vec, 30)
+			mvec3_set(near_pos, detect_pos)
 			mvector3.add(near_pos, side_vec)
 
 			near_vis_ray = World:raycast("ray", my_pos, near_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report")
@@ -681,6 +683,13 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 				mvector3.add(near_pos, side_vec)
 
 				near_vis_ray = World:raycast("ray", my_pos, near_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report")
+				
+				if near_vis_ray then
+					mvec3_set(near_pos, detect_pos)
+					mvector3.add(near_pos, math.UP * 30)
+					
+					near_vis_ray = World:raycast("ray", my_pos, near_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report")
+				end
 			end
 		end
 

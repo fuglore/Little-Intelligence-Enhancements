@@ -1164,7 +1164,9 @@ function CopLogicAttack._chk_enrage(data, focus_enemy)
 			end
 			
 			data.unit:sound():play("tire_blow", nil, true)
-			data.unit:sound():play("window_small_shatter", nil, true)
+			data.unit:sound():play("kick_metal_door", nil, true)
+			data.unit:sound():play("security_camera_explode", nil, true)
+			data.unit:sound():play("pot_large_shatter", nil, true)
 			
 			if enrage_data.played_warning then
 				data.unit:sound():play("slot_machine_win", nil, true)
@@ -1174,6 +1176,7 @@ function CopLogicAttack._chk_enrage(data, focus_enemy)
 			enrage_data.enrage_meter = 5
 		elseif not enrage_data.played_warning and enrage_data.enrage_meter > enrage_data.enrage_max * 0.75 then
 			data.unit:sound():play("slot_machine_rolling_loop", nil, true)
+			data.unit:sound():play("light_bulb_smash", nil, true)
 
 			enrage_data.played_warning = true
 		end
@@ -1197,6 +1200,7 @@ function CopLogicAttack._chk_enrage(data, focus_enemy)
 		
 		if enrage_data.played_warning then
 			data.unit:sound():play("slot_machine_loose", nil, true)
+			data.unit:sound():play("trombone_break", nil, true)
 			enrage_data.played_warning = nil
 		end
 	end

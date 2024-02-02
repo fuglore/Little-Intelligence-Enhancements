@@ -541,6 +541,10 @@ function GroupAIStateBesiege:_on_player_slow_pos_rsrv_upd(unit)
 	end
 end
 
+function GroupAIStateBesiege:is_detection_persistent()
+	return self._task_data.assault.active or self._fake_assault_mode
+end
+
 function GroupAIStateBesiege:_register_escort(unit)
 	self._escorts = self._escorts or {}
 	

@@ -40,6 +40,100 @@ local adjust_ids = {
 				"spooc"
 			}
 		}
+	},
+	glace = { --civilian start up SO
+		[100187] = {
+			change_interrupt_dis = false
+		}
+	},
+	born = { --biker idle SOs, NIGHTMARE NIGHTMARE NIGHTMARE
+		[100085] = {
+			interrupt_objective = true
+		},
+		[100529] = {
+			interrupt_objective = true
+		},
+		[101422] = {
+			interrupt_objective = true
+		},
+		[100572] = {
+			interrupt_objective = true
+		},
+		[101418] = {
+			interrupt_objective = true
+		},
+		[101120] = {
+			interrupt_objective = true
+		},
+		[101423] = {
+			interrupt_objective = true
+		},
+		[101657] = {
+			interrupt_objective = true
+		},
+		[102431] = {
+			interrupt_objective = true
+		},
+		[100086] = {
+			interrupt_objective = true
+		},
+		[100076] = {
+			interrupt_objective = true
+		},
+		[102479] = {
+			interrupt_objective = true
+		},
+		[100403] = {
+			interrupt_objective = true
+		},
+		[100084] = {
+			interrupt_objective = true
+		},
+		[100083] = {
+			interrupt_objective = true
+		},
+		[100528] = {
+			interrupt_objective = true
+		},
+		[100534] = {
+			interrupt_objective = true
+		},
+		[101424] = {
+			interrupt_objective = true
+		},
+		[101655] = {
+			interrupt_objective = true
+		},
+		[100545] = {
+			interrupt_objective = true
+		},
+		[100547] = {
+			interrupt_objective = true
+		},
+		[100548] = {
+			interrupt_objective = true
+		},
+		[100549] = {
+			interrupt_objective = true
+		},
+		[100150] = {
+			interrupt_objective = true
+		},
+		[102439] = {
+			interrupt_objective = true
+		},
+		[102443] = {
+			interrupt_objective = true
+		},
+		[102449] = {
+			interrupt_objective = true
+		},
+		[102452] = {
+			interrupt_objective = true
+		},
+		[102454] = {
+			interrupt_objective = true
+		},
 	}
 }
 
@@ -70,8 +164,20 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 				self._values.SO_access = managers.navigation:convert_access_filter_to_number(params.override_access_filter)
 			end
 			
+			if params.change_interrupt_dis ~= nil then
+				self._values.interrupt_dis = params.change_interrupt_dis
+			end
+			
+			if params.interrupt_objective ~= nil then
+				self._values.interrupt_objective = params.interrupt_objective
+			end
+			
 			--log("SCRONGBONGLED")
 		end
+	end
+	
+	if self._values.so_action == "e_so_ntl_smoke_stand" then --this smoking action has a much too long exit animation for loud gameplay
+		self._values.so_action = "e_so_ntl_look_around"
 	end
 
 	if self:_is_nav_link() then

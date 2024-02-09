@@ -43,7 +43,7 @@ function CopLogicSniper.enter(data, new_logic_name, enter_params)
 	data.internal_data = my_data
 	local key_str = tostring(data.unit:key())
 	my_data.detection_task_key = "CopLogicSniper._upd_enemy_detection" .. key_str
-
+	CopLogicIdle._chk_has_old_action(data, my_data)
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicSniper._upd_enemy_detection, data, data.t)
 
 	if objective then
@@ -57,6 +57,8 @@ function CopLogicSniper.enter(data, new_logic_name, enter_params)
 	if my_data ~= data.internal_data then
 		return
 	end
+	
+	
 
 	data.unit:brain():set_attention_settings({
 		cbt = true
@@ -254,6 +256,11 @@ function CopLogicSniper._upd_enemy_detection(data)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
+	
+	if my_data.has_old_action or my_data.old_action_advancing then
+		CopLogicAttack._upd_stop_old_action(data, my_data)
+	end
+	
 	local min_reaction = AIAttentionObject.REACT_AIM
 	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
 	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects, CopLogicSniper._chk_reaction_to_attention_object)
@@ -307,6 +314,8 @@ function CopLogicSniper.action_complete_clbk(data, action)
 		my_data.shooting = nil
 	elseif action_type == "walk" then
 		my_data.advacing = nil
+		my_data.advancing = nil
+		my_data.old_action_advancing = nil
 
 		if action:expired() then
 			my_data.reposition = nil

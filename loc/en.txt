@@ -27,7 +27,7 @@
 	"menu_lies_copsretire_desc" : "Allows enemy groups spawned during assault to leave the assault area when the assault is ending. Not accurate to Vanilla.",
 	
 	"menu_lies_enemy_aggro_level_title" : "Aggression Level",
-	"menu_lies_enemy_aggro_level_desc" : "Adjust how aggressive you want enemies to be. The *Mosh Pit* setting is the closest to Vanilla.",
+	"menu_lies_enemy_aggro_level_desc" : "Adjust how aggressive you want enemies to be. The *HIGH* setting is the closest to Vanilla.",
 	"menu_lies_enemy_aggro_low" : "LOW",
 	"menu_lies_enemy_aggro_normal" : "NORMAL",
 	"menu_lies_enemy_aggro_high" : "HIGH",
@@ -66,7 +66,7 @@
 	"menu_lies_interruptoncontact_desc" : "Minimizes the tendency for enemies to continue moving into danger if starting the engagement at a distance, and moving in slower would be viable for their purposes. Not accurate to Vanilla.",
 	
 	"menu_lies_spawngroupdelays_title" : "Forced Spawn Delays",
-	"menu_lies_spawngroupdelays_desc" : "Prevents enemy spawn group cooldown timers being reset when no other groups can spawn, reducing cases of enemies constantly pouring out of nearby spawn points. OFF is Vanilla behavior.",
+	"menu_lies_spawngroupdelays_desc" : "Increases the spawn group delays, reducing cases of enemies constantly pouring out of nearby spawn points. OFF is Vanilla behavior.",
 	"menu_lies_spawngroupdelays_vanilla" : "OFF",
 	"menu_lies_spawngroupdelays_long" : "LONG",
 	"menu_lies_spawngroupdelays_medium" : "MEDIUM",

@@ -36,7 +36,6 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 			my_data.needs_logic_reset = true
 		end
 		
-		
 		my_data.turning = old_internal_data.turning
 
 		if old_internal_data.firing then
@@ -359,14 +358,8 @@ function CopLogicIdle.clbk_action_timeout(ignore_this, data)
 		data.objective_complete_clbk(data.unit, data.objective)
 	end
 	
-	if not data.unit:movement():chk_action_forbidden("idle") and data.unit:anim_data().needs_idle then
+	if data.unit:anim_data().act and data.unit:anim_data().needs_idle and not data.unit:anim_data().to_idle then
 		CopLogicIdle._start_idle_action_from_act(data)
-	elseif data.unit:anim_data().act_idle then
-		data.unit:brain():action_request({
-			sync = true,
-			body_part = 2,
-			type = "idle"
-		})
 	end
 end
 
@@ -1171,7 +1164,7 @@ local bosses = {
 function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_func)
 	local best_target, best_target_priority_slot, best_target_priority, best_target_reaction = nil
 	
-	if data.is_converted or data.char_tweak.buddy then
+	if data.is_converted or data.char_tweak.buddy or data.check_crim_jobless then
 		best_target, best_target_priority_slot, best_target_reaction = TeamAILogicIdle._get_priority_attention(data, attention_objects, reaction_func)
 		
 		return best_target, best_target_priority_slot, best_target_reaction
@@ -1654,7 +1647,7 @@ function CopLogicIdle._chk_relocate(data)
 			return true
 		end
 	
-		if data.is_converted or data.unit:in_slot(16) then
+		if data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 			if TeamAILogicIdle._check_should_relocate(data, data.internal_data, data.objective) then
 				data.objective.in_place = nil
 

@@ -7,6 +7,14 @@ local adjust_ids = {
 			new_action = "e_nl_up_4m"
 		}
 	},
+	rvd1 = {
+		[100449] = {
+			action_duration = {20, 20}
+		},
+		[100026] = {
+			trigger_on = "none"
+		}
+	},
 	bph = {
 		[102181] = { --some badly set access filters result in team ai and jokers climbing up a specific window in the washing machine room, but not being able to climb down
 			override_access_filter = {
@@ -137,12 +145,29 @@ local adjust_ids = {
 	}
 }
 
+local hhtacs_adjust = {
+	rvd1 = {
+		[100449] = {
+			followup_elements = {100026}
+		}
+	}
+}
+
 Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_element", function(self)
 	if adjust_ids[Global.level_data.level_id] then
 		local to_adjust = adjust_ids[Global.level_data.level_id]
 		
 		if to_adjust[self._id] then
 			local params = to_adjust[self._id]
+			
+			if params.align_full then
+				self._values.align_position = true
+				self._values.align_rotation = true
+			end
+			
+			if params.trigger_on then
+				self._values.trigger_on = params.trigger_on
+			end
 			
 			if params.new_pos then
 				self._values.position = params.new_pos
@@ -154,6 +179,11 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 			
 			if params.new_search_pos then
 				self._values.search_position = params.new_search_pos
+			end
+			
+			if params.action_duration then
+				self._values.action_duration_min = params.action_duration[1]
+				self._values.action_duration_max = params.action_duration[2]
 			end
 			
 			if params.new_action then
@@ -170,6 +200,20 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 			
 			if params.interrupt_objective ~= nil then
 				self._values.interrupt_objective = params.interrupt_objective
+			end
+			
+			--log("SCRONGBONGLED")
+		end
+	end
+	
+	if LIES.settings.hhtacs and hhtacs_adjust[Global.level_data.level_id] then
+		local to_adjust = hhtacs_adjust[Global.level_data.level_id]
+		
+		if to_adjust[self._id] then
+			local params = to_adjust[self._id]
+
+			if params.followup_elements then
+				self._values.followup_elements = params.followup_elements
 			end
 			
 			--log("SCRONGBONGLED")

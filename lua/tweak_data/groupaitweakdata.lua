@@ -34,6 +34,10 @@ function GroupAITweakData:_LIES_setup()
 				tweak_data.attention:setup_hhtacs()
 			end
 			
+			if tweak_data.levels then
+				tweak_data.levels:setup_hhtacs()
+			end
+			
 			self:_setup_hhtacs_task_data(difficulty_index)
 		end
 		
@@ -736,16 +740,20 @@ function GroupAITweakData:_LIES_setup()
 	if LIES.settings.hhtacs then
 		log("LIES: Initializing Hyper Taktikz. Poggers.")
 		
-		if tweak_data.attention then
-			tweak_data.attention:setup_hhtacs()
-		end
-		
 		if tweak_data.character then
 			tweak_data.character:setup_hhtacs()
 		end
 		
 		if tweak_data.weapon then
 			tweak_data.weapon:setup_hhtacs()
+		end
+		
+		if tweak_data.attention then
+			tweak_data.attention:setup_hhtacs()
+		end
+		
+		if tweak_data.levels then
+			tweak_data.levels:setup_hhtacs()
 		end
 		
 		self:_setup_hhtacs_task_data(difficulty_index)

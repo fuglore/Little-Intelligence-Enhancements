@@ -254,7 +254,7 @@ function CopLogicPhalanxVip.breakup(remote_call)
 				phalanx_vip:sound():say("cpw_a04", true, true)
 			end
 		else
-			managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), 5, false)
+			managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), 5, false, true)
 	
 			data.unit:brain():set_active(false)
 			data.unit:base():set_slot(data.unit, 0)

@@ -27,6 +27,11 @@ local fbi_3_units = {
 	[Idstring("units/pd2_dlc_hvh/characters/ene_fbi_hvh_3/ene_fbi_hvh_3"):key()] = true
 }
 
+local hox = {
+	[Idstring("units/payday2/characters/npc_old_hoxton_prisonsuit_2/npc_old_hoxton_prisonsuit_2"):key()] = true,
+	[Idstring("units/pd2_dlc_rvd/characters/npc_mr_blonde/npc_mr_blonde"):key()] = true
+}
+
 function CopBase:default_weapon_name(selection_name)
 	local weap_ids = tweak_data.character.weap_ids
 	local weap_unit_names = tweak_data.character.weap_unit_names
@@ -50,7 +55,9 @@ function CopBase:default_weapon_name(selection_name)
 	local m_weapon_id = self._default_weapon_id
 
 	if LIES.settings.hhtacs then
-		if fbi_3_units[self._unit:name():key()] then
+		if hox[self._unit:name():key()] then
+			m_weapon_id = "mac11"
+		elseif fbi_3_units[self._unit:name():key()] then
 			m_weapon_id = "r870"
 			
 			local char_tweaks = deep_clone(self._char_tweak)

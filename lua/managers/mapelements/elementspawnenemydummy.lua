@@ -4,39 +4,63 @@ local instance_strings = {
 	harasser_hards = true,
 	harasser_over = true
 }
-local valid_levels = {
+local valid_harasser_levels = {
 	man = true,
 	rvd1 = true,
 	moon = true
 }
+local adjust_ids = {
+	rvd1 = {
+		[100544] = {
+			team = "converted_enemy"
+		}
+	}
+}
 
 Hooks:PostHook(ElementSpawnEnemyDummy, "_finalize_values", "lies_hhtacs_elementcheck", function(self)
-	if LIES.settings.hhtacs and valid_levels[Global.level_data.level_id] then
-		local editor_name = self._editor_name
+	if LIES.settings.hhtacs then
 		
-		if instance_strings[editor_name] then
-			self._LIES_harasser_spawn = true
-
-			return
+		if adjust_ids[Global.level_data.level_id] then
+			local to_adjust = adjust_ids[Global.level_data.level_id]
+			
+			if to_adjust[self._id] then
+				local params = to_adjust[self._id]
+				
+				if params.team then
+					self._values.team = params.team
+				end
+				
+				return
+			end
 		end
 		
-		local base_string = common_harasser_string
-		
-		for i = 1, 40 do
-			local s_to_test = common_harasser_string
+		if valid_harasser_levels[Global.level_data.level_id] then
+			local editor_name = self._editor_name
 			
-			if i < 10 then
-				s_to_test = s_to_test .. "00"
-			elseif i < 100 then
-				s_to_test = s_to_test .. "0"
+			if instance_strings[editor_name] then
+				self._LIES_harasser_spawn = true
 			end
 			
-			s_to_test = s_to_test .. tostring(i)
-		
-			if editor_name == s_to_test then
-				self._LIES_harasser_spawn = true
+			if not self._LIES_harasser_spawn then
+				local base_string = common_harasser_string
 				
-				break
+				for i = 1, 40 do
+					local s_to_test = common_harasser_string
+					
+					if i < 10 then
+						s_to_test = s_to_test .. "00"
+					elseif i < 100 then
+						s_to_test = s_to_test .. "0"
+					end
+					
+					s_to_test = s_to_test .. tostring(i)
+				
+					if editor_name == s_to_test then
+						self._LIES_harasser_spawn = true
+						
+						break
+					end
+				end
 			end
 		end
 	end

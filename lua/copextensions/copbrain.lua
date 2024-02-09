@@ -75,7 +75,7 @@ Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", func
 	char_tweaks.crouch_move = false
 	
 	if LIES.settings.jokerhurts then
-		char_tweaks.damage.hurt_severity = tweak_data.character.presets.hurt_severities.only_light_hurt
+		char_tweaks.damage.hurt_severity = deep_clone(tweak_data.character.presets.hurt_severities.only_light_hurt)
 		
 		char_tweaks.damage.hurt_severity.explosion = {
 			health_reference = 1,
@@ -195,7 +195,11 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 		self._ludicrous_damage_debuff = nil
 	end
 	
-	if supposedly_shitty_guns[self._unit:base()._current_weapon_id] then
+	if self._unit:base()._tweak_table == "old_hoxton_mission" or self._unit:base()._tweak_table == "spa_vip" then
+		if supposedly_shitty_guns[self._unit:base()._current_weapon_id] then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2)
+		end
+	elseif supposedly_shitty_guns[self._unit:base()._current_weapon_id] and difficulty_index > 3 then
 		if scaling_units[self._unit:base()._tweak_table] and difficulty_index > 6 then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6) --almost all guns in this game deal the same fucking damage, its dumb
 		else
@@ -263,7 +267,9 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
 			end
 		elseif difficulty_index == 7 then
-			if self._unit:base()._current_weapon_id == "scar" then
+			if mayhem_rifles[self._unit:base()._current_weapon_id] then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --60
+			elseif self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5) --75
 			elseif smgs[self._unit:base()._current_weapon_id] then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
@@ -290,6 +296,32 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
 		elseif self._unit:base()._current_weapon_id == "benelli" or self._unit:base()._current_weapon_id == "r870" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.25) --75 on 5 meters
+		end
+	elseif difficulty_index < 4 then
+		if supposedly_shitty_guns[self._unit:base()._current_weapon_id] then
+			if difficulty_index == 2 then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5)
+			else
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.75)
+			end
+		elseif smgs[self._unit:base()._current_weapon_id] then
+			if difficulty_index == 2 then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2.5)
+			else
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.5)
+			end
+		elseif ovk_rifles[self._unit:base()._current_weapon_id] then
+			if difficulty_index == 2 then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 4)
+			else
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.88)
+			end
+		elseif self._unit:base()._current_weapon_id == "benelli" or self._unit:base()._current_weapon_id == "r870" then
+			if difficulty_index == 2 then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2)
+			else
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5)
+			end
 		end
 	elseif smgs[self._unit:base()._current_weapon_id] then
 		self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4)
@@ -647,14 +679,14 @@ function CopBrain:_chk_use_cover_grenade(unit)
 			local duration_tweak = self._logic_data.char_tweak.dodge_with_grenade.smoke.duration
 			local duration = math.lerp(duration_tweak[1], duration_tweak[2], math.random())
 
-			managers.groupai:state():detonate_smoke_grenade(self._logic_data.m_pos + math.UP * 10, self._unit:movement():m_head_pos(), duration, false)
+			managers.groupai:state():detonate_smoke_grenade(self._logic_data.m_pos + math.UP * 10, self._unit:movement():m_head_pos(), duration, false, true)
 
 			self._next_grenade_use_t = t + duration
 		elseif self._logic_data.char_tweak.dodge_with_grenade.flash then
 			local duration_tweak = self._logic_data.char_tweak.dodge_with_grenade.flash.duration
 			local duration = math.lerp(duration_tweak[1], duration_tweak[2], math.random())
 
-			managers.groupai:state():detonate_smoke_grenade(self._logic_data.m_pos + math.UP * 10, self._unit:movement():m_head_pos(), duration, true)
+			managers.groupai:state():detonate_smoke_grenade(self._logic_data.m_pos + math.UP * 10, self._unit:movement():m_head_pos(), duration, true, true)
 
 			self._next_grenade_use_t = t + duration
 		end

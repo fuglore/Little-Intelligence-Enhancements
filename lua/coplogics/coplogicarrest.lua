@@ -174,11 +174,13 @@ function CopLogicArrest._upd_enemy_detection(data)
 
 			if not managers.groupai:state():can_police_be_called() or (managers.groupai:state():is_police_called() or managers.groupai:state():chk_enemy_calling_in_area(managers.groupai:state():get_area_from_nav_seg_id(data.unit:movement():nav_tracker():nav_segment()), data.key)) and not my_data.calling_the_police then
 				local wanted_state = CopLogicBase._get_logic_state_from_reaction(data) or "idle"
+				
+				if wanted_state and wanted_state ~= data.name then
+					CopLogicBase._exit(data.unit, wanted_state)
+					CopLogicBase._report_detections(data.detected_attention_objects)
 
-				CopLogicBase._exit(data.unit, wanted_state)
-				CopLogicBase._report_detections(data.detected_attention_objects)
-
-				return delay
+					return delay
+				end
 			end
 		else
 			local wanted_state = CopLogicBase._get_logic_state_from_reaction(data)

@@ -176,15 +176,15 @@ function CharacterTweakData:setup_hhtacs()
 							shoot_chance = 0.8,
 							shoot_accuracy = 0.5,
 							timeout = {
-								2,
-								4
+								0.2,
+								1
 							}
 						},
 						roll = {
 							chance = 1,
 							timeout = {
-								2,
-								4
+								0.2,
+								1
 							}
 						}
 					}
@@ -201,8 +201,8 @@ function CharacterTweakData:setup_hhtacs()
 							shoot_chance = 1,
 							shoot_accuracy = 0.7,
 							timeout = {
-								1,
-								2
+								0.2,
+								1
 							}
 						}
 					}
@@ -219,22 +219,22 @@ function CharacterTweakData:setup_hhtacs()
 							shoot_chance = 0.5,
 							shoot_accuracy = 0.4,
 							timeout = {
-								1,
-								2
+								0.2,
+								1
 							}
 						},
 						roll = {
 							chance = 1,
 							timeout = {
-								8,
-								10
+								0.2,
+								1
 							}
 						},
 						dive = {
 							chance = 2,
 							timeout = {
-								8,
-								10
+								1,
+								2
 							}
 						}
 					}
@@ -274,7 +274,7 @@ function CharacterTweakData:setup_hhtacs()
 					}
 				},
 				preemptive = {
-					chance = 0.7,
+					chance = 1,
 					check_timeout = {
 						0,
 						0

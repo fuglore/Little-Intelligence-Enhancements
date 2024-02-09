@@ -992,6 +992,14 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 								_nearly_visible_chk(attention_info, attention_pos)
 							end
 						end
+					elseif is_detection_persistent and AIAttentionObject.REACT_COMBAT <= attention_info.settings.reaction then
+						delay = math.min(0.2, delay)
+						mvector3.set(attention_info.verified_pos, attention_pos)
+						attention_info.verified_dis = dis
+						
+						if data.logic._chk_nearly_visible_chk_needed(data, attention_info, u_key) and attention_info.dis < 2000 then
+							_nearly_visible_chk(attention_info, attention_pos)
+						end
 					elseif attention_info.release_t and attention_info.release_t < t then
 						CopLogicBase._destroy_detected_attention_object_data(data, attention_info)
 					else
@@ -1293,12 +1301,12 @@ function CopLogicBase.chk_start_action_dodge(data, reason)
 		dodge_dir_reversed = not dodge_dir_reversed
 	end
 
-	local prefered_space = 130
-	local min_space = 90
+	local prefered_space = 180
+	local min_space = 130
 	local ray_to_pos = tmp_vec1
 
 	mvec3_set(ray_to_pos, dodge_dir)
-	mvector3.multiply(ray_to_pos, 130)
+	mvector3.multiply(ray_to_pos, prefered_space)
 	mvector3.add(ray_to_pos, data.m_pos)
 
 	local ray_params = {
@@ -1319,7 +1327,7 @@ function CopLogicBase.chk_start_action_dodge(data, reason)
 		dis = mvector3.length(hit_vec)
 
 		mvec3_set(ray_to_pos, dodge_dir)
-		mvector3.multiply(ray_to_pos, -130)
+		mvector3.multiply(ray_to_pos, -prefered_space)
 		mvector3.add(ray_to_pos, data.m_pos)
 
 		ray_params.pos_to = ray_to_pos
@@ -1357,7 +1365,7 @@ function CopLogicBase.chk_start_action_dodge(data, reason)
 			dodge_dir_reversed = false
 			
 			mvec3_set(ray_to_pos, dodge_dir)
-			mvector3.multiply(ray_to_pos, 130)
+			mvector3.multiply(ray_to_pos, prefered_space)
 			mvector3.add(ray_to_pos, data.m_pos)
 
 			local ray_params = {
@@ -1378,7 +1386,7 @@ function CopLogicBase.chk_start_action_dodge(data, reason)
 				dis = mvector3.length(hit_vec)
 
 				mvec3_set(ray_to_pos, dodge_dir)
-				mvector3.multiply(ray_to_pos, -130)
+				mvector3.multiply(ray_to_pos, -prefered_space)
 				mvector3.add(ray_to_pos, data.m_pos)
 
 				ray_params.pos_to = ray_to_pos

@@ -41,6 +41,10 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 	local function _f_draw_logic_name(u_key, l_data, draw_color)
 		local logic_name_text = logic_name_texts[u_key]
 		local text_str = tostring(l_data.unit:base()._tweak_table) .. ":" .. l_data.name
+		
+		if l_data.cool then
+			text_str = text_str .. ":" .. "cool"
+		end
 
 		if l_data.objective then
 			text_str = text_str .. ":" .. l_data.objective.type 
@@ -4200,7 +4204,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 
 	local total_weight = 0
 	local candidate_groups = {}
-	self._debug_weights = {}
+	--self._debug_weights = {}
 	local dis_limit = max_dis and max_dis or 25000000
 
 	for i, dis in pairs(valid_spawn_group_distances) do
@@ -4215,9 +4219,9 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 		return
 	end
 
-	for _, group in ipairs(candidate_groups) do
-		table.insert(self._debug_weights, clone(group))
-	end
+	--for _, group in ipairs(candidate_groups) do
+		--table.insert(self._debug_weights, clone(group))
+	--end
 
 	return self:_choose_best_group(candidate_groups, total_weight)
 end

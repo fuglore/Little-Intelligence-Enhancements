@@ -40,6 +40,8 @@ function CopLogicAttack.enter(data, new_logic_name, enter_params)
 
 	if data.unit:base():has_tag("medic") then
 		my_data.attitude = "avoid"
+	elseif not data.unit:character_damage():can_kill() then
+		my_data.attitude = "engage"
 	else
 		my_data.attitude = data.objective and data.objective.attitude or "avoid"
 	end
@@ -586,12 +588,12 @@ function CopLogicAttack._upd_combat_movement(data)
 		end
 	end
 
-	if not data.is_converted and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified and (not in_cover or not in_cover[4]) then
+	if not data.is_converted and not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and CopLogicAttack._can_move(data) and data.attention_obj.verified then
 		if data.is_suppressed and data.t - data.unit:character_damage():last_suppression_t() < 0.7 then
 			action_taken = CopLogicBase.chk_start_action_dodge(data, "scared")
 		end
 
-		if not action_taken and focus_enemy.is_person and focus_enemy.dis < 2000 and (data.group and data.group.size > 1 or math.random() < 0.5) then
+		if not action_taken and focus_enemy.is_person and focus_enemy.dis < 2000 then
 			local dodge = nil
 
 			if focus_enemy.is_local_player then
@@ -688,7 +690,7 @@ function CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 		end
 		
 		if data.attention_obj.verified then
-			if aggro_level < 2 and data.attention_obj.aimed_at or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
+			if aggro_level < 2 and data.attention_obj.aimed_at or data.tactics and (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
 				if my_data.firing then
 					return true
 				end
@@ -1019,7 +1021,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 	end
 	
 	if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-		if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) then
+		if LIES.settings.enemy_reaction_level < 3 and not data.unit:in_slot(16) and not data.team.id == "criminal1" then
 			if not focus_enemy.react_t then
 				focus_enemy.react_t = data.t
 			end
@@ -2107,7 +2109,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 				if is_medic and is_tank or is_shield or is_medic or not has_medic and is_tank then
 					local buddy_logic_data = u_data.unit:brain()._logic_data
 					
-					if buddy_logic_data and buddy_logic_data.name ~= "inactive" then
+					if buddy_logic_data and buddy_logic_data.name ~= "inactive" and buddy_logic_data.name ~= "travel" then
 						local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
 						local follow_unit_pos = advance_pos or u_data.unit:movement():nav_tracker():field_position()
 						
@@ -2141,7 +2143,7 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 				if is_medic and is_tank or is_shield or is_medic or not has_medic and is_tank then
 					local buddy_logic_data = u_data.unit:brain()._logic_data
 					
-					if buddy_logic_data and buddy_logic_data.name ~= "inactive" then
+					if buddy_logic_data and buddy_logic_data.name ~= "inactive" and buddy_logic_data.name ~= "travel" then
 						local advance_pos = u_data.unit:brain() and u_data.unit:brain():is_advancing()
 						local follow_unit_pos = advance_pos or u_data.unit:movement():nav_tracker():field_position()
 						

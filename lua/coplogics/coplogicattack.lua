@@ -2239,8 +2239,8 @@ function CopLogicAttack._update_cover(data)
 						local offset_pos, yaw = CopLogicAttack._get_cover_offset_pos(data, better_cover, threat_pos)
 
 						if offset_pos then
-							better_cover[5] = offset_pos
-							better_cover[6] = yaw
+							my_data.best_cover[5] = offset_pos
+							my_data.best_cover[6] = yaw
 						end
 					end
 				end
@@ -2248,7 +2248,7 @@ function CopLogicAttack._update_cover(data)
 				my_data.flank_cover = nil
 				
 				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing() --this is fucking crashing
-				local near_pos = advance_pos or data.objective.follow_unit:movement():m_pos()
+				local near_pos = advance_pos or data.objective.follow_unit:movement():m_newest_pos()
 				local dis = data.objective.distance and data.objective.distance * 0.6 or 450
 				
 				if not best_cover or mvec3_dis_sq(near_pos, best_cover[1][1]) > dis * dis or not CopLogicAttack._verify_cover(best_cover[1], threat_pos) then
@@ -2272,8 +2272,8 @@ function CopLogicAttack._update_cover(data)
 						local offset_pos, yaw = CopLogicAttack._get_cover_offset_pos(data, better_cover, threat_pos)
 
 						if offset_pos then
-							better_cover[5] = offset_pos
-							better_cover[6] = yaw
+							my_data.best_cover[5] = offset_pos
+							my_data.best_cover[6] = yaw
 						end
 					end
 				end

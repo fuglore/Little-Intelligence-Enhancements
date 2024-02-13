@@ -1372,7 +1372,7 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 			revive_u_pos = revive_u_tracker:field_position()
 			ray_params.pos_from = revive_u_pos
 		else
-			revive_u_pos = revive_u_mv:m_pos()
+			revive_u_pos = revive_u_mv:m_newest_pos()
 			ray_params.tracker_from = revive_u_tracker
 		end
 
@@ -1701,7 +1701,7 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 	else
 		local follow_unit = data.objective.follow_unit
 		local advance_pos = follow_unit:brain() and follow_unit:brain():is_advancing()
-		local follow_unit_pos = advance_pos or follow_unit:movement():m_pos()
+		local follow_unit_pos = advance_pos or follow_unit:movement():m_newest_pos()
 		local relocate = nil
 		
 		if data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then

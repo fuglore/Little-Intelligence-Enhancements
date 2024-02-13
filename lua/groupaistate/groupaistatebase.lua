@@ -334,6 +334,7 @@ function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
 			objective = {
 				scan = true,
 				is_default = true,
+				distance = 400,
 				type = "follow",
 				follow_unit = owner
 			}
@@ -358,6 +359,7 @@ function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
 	if closest_record then
 		objective = {
 			scan = true,
+			distance = 400,
 			is_default = true,
 			type = "follow",
 			follow_unit = closest_record.unit

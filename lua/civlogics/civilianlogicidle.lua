@@ -56,11 +56,7 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 	if not managers.groupai:state():enemy_weapons_hot() or not my_data.acting or CivilianLogicIdle._objective_can_be_interrupted(data) then
 		my_data.detection_task_key = "CivilianLogicIdle._upd_detection" .. key_str
 
-		CivilianLogicIdle._upd_detection(data)
-	end
-	
-	if my_data ~= data.internal_data then
-		return
+		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
 	end
 	
 	if not data.been_outlined and data.char_tweak.outline_on_discover then

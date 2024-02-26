@@ -4296,7 +4296,9 @@ function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
 				spawn_timers = spawn_timers / div
 				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + spawn_timers
 			else
-				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + 5
+				local timer = 5 + math.random(3)
+			
+				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + timer
 			end
 			
 			best_grp = candidate.group

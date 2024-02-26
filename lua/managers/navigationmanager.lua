@@ -628,7 +628,7 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 	if type(nav_seg) == "table" then
 		nav_segs = nav_seg
 	elseif nav_seg then
-		nav_segs = {nav_seg}
+		nav_segs = {[nav_seg] = true}
 	end
 	
 	local best_cover, best_dist, best_l_ray, best_h_ray, best_has_good_dir
@@ -725,7 +725,7 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 	if type(nav_seg_id) == "table" then
 		nav_segs = nav_seg_id
 	elseif nav_seg_id then
-		nav_segs = {nav_seg_id}
+		nav_segs = {[nav_seg_id] = true}
 	end
 	
 	local best_cover, best_dist, best_l_ray, best_h_ray, best_has_good_dir
@@ -826,7 +826,7 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 	if type(nav_seg_id) == "table" then
 		nav_segs = nav_seg_id
 	elseif nav_seg_id then
-		nav_segs = {nav_seg_id}
+		nav_segs = {[nav_seg_id] = true}
 	end
 	
 	local best_cover, best_dist, best_l_ray, best_h_ray

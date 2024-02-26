@@ -315,6 +315,10 @@ function GroupAIStateBase:_set_rescue_state(state) --this causes a crash in vani
 end
 
 function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
+	if not alive(unit) or unit:movement():cool() then
+		return
+	end
+
 	local objective, closest_dis, closest_record = nil
 	
 	if self._converted_police[unit:key()] then

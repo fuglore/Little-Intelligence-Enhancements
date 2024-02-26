@@ -155,18 +155,6 @@ function TaserLogicAttack._chk_wants_to_take_cover(data, my_data)
 		if data.is_suppressed then
 			return true
 		end
-		
-		if ammo / ammo_max < 0.2 then
-			return true
-		end
-		
-		if data.attention_obj.verified then
-			if aggro_level < 2 or not data.tactics or (data.tactics.ranged_fire or data.tactics.sniper) and my_data.weapon_range.close < data.attention_obj.verified_dis then
-				if my_data.firing then
-					return true
-				end
-			end
-		end
 	end
 end
 

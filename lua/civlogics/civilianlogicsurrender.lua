@@ -326,3 +326,38 @@ function CivilianLogicSurrender._update_enemy_detection(data, my_data)
 	my_data.scare_meter = math.max(0, my_data.scare_meter - delta_t)
 	my_data.last_upd_t = t
 end
+
+function CivilianLogicSurrender.on_intimidated(data, amount, aggressor_unit, skip_delay)
+	if data.is_tied then
+		return
+	end
+
+	if not tweak_data.character[data.unit:base()._tweak_table].intimidateable or data.unit:base().unintimidateable or data.unit:anim_data().unintimidateable then
+		return
+	end
+
+	local my_data = data.internal_data
+	
+	if not skip_delay then
+		skip_delay = data.unit:anim_data().move or data.unit:anim_data().call_police or data.unit:anim_data().peaceful or data.unit:movement():stance_name() == "ntl"
+	end
+
+	if not my_data.delayed_intimidate_id or not my_data.delayed_clbks or not my_data.delayed_clbks[my_data.delayed_intimidate_id] then
+		if skip_delay then
+			CivilianLogicSurrender._delayed_intimidate_clbk(nil, {
+				data,
+				amount,
+				aggressor_unit
+			})
+		else
+			my_data.delayed_intimidate_id = "intimidate" .. tostring(data.unit:key())
+			local delay = math.max(0, 1 - amount) + math.random() * 0.2
+
+			CopLogicBase.add_delayed_clbk(my_data, my_data.delayed_intimidate_id, callback(CivilianLogicSurrender, CivilianLogicSurrender, "_delayed_intimidate_clbk", {
+				data,
+				amount,
+				aggressor_unit
+			}), TimerManager:game():time() + delay)
+		end
+	end
+end

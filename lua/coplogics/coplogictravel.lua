@@ -564,7 +564,7 @@ function CopLogicTravel._chk_begin_advance(data, my_data)
 		local group_leader_key, group_leader_data = managers.groupai:state()._determine_group_leader(data.group.units)
 		
 		if group_leader_key and group_leader_key ~= data.key then
-			pose = not group_leader_data.char_tweak.crouch_move and "stand" or group_leader_data.char_tweak.allowed_poses and not group_leader_data.char_tweak.allowed_poses.stand and "crouch" or group_leader_data.char_tweak.walk_only and "walk" or "stand"
+			pose = not group_leader_data.char_tweak.crouch_move and "stand" or group_leader_data.char_tweak.allowed_poses and not group_leader_data.char_tweak.allowed_poses.stand and "crouch" or group_leader_data.char_tweak.walk_only and "crouch" or "stand"
 			haste = group_leader_data.char_tweak.walk_only and "walk"
 			
 			local upper_body_action = data.unit:movement()._active_actions[3]
@@ -1731,7 +1731,7 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 end
 
 function CopLogicTravel._find_cover(data, search_nav_seg, near_pos)
-	if data.unit:movement():cool() then
+	if data.unit:movement():cool() or data.char_tweak.allowed_poses then
 		return
 	end
 	

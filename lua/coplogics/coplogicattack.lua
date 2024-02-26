@@ -410,7 +410,7 @@ function CopLogicAttack._upd_combat_movement(data)
 	
 	local can_charge
 	
-	if not data.tactics or not data.tactics.sniper then
+	if (not data.objective or not data.objective.grp_objective or data.objective.grp_objective.type ~= "reenforce_area") and (not data.tactics or not data.tactics.sniper) then
 		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge or wanted_attack_range and focus_enemy.dis > wanted_attack_range or wanted_attack_range and not enemy_visible
 	end
 
@@ -426,7 +426,7 @@ function CopLogicAttack._upd_combat_movement(data)
 				local haste = "walk"
 				
 				if not data.char_tweak.walk_only then
-					if data.tactics and data.tactics.charge or aggro_level > 2 then
+					if data.tactics and data.tactics.charge or aggro_level > 2 or wanted_attack_range then
 						haste = "run"
 					end
 				end
@@ -526,7 +526,7 @@ function CopLogicAttack._upd_combat_movement(data)
 					local haste = "walk"
 				
 					if not data.char_tweak.walk_only then
-						if data.tactics and data.tactics.charge or aggro_level > 2 then
+						if data.tactics and data.tactics.charge or aggro_level > 2 or wanted_attack_range then
 							haste = "run"
 						end
 					end
@@ -2286,7 +2286,7 @@ function CopLogicAttack._update_cover(data)
 					min_dis = my_data.weapon_range.close
 				else
 					max_dis = my_data.weapon_range.optimal
-					min_dis = 400
+					min_dis = 100
 				end
 
 				if not best_cover or flank_cover or not CopLogicAttack._verify_cover(best_cover[1], threat_pos, min_dis, max_dis) then
@@ -2294,7 +2294,24 @@ function CopLogicAttack._update_cover(data)
 					local my_vec = my_pos - threat_pos
 
 					if flank_cover then
-						mvector3.rotate_with(my_vec, Rotation(flank_cover.angle))
+						local angle = flank_cover.angle
+						local sign = flank_cover.sign
+
+						if math.sign(angle) ~= sign then
+							angle = -angle + flank_cover.step * sign
+
+							if math.abs(angle) > 90 then
+								flank_cover.failed = true
+							else
+								flank_cover.angle = angle
+							end
+						else
+							flank_cover.angle = -angle
+						end
+						
+						if not flank_cover.failed then
+							mvector3.rotate_with(my_vec, Rotation(flank_cover.angle))
+						end
 					end
 
 					local optimal_dis = my_vec:length()
@@ -2323,24 +2340,7 @@ function CopLogicAttack._update_cover(data)
 
 					local furthest_side_pos = threat_pos + my_vec
 
-					if flank_cover then
-						local angle = flank_cover.angle
-						local sign = flank_cover.sign
-
-						if math.sign(angle) ~= sign then
-							angle = -angle + flank_cover.step * sign
-
-							if math.abs(angle) > 90 then
-								flank_cover.failed = true
-							else
-								flank_cover.angle = angle
-							end
-						else
-							flank_cover.angle = -angle
-						end
-					end
-
-					local min_threat_dis = 750
+					local min_threat_dis = 100
 					local cone_angle = nil
 
 					if flank_cover then
@@ -2352,10 +2352,33 @@ function CopLogicAttack._update_cover(data)
 					local search_nav_seg = nil
 
 					if data.objective and data.objective.type == "defend_area" then
-						search_nav_seg = data.objective.nav_seg
+						if not data.objective.grp_objective or not data.objective.grp_objective.pushed then
+							search_nav_seg = data.objective.nav_seg
+						end
 					end
 					
-					local found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)
+					local found_cover
+					
+					if not search_nav_seg or LIES.settings.lua_cover > 1 then
+						found_cover = managers.navigation:find_cover_in_cone_from_threat_pos_1(threat_pos, furthest_side_pos, my_side_pos, nil, cone_angle, min_threat_dis, search_nav_seg, nil, data.pos_rsrv_id)
+					else
+						if type(search_nav_seg) == "table" then
+							search_nav_seg = managers.navigation._convert_nav_seg_map_to_vec(search_nav_seg)
+						end
+					
+						local search_params = {
+							variation_z = 250,
+							near_pos = my_side_pos,
+							threat_pos = threat_pos,
+							cone_angle = cone_angle,
+							min_threat_distance = min_threat_dis,
+							cone_base = furthest_side_pos,
+							in_nav_seg = search_nav_seg,
+							rsrv_filter = data.pos_rsrv_id
+						}
+						
+						found_cover = managers.navigation._quad_field:find_cover(search_params)
+					end
 
 					if found_cover and (not best_cover or best_cover[1] ~= found_cover) then
 						satisfied = true

@@ -94,7 +94,11 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 	if not my_data.delayed_post_react_alert_id and not data.unit:anim_data().panic then
 		my_data.delayed_post_react_alert_id = "postreact_alert" .. key_str
 		
-		if data.char_tweak.faster_reactions then
+		if data.unit:anim_data().move or data.unit:anim_data().call_police or data.unit:anim_data().peaceful or data.unit:movement():stance_name() == "ntl" then
+			CopLogicBase.add_delayed_clbk(my_data, my_data.delayed_post_react_alert_id, callback(CivilianLogicFlee, CivilianLogicFlee, "post_react_alert_clbk", {
+				data = data,
+			}), TimerManager:game():time() + 1)
+		elseif data.char_tweak.faster_reactions then
 			CopLogicBase.add_delayed_clbk(my_data, my_data.delayed_post_react_alert_id, callback(CivilianLogicFlee, CivilianLogicFlee, "post_react_alert_clbk", {
 				data = data
 			}), TimerManager:game():time() + math.lerp(2, 4, math.random()))
@@ -237,7 +241,7 @@ function CivilianLogicFlee.on_intimidated(data, amount, aggressor_unit)
 
 	local my_data = data.internal_data
 	
-	if data.unit:anim_data().move then
+	if data.unit:anim_data().move or data.unit:anim_data().call_police or data.unit:anim_data().peaceful or data.unit:movement():stance_name() == "ntl" then
 		local params = {
 			data,
 			amount,

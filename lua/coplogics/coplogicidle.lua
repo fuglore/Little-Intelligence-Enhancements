@@ -69,7 +69,7 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	local key_str = tostring(data.unit:key())
 	my_data.detection_task_key = "CopLogicIdle.update" .. key_str
 
-	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t)
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t, data.important and true)
 
 	local objective = data.objective
 	

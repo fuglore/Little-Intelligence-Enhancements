@@ -70,7 +70,34 @@ local entirely_unique_stuff = {
 				end
 			end
 		end
-	}
+	},
+	wwh = {
+		[100683] = function ()
+			local valid_diffs = {
+				"overkill_290",
+				"sm_wish"
+			}
+		
+			if not valid_diffs[Global.game_settings.difficulty] then
+				return
+			end
+		
+			local t = managers.groupai:state()._t
+			
+			local func = function()
+				local van = managers.worlddefinition:get_unit(100677)
+				
+				if van and alive(van) and van:damage() then
+					if van:damage():has_sequence("turret_spawn") then
+						van:damage():run_sequence_simple("turret_spawn")
+						van:damage():run_sequence_simple("turret_activate")
+					end
+				end
+			end
+			
+			managers.enemy:add_delayed_clbk("wwh_van_turret", func, t + 10)
+		end
+	},
 }
 
 Hooks:PostHook(MissionScriptElement, "on_executed", "lies_blockade", function(self)

@@ -693,13 +693,18 @@ function GroupAIStateBase:print_objective(objective)
 	end
 end
 
-function GroupAIStateBase:unregister_AI_attention_object(unit_key)
-	if self._police[unit_key] then
-		return
-	end
+function GroupAIStateBase:unregister_AI_attention_object(unit_key)	
+	if self._attention_objects.all[unit_key] and self._attention_objects.all[unit_key].unit and alive(self._attention_objects.all[unit_key].unit) then
+		local att_unit = self._attention_objects.all[unit_key].unit
+		local is_alive = not att_unit:in_slot(0)
+		
+		if is_alive and att_unit:character_damage() and att_unit:character_damage().dead then
+			is_alive = not att_unit:character_damage():dead()
+		end
 	
-	if self._criminals[unit_key] then
-		return
+		if is_alive and (att_unit:base().sentry_gun or att_unit:in_slot(managers.slot:get_mask("persons"))) then
+			return
+		end
 	end
 
 	for cat_filter, list in pairs(self._attention_objects) do

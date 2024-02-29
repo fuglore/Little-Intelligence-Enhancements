@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.86",
+		version = "V7.87",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -24,6 +24,14 @@ if RequiredScript == "lib/managers/menumanager" then
 		}
 	}
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
+
+	TheFixesPreventer = TheFixesPreventer or {}
+	TheFixesPreventer.fix_hostages_not_moving = true
+	TheFixesPreventer.crash_no_unit_type_aistatebesiege = true
+	TheFixesPreventer.crash_criminal_obj_complete_aistatebase = true
+	TheFixesPreventer.crash_upd_aim_coplogicattack = true
+	TheFixesPreventer.crash_aim_allow_fire_coplogicattack = true
+	TheFixesPreventer.civvie_goes_to_player = true
 
 	function LIES:tprint(tbl, indent, depth)
 		depth = depth or 2

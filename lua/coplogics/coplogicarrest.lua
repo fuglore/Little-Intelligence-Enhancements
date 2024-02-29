@@ -115,13 +115,14 @@ function CopLogicArrest._upd_enemy_detection(data)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
-	local delay = CopLogicBase._upd_attention_obj_detection(data, nil, nil)
+	local min_reaction = AIAttentionObject.REACT_AIM
+	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
 	local all_attention_objects = data.detected_attention_objects
 	local arrest_targets = my_data.arrest_targets
 
 	CopLogicArrest._verify_arrest_targets(data, my_data)
 
-	local new_attention, new_prio_slot, new_reaction = CopLogicArrest._get_priority_attention(data, data.detected_attention_objects)
+	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects)
 	local old_att_obj = data.attention_obj
 
 	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)

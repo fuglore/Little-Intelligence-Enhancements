@@ -698,6 +698,11 @@ function GroupAIStateBase:unregister_AI_attention_object(unit_key)
 		local att_unit = self._attention_objects.all[unit_key].unit
 		local is_alive = not att_unit:in_slot(0)
 		
+		
+		if is_alive then
+			is_alive = att_unit:base() and true
+		end
+		
 		if is_alive and att_unit:character_damage() and att_unit:character_damage().dead then
 			is_alive = not att_unit:character_damage():dead()
 		end

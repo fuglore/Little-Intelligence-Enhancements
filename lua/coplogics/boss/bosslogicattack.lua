@@ -607,46 +607,14 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 
 						if my_data.chase_pos then
 							local my_pos = data.unit:movement():nav_tracker():field_position()
-							local unobstructed_line = nil
+							my_data.chase_path_search_id = tostring(data.unit:key()) .. "chase"
+							my_data.pathing_to_chase_pos = true
 
-							if math_abs(my_pos.z - my_data.chase_pos.z) < 40 then
-								local ray_params = {
-									allow_entry = false,
-									pos_from = my_pos,
-									pos_to = my_data.chase_pos
-								}
-
-								if not managers.navigation:raycast(ray_params) then
-									unobstructed_line = true
-								end
-							end
-
-							if unobstructed_line then
-								my_data.chase_path = {
-									mvec3_cpy(my_pos),
-									my_data.chase_pos
-								}
-								local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
-								local run_dist = enemy_visible and 800 or 400
-								local speed = "run"
-								
-								if data.char_tweak.walk_only then
-									speed = "walk"
-								elseif not data.enrage_data or not data.enrage_data.enraged then
-									speed = enemy_dis < run_dist and "walk" or speed
-								end
-								
-								LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
-							else
-								my_data.chase_path_search_id = tostring(data.unit:key()) .. "chase"
-								my_data.pathing_to_chase_pos = true
-
-								data.brain:add_pos_rsrv("path", {
-									radius = 60,
-									position = mvec3_cpy(my_data.chase_pos)
-								})
-								data.brain:search_for_path(my_data.chase_path_search_id, my_data.chase_pos)
-							end
+							data.brain:add_pos_rsrv("path", {
+								radius = 60,
+								position = mvec3_cpy(my_data.chase_pos)
+							})
+							data.brain:search_for_path(my_data.chase_path_search_id, my_data.chase_pos)
 						else
 							my_data.chase_path_failed_t = t
 						end

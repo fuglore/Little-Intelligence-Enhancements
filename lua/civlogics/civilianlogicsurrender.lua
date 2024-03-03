@@ -130,8 +130,6 @@ function CivilianLogicSurrender.update(data)
 			data.unit:brain():action_request(new_action)
 		end
 
-		my_data.surrender_clbk_registered = false
-
 		data.unit:brain():set_objective({
 			is_default = true,
 			type = "free"
@@ -170,8 +168,6 @@ function CivilianLogicSurrender.queued_update(rubbish, data)
 
 			data.unit:brain():action_request(new_action)
 		end
-
-		my_data.surrender_clbk_registered = false
 
 		data.unit:brain():set_objective({
 			is_default = true,

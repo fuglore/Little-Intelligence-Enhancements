@@ -1703,8 +1703,11 @@ function CopLogicTravel._chk_stop_for_follow_unit(data, my_data)
 		local advance_pos = follow_unit:brain() and follow_unit:brain():is_advancing()
 		local follow_unit_pos = advance_pos or follow_unit:movement():m_newest_pos()
 		local relocate = nil
+		local z_diff = math.abs(data.m_pos.z - follow_unit_pos.z)
 		
-		if data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then
+		if z_diff > 250 then
+			relocate = true
+		elseif data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then
 			relocate = true
 		end
 

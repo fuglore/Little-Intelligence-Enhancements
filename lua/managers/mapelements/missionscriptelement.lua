@@ -74,9 +74,11 @@ local entirely_unique_stuff = {
 	wwh = {
 		[100683] = function ()
 			local valid_diffs = {
-				"overkill_290",
-				"sm_wish"
+				overkill_290 = true,
+				sm_wish = true
 			}
+			
+			--log(tostring(Global.game_settings.difficulty))
 		
 			if not valid_diffs[Global.game_settings.difficulty] then
 				return

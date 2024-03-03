@@ -1545,6 +1545,29 @@ function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
 	end
 end
 
+function GroupAIStateBesiege:check_follow_objectives_ready(follow_unit)
+	local u_key = follow_unit:key()
+
+	for e_key, e_data in pairs(self._police) do
+		if u_key ~= e_key then
+			local unit = e_data.unit
+			
+			if alive(unit) and unit:brain():is_active() and not unit:character_damage():dead() then
+				local brain = unit:brain()
+				local current_objective = brain:objective()
+				
+				if current_objective and current_objective.type == "follow" and alive(current_objective.follow_unit) then
+					if current_objective.follow_unit:key() == u_key and not current_objective.in_place then
+						return false
+					end
+				end
+			end
+		end
+	end
+	
+	return true
+end
+
 local group_upd_funcs = {
 	assault_area = "_assign_enemy_group_to_assault",
 	recon_area = "_assign_enemy_group_to_recon",
@@ -2224,7 +2247,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						else
 							current_objective.tactic = nil
 						end
-					elseif current_objective.going_for_drill and self._jammable_drills then
+					end
+				elseif current_objective.tactic == "sabotage" then
+					if current_objective.going_for_drill and self._jammable_drills then
 						if not next(current_objective.area.criminal.units) then
 							for u_key, area in pairs(self._jammable_drills) do
 								if current_objective.area.id == area.id then
@@ -2294,7 +2319,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 							end
 						end
 					end
-					
+				elseif tactic_name == "sabotage" then
 					if self._jammable_drills then
 						local closest_area_dis, closest_area, closest_chosen_u_data
 						
@@ -2314,7 +2339,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 						
 						if closest_area then
 							local search_params = {
-								id = "GroupAI_HRTtactic",
+								id = "GroupAI_Sabotactic",
 								from_tracker = closest_chosen_u_data.unit:movement():nav_tracker(),
 								to_seg = closest_area.pos_nav_seg,
 								access_pos = self._get_group_acces_mask(group),
@@ -2326,7 +2351,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 								local grp_objective = {
 									type = "assault_area",
 									attitude = "avoid",
-									tactic = "hrt",
+									tactic = "sabotage",
 									going_for_drill = true,
 									area = closest_area,
 									coarse_path = coarse_path

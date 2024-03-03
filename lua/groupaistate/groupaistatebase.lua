@@ -167,10 +167,10 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 				is_default = true,
 				scan = true,
 				type = "free",
-				follow_unit = objective.follow_unit,
-				no_arrest = objective.no_arrest,
-				grp_objective = objective.grp_objective,
-				attitude = objective.attitude or objective.grp_objective and objective.grp_objective.attitude,
+				follow_unit = objective and objective.follow_unit,
+				no_arrest = objective and objective.no_arrest,
+				grp_objective = objective and objective.grp_objective,
+				attitude = objective and objective.attitude or objective and objective.grp_objective and objective.grp_objective.attitude,
 			}
 
 			if u_data.assigned_area then

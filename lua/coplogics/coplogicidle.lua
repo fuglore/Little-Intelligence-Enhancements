@@ -354,7 +354,7 @@ function CopLogicIdle.clbk_action_timeout(ignore_this, data)
 
 	my_data.action_expired = true
 	
-	if not my_data.detected_criminal then
+	if not data.cool or not my_data.detected_criminal then
 		data.objective_complete_clbk(data.unit, data.objective)
 	end
 	
@@ -1674,9 +1674,14 @@ function CopLogicIdle._chk_relocate(data)
 			return
 		end
 		
-		if data.is_tied and 60 < mvector3.distance(data.m_pos, follow_unit_pos) then
+		local old_pos = data.objective.relocated_to or data.m_pos
+		local z_diff = math.abs(old_pos.z - follow_unit_pos.z)
+		
+		if z_diff > 250 then
 			relocate = true
-		elseif data.objective.distance and data.objective.distance < mvector3.distance(data.m_pos, follow_unit_pos) then
+		elseif data.is_tied and 60 < mvector3.distance(old_pos, follow_unit_pos) then
+			relocate = true
+		elseif data.objective.distance and data.objective.distance < mvector3.distance(old_pos, follow_unit_pos) then
 			relocate = true
 		end
 

@@ -766,7 +766,8 @@ function GroupAITweakData:_LIES_setup()
 			"flank",
 			"charge",
 			"shield_cover",
-			"smoke_grenade"
+			"smoke_grenade",
+			"sabotage"
 		}
 		self._tactics.shield_wall_ranged = {
 			"shield",
@@ -787,6 +788,7 @@ function GroupAITweakData:_LIES_setup()
 			"ranged_fire",
 			"murder",
 			"hrt",
+			"sabotage",
 			"sniper",
 			"shield_cover"
 		}
@@ -826,7 +828,13 @@ function GroupAITweakData:_LIES_setup()
 		
 		self._tactics.hrt = {
 			"hrt",
+			"sabotage",
 			"flank"
+		}
+		self._tactics.taser_sabo = {
+			"flank",
+			"charge",
+			"sabotage"
 		}
 		
 		--chad wuz here
@@ -1767,7 +1775,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_max = 2,
 						rank = 1,
 						unit = "FBI_swat_M4",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.tazer_flanking
 					},
 					{
 						amount_min = 2,
@@ -1775,7 +1783,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_max = 2,
 						rank = 2,
 						unit = "FBI_heavy_G36",
-						tactics = self._tactics.swat_rifle_flank
+						tactics = self._tactics.tazer_flanking
 					}
 				}
 			}
@@ -1887,7 +1895,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_max = 2,
 						rank = 1,
 						unit = "FBI_swat_M4",
-						tactics = self._tactics.swat_rifle
+						tactics = self._tactics.tazer_charge
 					},
 					{
 						amount_min = 2,
@@ -1895,7 +1903,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_max = 2,
 						rank = 2,
 						unit = "FBI_heavy_G36",
-						tactics = self._tactics.swat_rifle
+						tactics = self._tactics.tazer_charge
 					}
 				}
 			}
@@ -2643,7 +2651,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.Cowboys = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 90,
+				initial_spawn_delay = 10,
 				amount = {
 					2,
 					3
@@ -2686,7 +2694,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.CS_cops = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 30,
+				initial_spawn_delay = 10,
 				amount = {
 					2,
 					4
@@ -2763,7 +2771,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.FBI_office_agents = {
 				spawn_cooldown = 60,
 				max_nr_simultaneous_groups = 3,
-				initial_spawn_delay = 90,
+				initial_spawn_delay = 30,
 				amount = {
 					2,
 					4
@@ -2806,7 +2814,7 @@ function GroupAITweakData:_LIES_setup()
 			
 			if difficulty_index > 5 then
 				self.enemy_spawn_groups.FBI_office_agents.spawn_cooldown = 45
-				self.enemy_spawn_groups.FBI_office_agents.initial_spawn_delay = 60
+				self.enemy_spawn_groups.FBI_office_agents.initial_spawn_delay = 10
 				self.enemy_spawn_groups.FBI_office_agents.spawn[1].respawn_cooldown = 15
 				self.enemy_spawn_groups.FBI_office_agents.spawn[2].respawn_cooldown = 15
 				
@@ -2825,7 +2833,7 @@ function GroupAITweakData:_LIES_setup()
 							rank = 1,
 							freq = 1,
 							unit = "CS_swat_MP5",
-							tactics = self._tactics.swat_rifle_flank
+							tactics = self._tactics.taser_sabo
 						},
 						{
 							respawn_cooldown = 15,
@@ -2833,7 +2841,7 @@ function GroupAITweakData:_LIES_setup()
 							rank = 1,
 							freq = 1,
 							unit = "CS_swat_R870",
-							tactics = self._tactics.swat_shotgun_flank
+							tactics = self._tactics.taser_sabo
 						},
 						{
 							respawn_cooldown = 30,
@@ -2841,7 +2849,7 @@ function GroupAITweakData:_LIES_setup()
 							rank = 2,
 							freq = 1,
 							unit = "taser_refless",
-							tactics = self._tactics.swat_shotgun_flank
+							tactics = self._tactics.taser_sabo
 						}
 					},
 					spawn_point_chk_ref = table.list_to_set({
@@ -2865,7 +2873,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.CS_cops = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 2,
-				initial_spawn_delay = 30,
+				initial_spawn_delay = 10,
 				amount = {
 					2,
 					4
@@ -3040,7 +3048,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.FBI_infil = {
 				spawn_cooldown = 30,
 				max_nr_simultaneous_groups = 3,
-				initial_spawn_delay = 30,
+				initial_spawn_delay = 10,
 				amount = {
 					2,
 					3
@@ -3115,7 +3123,7 @@ function GroupAITweakData:_LIES_setup()
 				self.enemy_spawn_groups.CS_cops = {
 					spawn_cooldown = 30,
 					max_nr_simultaneous_groups = 2,
-					initial_spawn_delay = 30,
+					initial_spawn_delay = 10,
 					amount = {
 						2,
 						4
@@ -3145,6 +3153,21 @@ function GroupAITweakData:_LIES_setup()
 					0,
 					0,
 					0
+				}
+			else
+				self._tactics.tazer_flanking = { 
+					"flank", --set to "flanking" in vanilla which is not an actual tactic
+					"charge",
+					"provide_coverfire",
+					"smoke_grenade",
+					"murder",
+					"sabotage"
+				}
+				self._tactics.smg = {
+					"flank",
+					"smoke_grenade",
+					"flash_grenade",
+					"sabotage"
 				}
 			end
 		
@@ -3232,7 +3255,7 @@ function GroupAITweakData:_LIES_setup()
 								rank = 1,
 								freq = 1,
 								unit = "CS_swat_MP5",
-								tactics = self._tactics.swat_rifle_flank
+								tactics = self._tactics.taser_sabo
 							},
 							{
 								respawn_cooldown = 15,
@@ -3240,7 +3263,7 @@ function GroupAITweakData:_LIES_setup()
 								rank = 1,
 								freq = 1,
 								unit = "CS_swat_R870",
-								tactics = self._tactics.swat_shotgun_flank
+								tactics = self._tactics.taser_sabo
 							},
 							{
 								respawn_cooldown = 30,
@@ -3248,7 +3271,7 @@ function GroupAITweakData:_LIES_setup()
 								rank = 2,
 								freq = 1,
 								unit = "taser_refless",
-								tactics = self._tactics.swat_shotgun_flank
+								tactics = self._tactics.taser_sabo
 							}
 						},
 						spawn_point_chk_ref = table.list_to_set({
@@ -3312,12 +3335,14 @@ function GroupAITweakData:_LIES_setup()
 			end
 		end
 		
-
-		self._tactics.smg = {
-			"flank",
-			"smoke_grenade",
-			"flash_grenade"
-		}
+		
+		if not self._tactics.smg then
+			self._tactics.smg = {
+				"flank",
+				"smoke_grenade",
+				"flash_grenade"
+			}
+		end
 	
 		if difficulty_index <= 2 then
 			self.enemy_spawn_groups.tac_swat_smg = {
@@ -4182,6 +4207,34 @@ Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(
 		radius = 700,
 		max_nr = 1,
 		queue = "e02",
+		group_min = 0,
+		duration = {
+			0,
+			0
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.powersabotage = {
+		radius = 700,
+		max_nr = 1,
+		queue = "e03",
+		group_min = 0,
+		duration = {
+			0,
+			0
+		},
+		interval = {
+			0.75,
+			1.2
+		}
+	}
+	self.enemy_chatter.gensabotage = {
+		radius = 700,
+		max_nr = 1,
+		queue = "e04",
 		group_min = 0,
 		duration = {
 			0,

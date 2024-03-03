@@ -24,6 +24,19 @@ function CopLogicBase._report_detections(enemies)
 	end
 end
 
+function CopLogicBase.on_objective_unit_damaged(data, unit, attacker_unit)
+	if not alive(data.unit) then
+		return
+	end
+
+	if unit and unit:character_damage():dead() then
+		data.objective.destroy_clbk_key = nil
+		data.objective.death_clbk_key = nil
+
+		data.objective_failed_clbk(data.unit, data.objective)
+	end
+end
+
 function CopLogicBase.should_duck_on_alert(data, alert_data)
 	return --let other things tell to crouch
 end
@@ -128,38 +141,20 @@ function CopLogicBase.check_sabotage_objective_not_allowed(data, objective)
 		return
 	end
 	
-	local is_civilian = CopDamage.is_civilian(data.unit:base()._tweak_table)
+	if not data.brain:objective_is_sabotage(objective) then
+		return
+	end
 	
-	if is_civilian then
-		return
+	if data.objective and objective ~= data.objective and data.objective.sabotage then
+		return true
 	end
 
-	if data.cool or not data.team.foes[tweak_data.levels:get_default_team_ID("player")] then
-		return
-	end
-
-	if objective.grp_objective then
-		return
-	end
-
-	if objective.type ~= "act" then
-		if (not objective.followup_objective or not objective.followup_objective.action) and not objective.followup_SO then
-			return
+	if LIES.settings.hhtacs then
+		if not data.group or data.SO_access == "security" or data.group and data.group.objective and (data.group.objective.type == "assault_area" or data.group.objective.type == "retire") then
+			if not data.tactics or not data.tactics.sabotage then
+				return true
+			end
 		end
-	end
-
-	if not objective.pos then
-		return
-	end
-
-	if not objective.action then
-		if (not objective.followup_objective or not objective.followup_objective.action) and not objective.followup_SO then
-			return
-		end
-	end
-
-	if data.tactics and data.tactics.hrt then
-		return
 	end
 
 	if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction  then
@@ -195,8 +190,28 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 		return true, true
 	end
 	
-	if CopLogicBase.check_sabotage_objective_not_allowed(data, objective) then
-		return true, true
+	if objective.sabotage then
+		if (not data.tactics or not data.tactics.hrt) then		
+			if attention and attention.nav_tracker and AIAttentionObject.REACT_COMBAT <= attention.reaction  then
+				if attention.verified and math.abs(objective.pos.z - attention.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, attention.m_pos) < 490000 then
+					return true, true
+				end
+			end
+
+			local objective_nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
+
+			local all_criminals = managers.groupai:state():all_char_criminals()
+
+			for u_key, u_data in pairs(all_criminals) do
+				if not u_data.status or u_data.status == "electrified" then
+					local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+
+					if crim_area.nav_segs[objective_nav_seg] then
+						return true, true
+					end
+				end
+			end
+		end
 	end
 
 	strictness = strictness or 0

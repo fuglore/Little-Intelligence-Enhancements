@@ -94,6 +94,13 @@ Hooks:PostHook(CopBrain, "convert_to_criminal", "lies_convert_to_criminal", func
 	self._unit:movement()._action_common_data.char_tweak = char_tweaks
 end)
 
+Hooks:PostHook(CopBrain, "clbk_death", "lies_remove_sabo_outline", function(self, my_unit, damage_info)
+	if self._sabotage_contour_id then
+		self._unit:contour():remove_by_id(self._sabotage_contour_id, true)
+		self._sabotage_contour_id = nil
+	end
+end)
+
 function CopBrain:upd_falloff_sim()
 	if self._unit:character_damage():dead() then
 		return
@@ -521,6 +528,74 @@ function CopBrain:set_objective(new_objective, params)
 		end
 	end
 	
+	if new_objective and self:objective_is_sabotage(new_objective) then
+		new_objective.sabotage = true
+
+		local dialogue_said = new_objective.sabo_voiceline and new_objective.sabo_voiceline == "none"
+		
+		if not dialogue_said then
+			local m_key = self._logic_data.key
+			local voiceline = new_objective.sabo_voiceline or "gensabotage"
+			
+			if self._logic_data.group then
+				local group = self._logic_data.group 
+
+				for u_key, u_data in pairs(group.units) do
+					if u_key ~= m_key then
+						if u_data.char_tweak.chatter.go_go and managers.groupai:state():chk_say_enemy_chatter(u_data.unit, u_data.m_pos, voiceline) then
+							dialogue_said = true
+							
+							break
+						end
+					end
+				end
+			end
+			
+			if not dialogue_said then
+				local best_group = nil
+
+				for _, group in pairs(managers.groupai:state()._groups) do
+					local group_has_reenforce = group.objective.type == "reenforce_area"
+				
+					if not best_group or group_has_reenforce then
+						best_group = group
+						
+						if group_has_reenforce then
+							break
+						end
+					elseif not group_has_reenforce and group.objective.type ~= "retire" then
+						best_group = group
+					end
+				end
+				
+				
+				if best_group then
+					for u_key, u_data in pairs(best_group.units) do
+						if u_key ~= m_key then
+							if u_data.char_tweak.chatter.go_go and managers.groupai:state():chk_say_enemy_chatter(u_data.unit, u_data.m_pos, voiceline) then
+								dialogue_said = true
+								
+								break
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		if LIES.settings.hhtacs then
+			if not self._sabotage_contour_id then
+				self._sabotage_contour_id = self._unit:contour():add("highlight_character", true)
+			end
+		elseif self._sabotage_contour_id then
+			self._unit:contour():remove_by_id(self._sabotage_contour_id, true)
+			self._sabotage_contour_id = nil
+		end
+	elseif self._sabotage_contour_id then
+		self._unit:contour():remove_by_id(self._sabotage_contour_id, true)
+		self._sabotage_contour_id = nil
+	end
+	
 	self._logic_data.objective = new_objective
 
 	if new_objective and new_objective.followup_objective and new_objective.followup_objective.interaction_voice then
@@ -820,6 +895,60 @@ function CopBrain:request_switch_to_normal_weapon(t)
 	end
 	
 	self:_do_hhtacs_damage_modifiers()
+	
+	return true
+end
+
+function CopBrain:objective_is_sabotage(objective)
+	local data = self._logic_data
+	
+	if not data then
+		return
+	end
+	
+	local objective = objective or self._logic_data.objective
+	
+	if not objective or not objective.pos or objective.grp_objective or data.cool then
+		return
+	end
+	
+	local is_civilian = CopDamage.is_civilian(data.unit:base()._tweak_table)
+	
+	if not data.team.foes[tweak_data.levels:get_default_team_ID("player")] or is_civilian then
+		return
+	end
+	
+	if objective.type ~= "act" or not objective.action then 
+		if (not objective.followup_objective or not objective.followup_objective.action) and not objective.followup_SO then
+			return
+		elseif objective.followup_objective and objective.followup_objective.element then
+			local element = objective.followup_objective.element
+			
+			if not element._events then
+				return
+			end
+			
+			if element._events["anim_start"] and next(element._events["anim_start"]) or element._events["complete"] and next(element._events["complete"]) then
+				return true
+			else
+				return
+			end
+		end
+	elseif objective.element then
+		local element = objective.element
+			
+		if not element._events then
+			return
+		end
+		
+		if element._events["anim_start"] and next(element._events["anim_start"]) or element._events["complete"] and next(element._events["complete"]) then
+			return true
+		else
+			return
+		end
+	elseif not objective.sabo_voiceline then
+		return
+	end
 	
 	return true
 end

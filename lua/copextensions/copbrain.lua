@@ -908,13 +908,13 @@ function CopBrain:objective_is_sabotage(objective)
 	
 	local objective = objective or self._logic_data.objective
 	
-	if not objective or not objective.pos or objective.grp_objective or data.cool then
+	if not objective or objective.grp_objective or data.cool then
 		return
 	end
 	
 	local is_civilian = CopDamage.is_civilian(data.unit:base()._tweak_table)
 	
-	if not data.team.foes[tweak_data.levels:get_default_team_ID("player")] or is_civilian then
+	if not data.team or not data.team.foes[tweak_data.levels:get_default_team_ID("player")] or is_civilian then
 		return
 	end
 	

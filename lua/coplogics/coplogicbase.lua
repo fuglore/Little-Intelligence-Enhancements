@@ -149,30 +149,52 @@ function CopLogicBase.check_sabotage_objective_not_allowed(data, objective)
 		return true
 	end
 
-	if LIES.settings.hhtacs then
+	if LIES.settings.hhtacs and not managers.skirmish:is_skirmish() then
 		if not data.group or data.SO_access == "security" or data.group and data.group.objective and (data.group.objective.type == "assault_area" or data.group.objective.type == "retire") then
 			if not data.tactics or not data.tactics.sabotage then
 				return true
 			end
 		end
 	end
-
-	if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction  then
-		if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, data.attention_obj.m_pos) < 490000 then
-			return true
-		end
-	end
-
-	local objective_nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
-
-	local all_criminals = managers.groupai:state():all_char_criminals()
-
-	for u_key, u_data in pairs(all_criminals) do
-		if not u_data.status or u_data.status == "electrified" then
-			local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
-
-			if crim_area.nav_segs[objective_nav_seg] then
+	
+	if objective.pos then
+		if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+			if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, data.attention_obj.m_pos) < 490000 then
 				return true
+			end
+		end
+
+		local objective_nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
+
+		local all_criminals = managers.groupai:state():all_char_criminals()
+
+		for u_key, u_data in pairs(all_criminals) do
+			if not u_data.status or u_data.status == "electrified" then
+				local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+
+				if crim_area.nav_segs[objective_nav_seg] then
+					return true
+				end
+			end
+		end
+	elseif objective.in_place then
+		if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+			if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(data.m_pos, data.attention_obj.m_pos) < 490000 then
+				return true
+			end
+		end
+
+		local my_seg = data.unit:movement():nav_tracker():nav_segment()
+
+		local all_criminals = managers.groupai:state():all_char_criminals()
+
+		for u_key, u_data in pairs(all_criminals) do
+			if not u_data.status or u_data.status == "electrified" then
+				local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+
+				if crim_area.nav_segs[my_seg] then
+					return true
+				end
 			end
 		end
 	end
@@ -191,10 +213,10 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 	end
 	
 	if objective.sabotage then
-		if (not data.tactics or not data.tactics.hrt) then		
-			if attention and attention.nav_tracker and AIAttentionObject.REACT_COMBAT <= attention.reaction  then
-				if attention.verified and math.abs(objective.pos.z - attention.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, attention.m_pos) < 490000 then
-					return true, true
+		if objective.pos then
+			if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, data.attention_obj.m_pos) < 490000 then
+					return true
 				end
 			end
 
@@ -207,7 +229,27 @@ function CopLogicBase.is_obstructed(data, objective, strictness, attention)
 					local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
 
 					if crim_area.nav_segs[objective_nav_seg] then
-						return true, true
+						return true
+					end
+				end
+			end
+		elseif objective.in_place then
+			if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+				if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(data.m_pos, data.attention_obj.m_pos) < 490000 then
+					return true
+				end
+			end
+
+			local my_seg = data.unit:movement():nav_tracker():nav_segment()
+
+			local all_criminals = managers.groupai:state():all_char_criminals()
+
+			for u_key, u_data in pairs(all_criminals) do
+				if not u_data.status or u_data.status == "electrified" then
+					local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
+
+					if crim_area.nav_segs[my_seg] then
+						return true
 					end
 				end
 			end

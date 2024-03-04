@@ -1325,11 +1325,16 @@ function CopLogicTravel._determine_destination_occupation(data, objective)
 		local dest_nav_seg_id = my_data.coarse_path[#my_data.coarse_path][1]
 		local dest_area = managers.groupai:state():get_area_from_nav_seg_id(dest_nav_seg_id)
 		local follow_pos = follow_tracker and follow_tracker:field_position()
+		
+		if not follow_pos then
+			follow_pos = my_data.coarse_path[#my_data.coarse_path][2] or managers.navigation._nav_segments[dest_nav_seg_id].pos
+		end
+		
 		local threat_pos = nil
 		local follow_dis = data.internal_data.called and 450 or 700
 
-		if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
-			threat_pos = data.attention_obj.nav_tracker:field_position()
+		if data.attention_obj and data.attention_obj.verified_pos and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
+			threat_pos = data.attention_obj.verified_pos
 		end
 
 		local cover = managers.navigation:find_cover_in_nav_seg_3(dest_area.nav_segs, follow_dis, follow_pos, threat_pos)

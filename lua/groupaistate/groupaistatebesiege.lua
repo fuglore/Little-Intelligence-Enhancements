@@ -431,7 +431,7 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 			self._blockade = true
 		end
 		
-		if level_id == "hvh" then
+		if level_id == "hvh" or managers.skirmish:is_skirmish() then
 			self._no_tear_gas = true
 		end
 		

@@ -919,10 +919,16 @@ function CopBrain:objective_is_sabotage(objective)
 	end
 	
 	if objective.type ~= "act" or not objective.action then 
-		if (not objective.followup_objective or not objective.followup_objective.action) and not objective.followup_SO then
+		if not objective.followup_objective or not objective.followup_objective.action then
 			return
-		elseif objective.followup_objective and objective.followup_objective.element then
+		elseif objective.followup_objective.element then
 			local element = objective.followup_objective.element
+			
+			if element:_is_nav_link() then
+				if not objective.followup_objective.action.variant or not string.begins(objective.followup_objective.action.variant, "e_so") then
+					return
+				end
+			end
 			
 			if not element._events then
 				return
@@ -936,6 +942,12 @@ function CopBrain:objective_is_sabotage(objective)
 		end
 	elseif objective.element then
 		local element = objective.element
+		
+		if element:_is_nav_link() then
+			if not objective.action.variant or not string.begins(objective.action.variant, "e_so") then
+				return
+			end
+		end
 			
 		if not element._events then
 			return

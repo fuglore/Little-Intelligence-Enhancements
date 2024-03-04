@@ -688,7 +688,20 @@ function CivilianLogicFlee.register_rescue_SO(ignore_this, data)
 			so_rot = nil
 		end
 	end
-
+	
+	local followup_objective = {
+		type = "act",
+		action = {
+			variant = "idle",
+			body_part = 1,
+			type = "act",
+			blocks = {
+				action = -1,
+				walk = -1
+			}
+		}
+	}
+	
 	local objective = {
 		type = "act",
 		interrupt_health = 0.75,
@@ -712,7 +725,8 @@ function CivilianLogicFlee.register_rescue_SO(ignore_this, data)
 				walk = -1
 			}
 		},
-		action_duration = tweak_data.interaction.free.timer
+		action_duration = tweak_data.interaction.free.timer,
+		followup_objective = followup_objective
 	}
 	local receiver_areas = managers.groupai:state():get_areas_from_nav_seg_id(objective.nav_seg)
 	local so_descriptor = {

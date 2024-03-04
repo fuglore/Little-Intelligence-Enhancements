@@ -688,7 +688,38 @@ function GroupAIStateBase:print_objective(objective)
 		if followup_objective.type then
 			local followup_objective_type_str = followup_objective.type and tostring(followup_objective.type) or "lmao what"
 			
+			log("f. objective info:")
+			
 			log("f. objective has type: " .. followup_objective_type_str .. "")
+		
+			if followup_objective_type_str.is_default then
+				log("objective is default")
+			end
+			
+			if followup_objective_type_str.forced then
+				log("forced objective")
+			end
+			
+			if followup_objective_type_str.stance then
+				log(objective.stance)
+			end
+			
+			if followup_objective_type_str.attitude then
+				log(objective.attitude)
+			end
+			
+			if followup_objective_type_str.path_style then
+				log(objective.path_style)
+			end
+			
+			if followup_objective_type_str.action then
+				log("objective has action type " ..tostring(followup_objective_type_str.action.type)..":"..tostring(followup_objective_type_str.action.variant))
+			end
+			
+			if followup_objective_type_str.element then
+				log("objective has element: " .. tostring(followup_objective_type_str.element._id))
+			end
+			
 		end
 	end
 end

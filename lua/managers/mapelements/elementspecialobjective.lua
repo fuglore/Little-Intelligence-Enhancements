@@ -223,6 +223,10 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 	if self._values.so_action == "e_so_ntl_smoke_stand" then --this smoking action has a much too long exit animation for loud gameplay
 		self._values.so_action = "e_so_ntl_look_around"
 	end
+	
+	if self._values.trigger_on == nil and not self.allow_followup_self then
+		self._values.trigger_on = "none"
+	end
 
 	if self:_is_nav_link() then
 		managers.navigation._LIES_navlink_elements[self._id] = self
@@ -259,7 +263,7 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 		end
 	end
 	
-	if self._stealth_patrol and managers.groupai:state():whisper_mode() then
+	if self._stealth_patrol and managers.groupai:state():whisper_mode() or not self._values.patrol_path and self._values.path_style == "destination" then
 		if unit:movement()._nav_tracker and unit:brain():SO_access() then
 			local to_pos = self._values.position
 			
@@ -272,17 +276,20 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 			
 			if to_pos then
 				local to_seg = managers.navigation:get_nav_seg_from_pos(to_pos, true)
-				local search_params = {
-					id = "ESO_coarse_" ..  self._id .. tostring(unit:key()),
-					from_tracker = unit:movement():nav_tracker(),
-					to_seg = to_seg,
-					to_pos = to_pos,
-					access_pos = self._values.SO_access
-				}
-				local coarse_path = managers.navigation:search_coarse(search_params)
 				
-				if not coarse_path then
-					return false
+				if unit:movement():nav_tracker() and unit:movement():nav_tracker():nav_segment() ~= to_seg then				
+					local search_params = {
+						id = "ESO_coarse_" ..  self._id .. tostring(unit:key()),
+						from_tracker = unit:movement():nav_tracker(),
+						to_seg = to_seg,
+						to_pos = to_pos,
+						access_pos = unit:brain():SO_access()
+					}
+					local coarse_path = managers.navigation:search_coarse(search_params)
+					
+					if not coarse_path then
+						return false
+					end
 				end
 			end
 		end

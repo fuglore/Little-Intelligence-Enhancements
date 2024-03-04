@@ -1635,6 +1635,96 @@ function CopLogicIdle.damage_clbk(data, damage_info)
 	end
 end
 
+function CopLogicIdle._check_should_relocate(data, objective)
+	if not objective then
+		return
+	end
+	
+	if objective and objective.type == "follow" and objective.follow_unit and alive(objective.follow_unit) then
+		if data.unit:in_slot(16) or data.team and (data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")]) then
+			if TeamAILogicIdle._check_should_relocate(data, data.internal_data, objective) then
+				objective.in_place = nil
+				
+				return true
+			end
+			
+			return
+		end
+		
+		local relocate = nil
+		local follow_unit = objective.follow_unit
+		local advance_pos = follow_unit:brain() and follow_unit:brain():is_advancing()
+		local follow_unit_pos = advance_pos or follow_unit:movement():m_newest_pos()
+
+		if objective.relocated_to and mvector3.distance_sq(objective.relocated_to, follow_unit_pos) < 3600 then
+			return
+		end
+		
+		local old_pos = objective.relocated_to or data.m_pos
+		local z_diff = math.abs(old_pos.z - follow_unit_pos.z)
+		
+		if z_diff > 250 then
+			relocate = true
+		elseif data.is_tied and 60 < mvector3.distance(old_pos, follow_unit_pos) then
+			relocate = true
+		elseif objective.distance and objective.distance < mvector3.distance(old_pos, follow_unit_pos) then
+			relocate = true
+		end
+
+		if not relocate then
+			local ray_params = {
+				pos_to = follow_unit_pos
+			}
+			
+			if objective.relocated_to then
+				ray_params.pos_from = objective.relocated_to
+			else
+				ray_params.tracker_from = data.unit:movement():nav_tracker()
+			end
+			
+			local ray_res = managers.navigation:raycast(ray_params)
+
+			if ray_res then
+				relocate = true
+			end
+		end
+
+		if relocate then
+			objective.in_place = nil
+			objective.nav_seg = follow_unit:movement():nav_tracker():nav_segment()
+			objective.relocated_to = mvector3.copy(follow_unit_pos)
+
+			return true
+		end
+	end
+end
+
+function CopLogicIdle._chk_objective_needs_travel(data, new_objective)
+	if not new_objective.nav_seg and new_objective.type ~= "follow" then
+		return
+	end
+	
+	if CopLogicIdle._check_should_relocate(data, new_objective) then
+		return true
+	end
+
+	if new_objective.in_place then
+		return
+	end
+
+	if new_objective.pos then
+		return true
+	end
+
+	if new_objective.area and new_objective.area.nav_segs[data.unit:movement():nav_tracker():nav_segment()] then
+		new_objective.in_place = true
+
+		return
+	end
+
+	return true
+end
+
 function CopLogicIdle._chk_relocate(data)
 	if not data.objective then
 		return

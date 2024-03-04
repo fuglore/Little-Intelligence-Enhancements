@@ -19,7 +19,7 @@ function CopLogicIntimidated.register_rescue_SO(ignore_this, data)
 		}
 	}
 	local objective = {
-		interrupt_health = 0.85,
+		interrupt_health = 0.75,
 		stance = "hos",
 		type = "act",
 		scan = true,

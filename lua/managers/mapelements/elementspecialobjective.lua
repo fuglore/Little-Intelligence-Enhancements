@@ -223,10 +223,6 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 	if self._values.so_action == "e_so_ntl_smoke_stand" then --this smoking action has a much too long exit animation for loud gameplay
 		self._values.so_action = "e_so_ntl_look_around"
 	end
-	
-	if self._values.trigger_on == nil and not self.allow_followup_self then
-		self._values.trigger_on = "none"
-	end
 
 	if self:_is_nav_link() then
 		managers.navigation._LIES_navlink_elements[self._id] = self
@@ -236,6 +232,10 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 	
 	if not is_AI_SO and self._values.path_stance ~= "hos" and self._values.path_stance ~= "cbt" and (self._values.patrol_path or self._values.position) and self._values.path_style ~= "precise" and not self._values.forced then
 		self._stealth_patrol = true
+	end
+	
+	if not is_AI_SO and not self._stealth_patrol and self._values.trigger_on == nil and not self._values.allow_followup_self then
+		self._values.trigger_on = "none"
 	end
 end)
 

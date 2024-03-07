@@ -1478,7 +1478,35 @@ function CopLogicAttack._find_flank_pos(data, my_data, flank_tracker, max_dist)
 end
 
 function CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
+	if my_data.advancing then
+		return
+	end
+
 	local my_tracker = data.unit:movement():nav_tracker()
+	
+	if my_tracker:lost() then
+		local field_position = my_tracker:field_position()
+		
+		if mvec3_dis_sq(my_tracker:position(), field_position) > 900 then	
+			local path = {
+				mvector3.copy(data.m_pos),
+				field_position
+			}
+			
+			local new_action_data = {
+				variant = "run",
+				body_part = 2,
+				type = "walk",
+				nav_path = path
+			}
+			my_data.advancing = data.unit:brain():action_request(new_action_data)
+
+			if my_data.advancing then
+				return true
+			end
+		end
+	end
+	
 	local reservation = {
 		radius = 30,
 		position = data.m_pos,
@@ -1486,7 +1514,7 @@ function CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 	}
 
 	if not managers.navigation:is_pos_free(reservation) then
-		local to_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 500, nil, nil, nil, data.pos_rsrv_id)
+		local to_pos = CopLogicTravel._get_pos_on_wall(my_tracker:position(), 500, nil, nil, nil, data.pos_rsrv_id)
 
 		if to_pos then
 			local path = {
@@ -1495,7 +1523,7 @@ function CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 			}
 
 			local new_action_data = {
-				variant = "walk",
+				variant = "run",
 				body_part = 2,
 				type = "walk",
 				nav_path = path
@@ -1503,8 +1531,6 @@ function CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
 			my_data.advancing = data.unit:brain():action_request(new_action_data)
 
 			if my_data.advancing then
-				my_data.surprised = true
-
 				return true
 			end
 		end

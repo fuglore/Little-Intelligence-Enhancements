@@ -2979,11 +2979,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 								assault_from_here = false
 								flank = true
 								
-								if not alternate_assault_area then
-									break
-								end
-								
-								flank_quality = flank_quality * 0.9
+								break
 							end
 						end
 					end
@@ -3006,7 +3002,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 						break
 					end
-				elseif not alternate_assault_area or flank_quality > best_flank_quality then
+				elseif not alternate_assault_area or math.random() > 0.5 then
 					local search_params = {
 						id = "GroupAI_assault",
 						from_seg = objective_area.pos_nav_seg,
@@ -3021,10 +3017,17 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 
 						alternate_assault_area = search_area
 						alternate_assault_area_from = assault_from_area
-						best_flank_quality = flank_quality
 					end
+				end
+				
+				found_areas[search_area] = nil
+				
+				for other_area_id, other_area in pairs(search_area.neighbours) do
+					if not found_areas[other_area] then
+						table.insert(to_search_areas, other_area)
 
-					found_areas[search_area] = nil
+						found_areas[other_area] = search_area
+					end
 				end
 			else
 				for other_area_id, other_area in pairs(search_area.neighbours) do
@@ -3038,10 +3041,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 		until #to_search_areas == 0
 
 		if not assault_area and alternate_assault_area then
-			flank = best_flank_quality > 0.8
 			assault_area = alternate_assault_area
 			found_areas[assault_area] = alternate_assault_area_from
 			assault_path = alternate_assault_path
+			flank = nil
 		end
 
 		if assault_area and assault_path then

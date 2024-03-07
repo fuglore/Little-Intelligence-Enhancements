@@ -233,10 +233,6 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 	if not is_AI_SO and self._values.path_stance ~= "hos" and self._values.path_stance ~= "cbt" and (self._values.patrol_path or self._values.position) and self._values.path_style ~= "precise" and not self._values.forced then
 		self._stealth_patrol = true
 	end
-	
-	if not is_AI_SO and not self._stealth_patrol and self._values.trigger_on == nil and not self._values.allow_followup_self then
-		self._values.trigger_on = "none"
-	end
 end)
 
 function ElementSpecialObjective:nav_link_delay()

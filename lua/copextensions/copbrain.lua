@@ -528,6 +528,22 @@ function CopBrain:set_objective(new_objective, params)
 		end
 	end
 	
+	if new_objective and new_objective.element and new_objective.needs_admin_clbk then
+		new_objective.element:clbk_objective_administered(self._unit)
+	end
+	
+	if new_objective and new_objective.followup_SO and not new_objective.followup_objective then
+		local current_SO_element = new_objective.followup_SO
+		local so_element = current_SO_element:choose_followup_SO(self._unit)
+		followup_objective = so_element and so_element:get_objective(self._unit)
+		
+		if followup_objective and not followup_objective.trigger_on then
+			followup_objective.needs_admin_clbk = true
+			new_objective.followup_objective = followup_objective
+			new_objective.followup_SO = nil
+		end
+	end
+	
 	if new_objective and self:objective_is_sabotage(new_objective) then
 		new_objective.sabotage = true
 
@@ -899,6 +915,13 @@ function CopBrain:request_switch_to_normal_weapon(t)
 	return true
 end
 
+local yeahitssabo = {
+	untie = true,
+	sabotage_device_low = true,
+	sabotage_device_mid = true,
+	sabotage_device_high = true
+}
+
 function CopBrain:objective_is_sabotage(objective)
 	local data = self._logic_data
 	
@@ -918,14 +941,18 @@ function CopBrain:objective_is_sabotage(objective)
 		return
 	end
 	
-	if objective.type ~= "act" or not objective.action then 
+	if not objective.action then 
 		if not objective.followup_objective or not objective.followup_objective.action then
 			return
 		elseif objective.followup_objective.element then
 			local element = objective.followup_objective.element
 			
+			if yeahitssabo[objective.followup_objective.action.variant] then
+				return true
+			end
+			
 			if element:_is_nav_link() then
-				if not objective.followup_objective.action.variant or not string.begins(objective.followup_objective.action.variant, "e_so") then
+				if not objective.followup_objective.action.variant or not CopActionAct._act_redirects.script[objective.followup_objective.action.variant] and not string.begins(objective.followup_objective.action.variant, "e_so") then
 					return
 				end
 			end
@@ -939,12 +966,18 @@ function CopBrain:objective_is_sabotage(objective)
 			else
 				return
 			end
+		elseif yeahitssabo[objective.action.variant] then
+			return true
 		end
 	elseif objective.element then
 		local element = objective.element
 		
+		if yeahitssabo[objective.action.variant] then
+			return true
+		end
+		
 		if element:_is_nav_link() then
-			if not objective.action.variant or not string.begins(objective.action.variant, "e_so") then
+			if not objective.action.variant or not CopActionAct._act_redirects.script[objective.action.variant] and not string.begins(objective.action.variant, "e_so") then
 				return
 			end
 		end
@@ -958,6 +991,8 @@ function CopBrain:objective_is_sabotage(objective)
 		else
 			return
 		end
+	elseif yeahitssabo[objective.action.variant] then
+		return true
 	elseif not objective.sabo_voiceline then
 		return
 	end

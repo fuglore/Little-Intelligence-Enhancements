@@ -150,21 +150,27 @@ function CopLogicBase.check_sabotage_objective_not_allowed(data, objective)
 	end
 
 	if LIES.settings.hhtacs and not managers.skirmish:is_skirmish() then
-		if not data.group or data.SO_access_str == "security" or data.group and data.group.objective and (data.group.objective.type == "assault_area" or data.group.objective.type == "retire") then
-			if not data.tactics or not data.tactics.sabotage then
-				return true
-			end
+		if not data.group or data.SO_access_str == "security" then
+			return true
 		end
 	end
 	
+	local my_seg = data.unit:movement():nav_tracker():nav_segment()
+	
 	if objective.pos then
+		local objective_nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
+		
+		if not data.tactics or not data.tactics.sabotage then
+			if objective_nav_seg ~= my_seg then
+				return
+			end
+		end
+		
 		if data.attention_obj and data.attention_obj.nav_tracker and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
 			if data.attention_obj.verified and math.abs(objective.pos.z - data.attention_obj.m_pos.z) < 250 and mvec3_dis_sq(objective.pos, data.attention_obj.m_pos) < 490000 then
 				return true
 			end
 		end
-
-		local objective_nav_seg = managers.navigation:get_nav_seg_from_pos(objective.pos)
 
 		local all_criminals = managers.groupai:state():all_char_criminals()
 
@@ -184,8 +190,6 @@ function CopLogicBase.check_sabotage_objective_not_allowed(data, objective)
 			return true
 		end
 	end
-
-	local my_seg = data.unit:movement():nav_tracker():nav_segment()
 
 	local all_criminals = managers.groupai:state():all_char_criminals()
 

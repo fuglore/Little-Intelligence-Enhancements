@@ -457,7 +457,7 @@ function NavigationManager:register_cover_units()
 								t_ins(location_script_data.covers, cover)
 								t_ins(covers, cover)
 								
-								if #covers >= max_cover_points then
+								if #location_script_data.covers >= 12 or #covers >= max_cover_points then
 									break
 								end
 							elseif c_tracker then

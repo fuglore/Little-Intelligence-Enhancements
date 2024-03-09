@@ -2378,7 +2378,7 @@ function CopLogicAttack._update_cover(data)
 					local search_nav_seg = nil
 
 					if data.objective and data.objective.type == "defend_area" then
-						if not data.objective.grp_objective or not data.objective.grp_objective.pushed then
+						if not data.objective.grp_objective or not data.objective.grp_objective.pushed or data.objective.in_place then
 							search_nav_seg = data.objective.nav_seg
 						end
 					end

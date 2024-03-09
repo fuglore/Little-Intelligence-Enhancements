@@ -965,3 +965,61 @@ function TeamAILogicIdle.on_long_dis_interacted(data, other_unit, secondary)
 		data.unit:brain():set_objective(objective)
 	end
 end
+
+function TeamAILogicIdle.clbk_revive_complete(ignore_this, data)
+	local my_data = data.internal_data
+
+	CopLogicBase.on_delayed_clbk(my_data, my_data.revive_complete_clbk_id)
+
+	my_data.revive_complete_clbk_id = nil
+	local revive_unit = my_data.reviving
+	my_data.reviving = nil
+
+	if revive_unit and alive(revive_unit) then
+		TeamAILogicIdle.actually_revive(data, revive_unit)
+		
+		if data.objective then
+			data.objective_complete_clbk(data.unit, my_data.performing_act_objective)
+		else
+			local objective = {
+				scan = true,
+				type = "act",
+				action = {
+					variant = "crouch",
+					body_part = 1,
+					type = "act",
+					blocks = {
+						heavy_hurt = -1,
+						hurt = -1,
+						action = -1,
+						aim = -1,
+						walk = -1
+					}
+				}
+			}
+		
+			data.unit:brain():set_objective(objective)
+		end
+	elseif data.objective then
+		data.objective_failed_clbk(data.unit, my_data.performing_act_objective)
+	else
+		local objective = {
+			scan = true,
+			type = "act",
+			action = {
+				variant = "crouch",
+				body_part = 1,
+				type = "act",
+				blocks = {
+					heavy_hurt = -1,
+					hurt = -1,
+					action = -1,
+					aim = -1,
+					walk = -1
+				}
+			}
+		}
+	
+		data.unit:brain():set_objective(objective)
+	end
+end

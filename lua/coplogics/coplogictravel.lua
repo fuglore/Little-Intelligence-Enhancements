@@ -1882,6 +1882,11 @@ function CopLogicTravel._get_exact_move_pos(data, nav_index)
 		
 		if not data.cool and not data.char_tweak.allowed_poses then
 			local end_pos = coarse_path[nav_index + 1][2]
+			
+			if not end_pos then
+				end_pos = area.pos --what the hell did i do to cause this?
+			end
+			
 			local walk_dir = end_pos - data.m_pos
 			local walk_dis = mvector3.normalize(walk_dir)
 			local cover_range = math.min(700, math.max(0, walk_dis - 100))

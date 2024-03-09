@@ -369,9 +369,9 @@ function NavigationManager:register_cover_units()
 	end
 	
 	if Network:is_server() then
-		local max_cover_points = #covers <= 0 and 2500 or math.round(#covers * (math_lerp(4, 1, math_clamp(#covers / 2500, 0, 1))))
+		local max_cover_points = #covers <= 0 and 5000 or math.round(#covers * (math_lerp(4, 1, math_clamp(#covers / 5000, 0, 1))))
 	
-		max_cover_points = math_clamp(max_cover_points, 1, 2500)
+		max_cover_points = math_clamp(max_cover_points, 1, 5000)
 		
 		log("Map has " .. tostring(#covers) .. " cover points, setting generation limit to " .. tostring(max_cover_points) .. " cover points.")
 		
@@ -457,7 +457,7 @@ function NavigationManager:register_cover_units()
 								t_ins(location_script_data.covers, cover)
 								t_ins(covers, cover)
 								
-								if #location_script_data.covers >= 12 or #covers >= max_cover_points then
+								if #covers >= max_cover_points then
 									break
 								end
 							elseif c_tracker then

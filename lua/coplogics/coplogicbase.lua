@@ -28,6 +28,10 @@ function CopLogicBase.on_objective_unit_damaged(data, unit, attacker_unit)
 	if not alive(data.unit) then
 		return
 	end
+	
+	if not data.objective then
+		return
+	end
 
 	if unit and unit:character_damage():dead() then
 		data.objective.destroy_clbk_key = nil
@@ -35,6 +39,23 @@ function CopLogicBase.on_objective_unit_damaged(data, unit, attacker_unit)
 
 		data.objective_failed_clbk(data.unit, data.objective)
 	end
+end
+
+function CopLogicBase.on_objective_unit_destroyed(data, unit)
+	if not alive(data.unit) then
+		debug_pause("dead unit did not remove destroy listener", data.debug_name, inspect(data.objective), data.name)
+
+		return
+	end
+	
+	if not data.objective then
+		return --we already got the objective removed
+	end
+
+	data.objective.destroy_clbk_key = nil
+	data.objective.death_clbk_key = nil
+
+	data.objective_failed_clbk(data.unit, data.objective)
 end
 
 function CopLogicBase.should_duck_on_alert(data, alert_data)

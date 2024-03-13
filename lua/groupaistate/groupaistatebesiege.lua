@@ -4516,10 +4516,18 @@ function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
 
 		if rand_wgt <= 0 then
 			if LIES.settings.spawngroupdelays > 1 then
-				local spawn_timers = math.random(15, 20)
-				local div = LIES.settings.spawngroupdelays - 1
+				local delay_i = LIES.settings.spawngroupdelays
+				local delays = {
+					{5, 9},
+					{10, 15},
+					{12, 18},
+					{15, 20}
+				}
 				
-				spawn_timers = spawn_timers / div
+				local chosen_delays = delays[delay_i]
+				
+				local spawn_timers = math.lerp(chosen_delays[1], chosen_delays[2], math.random())
+
 				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + spawn_timers
 			else
 				local timer = 5 + math.random(3)

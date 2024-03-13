@@ -179,8 +179,12 @@ function CopBase:default_weapon_name(selection_name)
 			else
 				m_weapon_id = "mp5"
 			end
-		elseif tweak_data.group_ai._not_america and (difficulty_index < 6 or difficulty_index > 7) and m_weapon_id == "g36" then
-			m_weapon_id = "m4"
+		elseif tweak_data.group_ai._not_america and m_weapon_id == "g36" then
+			if difficulty_index <= 6 then
+				m_weapon_id = "m4"
+			else
+				m_weapon_id = "ak47"
+			end
 		elseif self._tweak_table == "taser" then
 			m_weapon_id = "m4_yellow"
 		elseif self._tweak_table == "medic" and not shotguns[m_weapon_id] then

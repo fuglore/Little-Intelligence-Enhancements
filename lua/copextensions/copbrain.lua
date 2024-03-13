@@ -276,6 +276,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 		elseif difficulty_index == 7 then
 			if mayhem_rifles[self._unit:base()._current_weapon_id] then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --60
+			elseif self._unit:base()._current_weapon_id == "ak47" then
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --60
 			elseif self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5) --75
 			elseif smgs[self._unit:base()._current_weapon_id] then
@@ -289,6 +291,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 	elseif difficulty_index == 6 then
 		if mayhem_rifles[self._unit:base()._current_weapon_id] then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) --45
+		elseif self._unit:base()._current_weapon_id == "m4" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.25) --45
 		elseif self._unit:base()._current_weapon_id == "ak47_ass" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.1) --45
 		elseif self._unit:base()._current_weapon_id == "scar" then
@@ -299,6 +303,8 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 	elseif difficulty_index == 5 then
 		if ovk_rifles[self._unit:base()._current_weapon_id] then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --30
+		elseif self._unit:base()._current_weapon_id == "ak47_ass" then
+			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.25)
 		elseif self._unit:base()._current_weapon_id == "scar" then
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5) --45
 		elseif self._unit:base()._current_weapon_id == "benelli" or self._unit:base()._current_weapon_id == "r870" then
@@ -307,7 +313,7 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 	elseif difficulty_index < 4 then
 		if supposedly_shitty_guns[self._unit:base()._current_weapon_id] then
 			if difficulty_index == 2 then
-				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.5)
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1)
 			else
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.75)
 			end
@@ -321,9 +327,9 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 			if difficulty_index == 2 then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 4)
 			else
-				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 0.88)
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 1.5)
 			end
-		elseif self._unit:base()._current_weapon_id == "benelli" or self._unit:base()._current_weapon_id == "r870" then
+		elseif self._unit:base()._current_weapon_id == "r870" then
 			if difficulty_index == 2 then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2)
 			else

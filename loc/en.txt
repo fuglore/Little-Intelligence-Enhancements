@@ -65,10 +65,10 @@
 	"menu_lies_interruptoncontact_title" : "Smart Engagement",
 	"menu_lies_interruptoncontact_desc" : "Minimizes the tendency for enemies to continue moving into danger if starting the engagement at a distance, and moving in slower would be viable for their purposes. Not accurate to Vanilla.",
 	
-	"menu_lies_spawngroupdelays_title" : "Forced Spawn Delays",
-	"menu_lies_spawngroupdelays_desc" : "Increases the spawn group delays, reducing cases of enemies constantly pouring out of nearby spawn points. OFF is Vanilla behavior.",
-	"menu_lies_spawngroupdelays_vanilla" : "OFF",
-	"menu_lies_spawngroupdelays_long" : "LONG",
-	"menu_lies_spawngroupdelays_medium" : "MEDIUM",
-	"menu_lies_spawngroupdelays_short" : "SHORT",
+	"menu_lies_spawngroupdelays_title" : "Spawn Delays",
+	"menu_lies_spawngroupdelays_desc" : "Change the randomized spawn group delays, reducing cases of enemies constantly pouring out of nearby spawn points.",
+	"menu_lies_spawngroupdelays_vanilla" : "VANILLA (5-9)",
+	"menu_lies_spawngroupdelays_short" : "10-15",
+	"menu_lies_spawngroupdelays_medium" : "12-18",
+	"menu_lies_spawngroupdelays_long" : "15-20",
 }

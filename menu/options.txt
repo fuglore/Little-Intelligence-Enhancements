@@ -141,9 +141,9 @@
 			"callback" : "callback_lies_spawngroupdelays",
 			"items" : [
 				"menu_lies_spawngroupdelays_vanilla",
-				"menu_lies_spawngroupdelays_long",
+				"menu_lies_spawngroupdelays_short",
 				"menu_lies_spawngroupdelays_medium",
-				"menu_lies_spawngroupdelays_short"
+				"menu_lies_spawngroupdelays_long"
             ],
 			"value" : "spawngroupdelays"
 		}

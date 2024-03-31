@@ -534,6 +534,7 @@ function CivilianLogicFlee.update(data)
 					local next_area = managers.groupai:state():get_area_from_nav_seg_id(coarse_path[cur_index + 1][1])
 					
 					local crim_pos
+					local cover
 					
 					if data.attention_obj and AIAttentionObject.REACT_SCARED <= data.attention_obj.reaction then
 						crim_pos = data.attention_obj.m_head_pos

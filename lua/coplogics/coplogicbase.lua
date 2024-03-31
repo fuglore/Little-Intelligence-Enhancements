@@ -703,6 +703,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 			if not is_weapons_hot and settings.notice_requires_FOV then
 				my_head_fwd = my_head_fwd or data.unit:movement():m_head_rot():z()
 				local angle = mvector3.angle(my_head_fwd, tmp_vec1)
+				local angle_max
 				
 				if hhtacs then
 					if not my_data.detection.use_uncover_range and settings.uncover_range and dis < settings.uncover_range then

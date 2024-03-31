@@ -300,7 +300,7 @@ function GroupAIStateBase:on_criminal_nav_seg_change(unit, nav_seg_id)
 		area.criminal.units[u_key] = u_sighting
 	end
 
-	if area.is_safe then
+	if area and area.is_safe then
 		area.is_safe = nil
 
 		self:_on_area_safety_status(area, {

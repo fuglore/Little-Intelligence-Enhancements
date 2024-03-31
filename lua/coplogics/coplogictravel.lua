@@ -2072,7 +2072,7 @@ function CopLogicTravel.queue_update(data, my_data, delay)
 	CopLogicBase.queue_task(my_data, my_data.upd_task_key, CopLogicTravel.queued_update, data, data.t + delay, data.important and true)
 end
 
-function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_recurse, pos_rsrv_id)
+function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_recurse, pos_rsrv_id, ...)
 	local is_recurse = is_recurse or 2
 	local nav_manager = managers.navigation
 	local nr_rays = 9

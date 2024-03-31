@@ -36,12 +36,10 @@ local adjust_ids = {
 		[101901] = true,
 		[101903] = true,
 		[101906] = true,
-		[101901] = true,
 		[102057] = true,
 		[102060] = true,
 		[102072] = true,
 		[102073] = true,
-		[101904] = true,
 		
 		[101603] = true,
 		[101604] = true,
@@ -133,7 +131,6 @@ local adjust_ids = {
 		--fucking weapons lab walkway
 		[102242] = true,
 		[102342] = true,
-		[102344] = true,
 		[102344] = true,
 		[102345] = true,
 		[102350] = true,

@@ -1586,6 +1586,7 @@ function CopLogicAttack._chk_start_action_move_back(data, my_data, focus_enemy, 
 				end
 				
 				local speed = "walk"
+				local pose
 				
 				if not vis_required and not is_fail and dis > 40000 then
 					speed = "run"

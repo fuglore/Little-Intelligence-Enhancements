@@ -432,6 +432,7 @@ function SecurityCamera:_detect_criminals_loud(t, criminals)
 		if alive(c_data.unit) and t - c_data.det_t > 1 then
 			local c_unit = c_data.unit
 			local detection_pos = c_unit:movement():m_head_pos()
+			local angle_multiplier
 			
 			if mvec3_dis_sq(my_pos, detection_pos) < my_range then
 				mvector3.direction(self._tmp_vec1, my_pos, detection_pos)

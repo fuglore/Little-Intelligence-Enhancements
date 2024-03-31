@@ -829,7 +829,7 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 		nav_segs = {[nav_seg_id] = true}
 	end
 	
-	local best_cover, best_dist, best_l_ray, best_h_ray
+	local best_cover, best_dist, best_l_ray, best_h_ray, best_has_good_dir
 	
 	local function _f_check_cover_rays(cover, threat_pos) --this is a visibility check. first checking for crouching positions, then standing.
 		local cover_pos = cover[1]

@@ -187,7 +187,6 @@ local smgs = {
 	akmsu_smg = true,
 	mp9 = true,
 	asval_smg = true,
-	akmsu_smg = true,
 	mp5_tactical = true,
 	sr2_smg = true
 }

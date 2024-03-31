@@ -70,5 +70,5 @@
 	"menu_lies_spawngroupdelays_vanilla" : "VANILLA (5-9)",
 	"menu_lies_spawngroupdelays_short" : "10-15",
 	"menu_lies_spawngroupdelays_medium" : "12-18",
-	"menu_lies_spawngroupdelays_long" : "15-20",
+	"menu_lies_spawngroupdelays_long" : "15-20"
 }

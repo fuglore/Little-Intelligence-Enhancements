@@ -3625,7 +3625,7 @@ function GroupAIStateBesiege:_upd_recon_sweep_task()
 	end
 	
 	if target_area then
-		local spawn_group, spawn_group_type
+		local spawn_group, spawn_group_type, used_group
 				
 		if LIES.settings.fixed_spawngroups == 2 or LIES.settings.fixed_spawngroups == 4 then
 			spawn_group, spawn_group_type = self:_find_spawn_group_near_area(target_area, self._tweak_data.recon.groups, nil, nil, nil, "recon")

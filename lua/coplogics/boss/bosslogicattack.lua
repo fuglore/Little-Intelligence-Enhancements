@@ -734,7 +734,7 @@ function LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 	end
 end
 
-function LIESBossLogicAttack._chk_use_throwable(data, my_data, focus)
+function LIESBossLogicAttack._chk_use_throwable(data, my_data, focus, ...)
 	local throwable = data.char_tweak.throwable
 
 	if not throwable then

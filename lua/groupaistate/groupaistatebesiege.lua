@@ -465,6 +465,8 @@ Hooks:PostHook(GroupAIStateBesiege, "init", "lies_spawngroups", function(self)
 		}
 		
 		Hooks:PostHook(GroupAIStateBesiege, "_upd_groups", "lies_group_dialogue", function(self)
+			self._groups_updated = {}
+			
 			for group_id, group in pairs(self._groups) do
 				if group.needs_announce_retreat then
 					group.dialogue_data = nil
@@ -1569,6 +1571,19 @@ function GroupAIStateBesiege:on_objective_complete(unit, objective)
 	end
 end
 
+function GroupAIStateBesiege:request_group_upd(unit)
+	if not alive(unit) then
+		return
+	end
+
+	local u_key = unit:key()
+	local unit_data = self._police[u_key]
+	
+	if unit_data.group and self._groups[unit_data.group.id] and not unit_data.unit:movement():cool() then
+		self:_upd_group(self._groups[unit_data.group.id])
+	end
+end
+
 function GroupAIStateBesiege:on_defend_travel_end(unit, objective)
 	local seg = objective.nav_seg
 	local area = self:get_area_from_nav_seg_id(seg)
@@ -1634,6 +1649,12 @@ function GroupAIStateBesiege:_upd_group(group)
 		return
 	end
 	
+	self._groups_updated = self._groups_updated or {}
+		
+	if self._groups_updated[group.id] then
+		return
+	end
+	
 	if group.objective.type and group_upd_funcs[group.objective.type] then
 		local func = group_upd_funcs[group.objective.type]
 		
@@ -1659,6 +1680,8 @@ function GroupAIStateBesiege:_upd_group(group)
 				end
 			end
 		end
+		
+		self._groups_updated[group.id] = true
 	end
 end
 
@@ -1998,46 +2021,34 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, range
 	local dist_sq = dis_to_check * dis_to_check
 	
 	local old_engaging_area = group.objective.old_engaging_area or nil
-	local best_dis, best_u_area
-	
+	local best_dis, best_u_area, target_area
+
 	for u_key, u_data in pairs(group.units) do
 		if u_data.unit and alive(u_data.unit) then
 			local brain = u_data.unit:brain()
 			local objective = brain:objective()
-
-			if objective and objective.grp_objective == group.objective and group.objective.area  then
-				local dis = mvec3_dis_sq(group.objective.area.pos, u_data.m_pos)
-				
-				if not best_dis or dis < best_dis then
-					best_dis = dis
-					
-					local nav_seg = managers.navigation:get_nav_seg_from_pos(u_data.m_pos, true)
-					local area = self:get_area_from_nav_seg_id(nav_seg)
-					best_u_area = area
-				end
-			end
-		end
-	end
+			local logic_data = brain._logic_data
 	
-	if best_u_area then
-		for u_key, u_data in pairs(group.units) do
-			if u_data.unit and alive(u_data.unit) then
-				local brain = u_data.unit:brain()
-				local objective = brain:objective()
-				local logic_data = brain._logic_data
-		
-				if objective and objective.grp_objective == group.objective and logic_data then
-					local focus_enemy = logic_data.attention_obj
-					
-					if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-						local seen_enemy = focus_enemy.verified_t and logic_data.t - focus_enemy.verified_t <= 15 and focus_enemy.last_verified_m_pos
+			if objective and objective.grp_objective == group.objective and logic_data then
+				local focus_enemy = logic_data.attention_obj
+				
+				if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
+					local seen_enemy = focus_enemy.verified_t and logic_data.t - focus_enemy.verified_t <= 15 and focus_enemy.last_verified_m_pos
 
-						if seen_enemy then
-							if mvec3_dis_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dist_sq / 2 and mvec3_dis_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dist_sq then
-								local nav_seg = managers.navigation:get_nav_seg_from_pos(focus_enemy.m_pos, true)
-								local target_area = self:get_area_from_nav_seg_id(nav_seg)
-								
-								return best_u_area, target_area
+					if seen_enemy then
+						local weight_mul = 1 + math.lerp(0, 0.15, (logic_data.t - focus_enemy.verified_t) / 15)
+						
+						if mvec3_dis_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dist_sq / 2 and mvec3_dis_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dist_sq then
+							local nav_seg = managers.navigation:get_nav_seg_from_pos(focus_enemy.m_pos, true)
+							local enemy_area = self:get_area_from_nav_seg_id(nav_seg)
+							local dis = mvec3_dis_sq(group.objective.area.pos, u_data.m_pos) * weight_mul * weight_mul
+							
+							if not best_dis or dis < best_dis then
+								local m_nav_seg = managers.navigation:get_nav_seg_from_pos(u_data.m_pos, true)
+								local my_area = self:get_area_from_nav_seg_id(m_nav_seg)
+								best_u_area = my_area
+								target_area = enemy_area
+								best_dis = dis
 							end
 						end
 					end
@@ -3162,9 +3173,9 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				area = push_area,
 				coarse_path = push_path,
 				attitude = "engage",
-				moving_in = true,
 				open_fire = true,
 				pushed = true,
+				moving_in = true,
 				charge = charge
 			}
 			group.is_chasing = true

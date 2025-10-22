@@ -225,9 +225,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 						elseif attention_unit:base().has_tag and attention_unit:base():has_tag("special") then
 							if attention_unit:base():has_tag("sniper") and aimed_at then
 								dangerous_special = true
-								if has_damaged then
-									target_priority_slot = 2
-								elseif has_alerted then
+								
+								if has_alerted then
 									target_priority_slot = 4
 								else
 									target_priority_slot = 7
@@ -285,7 +284,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 							elseif attention_unit:base():has_tag("tank") or attention_unit:base()._tweak_table == "marshal_shield_break" then
 								local dozer_type = attention_unit:base()._tweak_table
 								
-								if near then
+								if near or dozer_type == "tank_mini" then
 									--dangerous_special = true
 									
 									if dozer_type == "tank_mini" then

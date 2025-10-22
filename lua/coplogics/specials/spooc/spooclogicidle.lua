@@ -8,7 +8,7 @@ function SpoocLogicIdle._upd_enemy_detection(data)
 	local delay = 0
 	
 	if not managers.groupai:state():whisper_mode() then
-		delay = (data.unit:anim_data().hide or data.unit:anim_data().hide_loop) and 0.5 or data.important and 0.7 or 1.4
+		delay = (data.unit:anim_data().hide or data.unit:anim_data().hide_loop or data.unit:anim_data().needs_idle) and 0.5 or data.important and 0.7 or 1.4
 	end
 	
 	local new_attention, new_prio_slot, new_reaction = CopLogicIdle._get_priority_attention(data, data.detected_attention_objects)
@@ -26,7 +26,7 @@ function SpoocLogicIdle._upd_enemy_detection(data)
 		end
 
 		if wanted_state and wanted_state ~= data.name then
-			if data.unit:anim_data().hide_loop then
+			if data.unit:anim_data().hide_loop or data.unit:anim_data().needs_idle then
 				new_attention.react_t = data.t - 1
 				SpoocLogicIdle._exit_hiding(data)
 			end
@@ -59,7 +59,7 @@ function SpoocLogicIdle._upd_enemy_detection(data)
 end
 
 function SpoocLogicIdle._chk_exit_hiding(data)
-	if not data.unit:anim_data().hide_loop then
+	if not data.unit:anim_data().hide_loop and not data.unit:anim_data().needs_idle then
 		return
 	end
 	
@@ -91,4 +91,14 @@ function SpoocLogicIdle._chk_exit_hiding(data)
 			end
 		end
 	end
+end
+
+function SpoocLogicIdle.damage_clbk(data, damage_info)
+	local res = SpoocLogicIdle.super.damage_clbk(data, damage_info)
+
+	if data.unit:anim_data().hide_loop or data.unit:anim_data().needs_idle then
+		SpoocLogicIdle._exit_hiding(data)
+	end
+
+	return res
 end

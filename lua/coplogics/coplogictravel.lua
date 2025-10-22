@@ -556,10 +556,14 @@ function CopLogicTravel.chk_group_ready_to_move(data, my_data)
 		end
 	end
 	
-	if not can_continue and say_follow then
-		if data.char_tweak.chatter and data.char_tweak.chatter.ready then
-			managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "follow_me")
+	if not can_continue then
+		if say_follow then
+			if data.char_tweak.chatter and data.char_tweak.chatter.ready then
+				managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "follow_me")
+			end
 		end
+		
+		managers.groupai:state():request_group_upd(data.unit)
 	end
 
 	return can_continue

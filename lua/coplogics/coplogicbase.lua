@@ -76,10 +76,10 @@ end
 
 function CopLogicBase._report_detections(enemies)
 	local group = managers.groupai:state()
-
-	for key, data in pairs(enemies) do
-		if data.verified and data.criminal_record and AIAttentionObject.REACT_SUSPICIOUS <= data.reaction then
-			group:criminal_spotted(data.unit)
+	
+	for key, att_data in pairs(enemies) do
+		if att_data.verified and att_data.criminal_record and AIAttentionObject.REACT_SUSPICIOUS <= att_data.reaction then
+			group:criminal_spotted(att_data.unit)
 		end
 	end
 end
@@ -1170,6 +1170,11 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 				if dis < my_data.detection.dis_max * 1.2 and (not attention_info.settings.max_range or dis < attention_info.settings.max_range * (attention_info.settings.detection and attention_info.settings.detection.range_mul or 1) * 1.2) then
 					local detect_pos = attention_pos
 					local lost_track = attention_info.lost_track and not highperformance or not attention_info.verified_t
+					
+					if data.unit:anim_data().hide or data.unit:anim_data().hide_loop or data.unit:anim_data().needs_idle and (data.unit:base():has_tag("spooc") or data.unit:base()._tweak_table == "shadow_spooc") then
+						lost_track = nil
+					end
+					
 					local fov_not_required = not attention_info.settings.notice_requires_FOV or data.enemy_slotmask and attention_info.unit:in_slot(data.enemy_slotmask)
 					
 					local in_FOV = not lost_track and fov_not_required

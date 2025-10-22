@@ -392,11 +392,10 @@ function CopLogicAttack._upd_combat_movement(data)
 		my_data.stay_out_time = t + 7
 	end
 	
-	local can_charge
+	local can_charge = wanted_attack_range and focus_enemy.dis > wanted_attack_range or wanted_attack_range and not enemy_visible or data.unit:base()._tweak_table == "marshal_shield_break"
 	
-	if not data.is_converted and (not data.objective or not data.objective.grp_objective or data.objective.grp_objective.type ~= "reenforce_area" and not data.objective.grp_objective.blockading and data.objective.grp_objective.pushed) and (not data.tactics or not data.tactics.sniper) then
-		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge or wanted_attack_range and focus_enemy.dis > wanted_attack_range or wanted_attack_range and not enemy_visible
-		
+	if not can_charge and not data.is_converted and (not data.objective or not data.objective.grp_objective or data.objective.grp_objective.type ~= "reenforce_area" and not data.objective.grp_objective.blockading) and (not data.tactics or not data.tactics.sniper) then
+		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge 
 		can_charge = can_charge or (not data.tactics or not data.tactics.ranged_fire) and not enemy_visible_softer
 	end
 
@@ -825,7 +824,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 			if my_data.charging and not data.unit:movement():chk_action_forbidden("walk") then
 				try_stop_charge = true
 				
-				if data.attention_obj.dis <= 200 or LIES.settings.enemy_aggro_level < 4 and (not data.tactics or not data.tactics.charge) and not data.unit:base():has_tag("tank") and not tankboss[data.unit:base()._tweak_table]then
+				if data.attention_obj.dis <= 200 or LIES.settings.enemy_aggro_level < 4 and (not data.tactics or not data.tactics.charge) and not data.unit:base():has_tag("tank") and not tankboss[data.unit:base()._tweak_table] then
 					local new_action = {
 						body_part = 2,
 						type = "idle"
@@ -875,7 +874,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 								walking = nil
 								running = nil
 							end
-						else
+						elseif not focus_enemy.dmg_t or data.t - focus_enemy.dmg_t > 5 then
 							shoot = false
 							aim = false
 						end

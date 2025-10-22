@@ -1,3 +1,6 @@
+local tmp_vec1 = Vector3()
+local tmp_vec2 = Vector3()
+
 function CopLogicIntimidated.enter(data, new_logic_name, enter_params)
 	CopLogicBase.enter(data, new_logic_name, enter_params)
 	data.unit:brain():cancel_all_pathing_searches()
@@ -125,7 +128,7 @@ function CopLogicIntimidated.queued_update(data)
 
 	CopLogicIntimidated._update_enemy_detection(data, my_data)
 
-	if my_data ~= data.internal_data then
+	if my_data ~= data.internal_data or not alive(data.unit) or data.unit:character_damage():dead() or not data.unit:movement() then
 		return
 	end
 	
@@ -243,4 +246,48 @@ function CopLogicIntimidated._do_tied(data, aggressor_unit)
 	end
 
 	managers.groupai:state():on_criminal_suspicion_progress(nil, data.unit, nil)
+end
+
+function CopLogicIntimidated._update_enemy_detection(data, my_data)
+	if not alive(data.unit) or data.unit:character_damage():dead() or not data.unit:movement() then
+		return
+	end
+
+	local fight = not my_data.tied
+
+	if not my_data.surrender_break_t or data.t < my_data.surrender_break_t then
+		local crim_fwd = tmp_vec2
+		local max_intimidation_range = tweak_data.player.long_dis_interaction.intimidate_range_enemies * tweak_data.upgrades.values.player.intimidate_range_mul[1] * tweak_data.upgrades.values.player.passive_intimidate_range_mul[1] * 1.05
+
+		for u_key, u_data in pairs(managers.groupai:state():all_criminals()) do
+			if not u_data.is_deployable then
+				local crim_unit = u_data.unit
+				local crim_pos = u_data.m_pos
+				local dis = mvector3.direction(tmp_vec1, data.m_pos, crim_pos)
+
+				if dis < max_intimidation_range then
+					mvector3.set(crim_fwd, crim_unit:movement():detect_look_dir())
+					mvector3.set_z(crim_fwd, 0)
+					mvector3.normalize(crim_fwd)
+
+					if mvector3.dot(crim_fwd, tmp_vec1) < -0.2 then
+						local vis_ray = World:raycast("ray", data.unit:movement():m_head_pos(), u_data.m_det_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report")
+
+						if not vis_ray then
+							fight = nil
+
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if fight then
+		my_data.surrender_clbk_registered = nil
+
+		data.brain:set_objective(nil)
+		CopLogicBase._exit(data.unit, "idle")
+	end
 end

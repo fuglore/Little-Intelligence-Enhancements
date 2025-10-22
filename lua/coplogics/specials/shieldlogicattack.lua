@@ -12,6 +12,8 @@ function ShieldLogicAttack.enter(data, new_logic_name, enter_params)
 		my_data.firing = old_internal_data.firing
 		my_data.shooting = old_internal_data.shooting
 		my_data.attention_unit = old_internal_data.attention_unit
+		my_data.expected_pos_last_check_t = old_internal_data.expected_pos_last_check_t
+		my_data.start_shoot_t = old_internal_data.start_shoot_t
 	end
 
 	local key_str = tostring(data.key)
@@ -56,7 +58,7 @@ function ShieldLogicAttack.enter(data, new_logic_name, enter_params)
 end
 
 function ShieldLogicAttack.chk_should_turn(data, my_data)
-	return not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and not my_data.walking_to_optimal_pos
+	return not my_data.turning and not data.unit:movement():chk_action_forbidden("walk") and not my_data.walking_to_optimal_pos and not my_data.advancing
 end
 
 function ShieldLogicAttack._upd_enemy_detection(data)
@@ -74,9 +76,10 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 	local threat_epicenter, threats = nil
 	local nr_threats = 0
 	local verified_chk_t = data.t - 8
+	local cancel_old_shield_move
 
 	for key, enemy_data in pairs(detected_enemies) do
-		if AIAttentionObject.REACT_COMBAT <= enemy_data.reaction and enemy_data.identified and enemy_data.verified_t and verified_chk_t < enemy_data.verified_t then
+		if AIAttentionObject.REACT_COMBAT <= enemy_data.reaction and enemy_data.identified and enemy_data.verified_t and not enemy_data.lost_track then
 			enemies[key] = enemy_data
 			enemies_cpy[key] = enemy_data
 		end
@@ -107,7 +110,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 		local furthest_pt_dist = 0
 		local furthest_line = nil
 
-		if not my_data.threat_epicenter or mvector3.distance(threat_epicenter, my_data.threat_epicenter) > 50 then
+		if not my_data.threat_epicenter or mvector3.not_equal(threat_epicenter, my_data.threat_epicenter) then
 			my_data.threat_epicenter = mvector3.copy(threat_epicenter)
 
 			for key1, enemy_data1 in pairs(enemies) do
@@ -225,15 +228,27 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 			mvector3.multiply(optimal_direction, -1)
 			
+			local dis_from_threat = mvector3.distance(data.m_pos, threat_epicenter)
+			local wanted_range = dis_from_threat
+			
 			if my_data.shield_use_range and my_data.shield_unit:base():is_charging() then
-				local dis = my_data.shield_use_range * 0.7
-				
-				mvector3.multiply(out, mvector3.dot(out, PA) + dis)
-			elseif my_data.attitude == "engage" then
-				mvector3.multiply(out, mvector3.dot(out, PA) + 600)
+				wanted_range = my_data.shield_use_range * 0.7
+				cancel_old_shield_move = my_data.shield_state ~= "charging"
+				my_data.shield_state = "charging"
 			else
-				mvector3.multiply(out, mvector3.dot(out, PA) + 900)
+				if my_data.attitude == "engage" and not my_data.want_to_take_cover then
+					local push = math.max(dis_from_threat - 500, dis_from_threat * 0.9)
+					wanted_range = math.max(push, my_data.weapon_range.close)
+					cancel_old_shield_move = my_data.shield_state ~= "aggressive"
+					my_data.shield_state = "aggressive"
+				elseif dis_from_threat < my_data.weapon_range.far then
+					wanted_range = wanted_range < 750 and 1000 or wanted_range + 500
+					cancel_old_shield_move = my_data.shield_state ~= "defensive"
+					my_data.shield_state = "defensive"
+				end
 			end
+			
+			mvector3.multiply(out, mvector3.dot(out, PA) + wanted_range)
 			
 			if data.objective and data.objective.follow_unit and alive(data.objective.follow_unit) then
 				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
@@ -263,17 +278,29 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			end
 
 			local optimal_pos = mvector3.copy(optimal_direction)
-
-			if my_data.shield_use_range and my_data.shield_unit:base():is_charging() then
-				local dis = my_data.shield_use_range * 0.7
-				
-				mvector3.multiply(optimal_pos, -(optimal_length + dis))
-			elseif my_data.attitude == "engage" then
-				mvector3.multiply(optimal_pos, -(optimal_length + 600))
-			else
-				mvector3.multiply(optimal_pos, -(optimal_length + 900))
-			end
 			
+			local dis_from_threat = mvector3.distance(data.m_pos, threat_epicenter)
+			local wanted_range = dis_from_threat
+			
+			if my_data.shield_use_range and my_data.shield_unit:base():is_charging() then
+				wanted_range = my_data.shield_use_range * 0.7
+				cancel_old_shield_move = my_data.shield_state ~= "charging"
+				my_data.shield_state = "charging"
+			else
+				if my_data.attitude == "engage" and not my_data.want_to_take_cover then
+					local push = math.max(dis_from_threat - 500, dis_from_threat * 0.9)
+					wanted_range = math.max(push, my_data.weapon_range.close)
+					cancel_old_shield_move = my_data.shield_state ~= "aggressive"
+					my_data.shield_state = "aggressive"
+				elseif dis_from_threat < my_data.weapon_range.far then
+					wanted_range = wanted_range < 750 and 1000 or wanted_range + 500
+					cancel_old_shield_move = my_data.shield_state ~= "defensive"
+					my_data.shield_state = "defensive"
+				end
+			end
+
+			mvector3.multiply(optimal_pos, -(optimal_length + wanted_range))
+
 			if data.objective and data.objective.follow_unit and alive(data.objective.follow_unit) then
 				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing()
 				local follow_unit_pos = advance_pos or data.objective.follow_unit:movement():nav_tracker():field_position()
@@ -319,7 +346,7 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			if old_att_obj and old_att_obj.u_key ~= new_attention.u_key then
 				CopLogicAttack._cancel_charge(data, my_data)
 
-				if not data.unit:movement():chk_action_forbidden("walk") then
+				if not data.unit:movement():chk_action_forbidden("walk") or not my_data.walking_to_optimal_pos then
 					ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
 				end
 			end
@@ -333,8 +360,10 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 			elseif AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.nav_tracker and my_data.attitude == "engage" then
 				my_data.optimal_pos = CopLogicAttack._find_flank_pos(data, my_data, new_attention.nav_tracker)
 			end
-		elseif old_att_obj and not data.unit:movement():chk_action_forbidden("walk") then
-			ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
+		elseif old_att_obj then
+			if not data.unit:movement():chk_action_forbidden("walk") or not my_data.walking_to_optimal_pos then
+				ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
+			end
 		end
 	end
 
@@ -357,6 +386,14 @@ function ShieldLogicAttack._upd_enemy_detection(data)
 
 		if not managers.navigation:is_pos_free(reservation) then
 			my_data.optimal_pos = CopLogicTravel._get_pos_on_wall(data.m_pos, 280, nil, nil, nil, data.pos_rsrv_id)
+		end
+		
+		if cancel_old_shield_move then
+			if my_data.walking_to_optimal_pos then
+				my_data.old_action_advancing = true
+			elseif my_data.pathing_to_optimal_pos then
+				ShieldLogicAttack._cancel_optimal_attempt(data, my_data)
+			end
 		end
 	end
 end
@@ -384,7 +421,13 @@ function ShieldLogicAttack._pathing_complete_clbk(data)
 end
 
 function ShieldLogicAttack.queue_update(data, my_data)
-	CopLogicBase.queue_task(my_data, my_data.update_queue_id, ShieldLogicAttack.queued_update, data, data.t + (data.important and 0.2 or 0.7), data.important and true)
+	local delay = data.important and 0.2 or 0.7
+	
+	if LIES.settings.highperformance then
+		delay = delay * 2
+	end
+
+	CopLogicBase.queue_task(my_data, my_data.update_queue_id, ShieldLogicAttack.queued_update, data, data.t + delay, data.important and true)
 end
 
 function ShieldLogicAttack.queued_update(data)
@@ -420,7 +463,7 @@ function ShieldLogicAttack.queued_update(data)
 	
 	my_data.want_to_take_cover = CopLogicAttack._chk_wants_to_take_cover(data, my_data)
 	
-	local action_taken = my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.walking_to_optimal_pos
+	local action_taken = data.unit:movement():chk_action_forbidden("walk") or my_data.advancing
 
 	if not action_taken and unit:anim_data().stand then
 		action_taken = CopLogicAttack._chk_request_action_crouch(data)
@@ -442,7 +485,7 @@ function ShieldLogicAttack.queued_update(data)
 				my_data.optimal_pos = nil
 				
 				if not data.objective or not data.objective.follow_unit then
-					if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 2 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
+					if my_data.attitude == "engage" and (LIES.settings.enemy_aggro_level > 2 or not focus_enemy.verified_t or t - focus_enemy.verified_t > 15) and my_data.shield_state ~= "defensive" or my_data.shield_unit and my_data.shield_unit:base():is_charging() then
 						local ray_params = {
 							pos_to = to_pos,
 							trace = true
@@ -530,5 +573,31 @@ function ShieldLogicAttack.action_complete_clbk(data, action)
 		end
 	elseif action_type == "hurt" and action:expired() then
 		ShieldLogicAttack._upd_aim(data, my_data)
+	end
+end
+
+function ShieldLogicAttack._chk_request_action_walk_to_optimal_pos(data, my_data, end_rot)
+	if not data.unit:movement():chk_action_forbidden("walk") then
+		ShieldLogicAttack._correct_path_start_pos(data, my_data.optimal_path)
+
+		local new_action_data = {
+			type = "walk",
+			body_part = 2,
+			variant = "walk",
+			nav_path = my_data.optimal_path,
+			end_rot = end_rot
+		}
+		my_data.optimal_path = nil
+		my_data.advancing = data.unit:brain():action_request(new_action_data)
+
+		if my_data.advancing then
+			my_data.walking_to_optimal_pos = true
+			
+			CopLogicAttack._upd_aim(data, my_data)
+			
+			data.brain:rem_pos_rsrv("path")
+			
+			return true
+		end
 	end
 end

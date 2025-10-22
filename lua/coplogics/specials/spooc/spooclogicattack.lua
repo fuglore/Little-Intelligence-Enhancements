@@ -14,9 +14,11 @@ function SpoocLogicAttack.enter(data, new_logic_name, enter_params)
 		my_data.firing = old_internal_data.firing
 		my_data.shooting = old_internal_data.shooting
 		my_data.attention_unit = old_internal_data.attention_unit
+		my_data.expected_pos_last_check_t = old_internal_data.expected_pos_last_check_t
+		my_data.start_shoot_t = old_internal_data.start_shoot_t
 
 		CopLogicAttack._set_best_cover(data, my_data, old_internal_data.best_cover)
-		CopLogicAttack._set_nearest_cover(my_data, old_internal_data.nearest_cover)
+		--CopLogicAttack._set_nearest_cover(my_data, old_internal_data.nearest_cover)
 	end
 
 	local key_str = tostring(data.key)
@@ -116,7 +118,7 @@ function SpoocLogicAttack.update(data)
 			data.attention_obj.react_t = data.t
 		end
 	
-		if not data.attention_obj.verified_t or data.t - data.attention_obj.verified_t > 2 then
+		if not data.attention_obj.verified_t then
 			data.attention_obj.react_t = data.t
 		end
 
@@ -206,6 +208,7 @@ end
 function SpoocLogicAttack.action_complete_clbk(data, action)
 	local my_data = data.internal_data
 	local action_type = action:type()
+	local highperformance = LIES.settings.highperformance
 
 	if action_type == "walk" then
 		my_data.advancing = nil
@@ -235,7 +238,7 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 			end
 		end
 		
-		if action:expired() then
+		if action:expired() and not highperformance then
 			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
 				data.logic._update_cover(data)
 				data.logic._upd_combat_movement(data)
@@ -243,7 +246,7 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 			end
 		end
 	elseif action_type == "act" then
-		if not my_data.advancing and action:expired() then
+		if not my_data.advancing and action:expired() and not highperformance then
 			if data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction then
 				data.logic._update_cover(data)
 				data.logic._upd_combat_movement(data)
@@ -255,19 +258,19 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 	elseif action_type == "turn" then
 		my_data.turning = nil
 		
-		if action:expired() then
+		if action:expired() and not highperformance then
 			data.logic._upd_aim(data, my_data) --check if i need to turn again
 		end
 	elseif action_type == "heal" then
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 		
-		if action:expired() then
+		if action:expired() and not highperformance then
 			data.logic._upd_aim(data, my_data)
 		end
 	elseif action_type == "hurt" or action_type == "healed" then
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 
-		if action:expired() then
+		if action:expired() and not highperformance then
 			if data.is_converted or not CopLogicBase.chk_start_action_dodge(data, "hit") then
 				data.logic._upd_aim(data, my_data)
 			end
@@ -288,7 +291,7 @@ function SpoocLogicAttack.action_complete_clbk(data, action)
 
 		CopLogicAttack._cancel_cover_pathing(data, my_data)
 
-		if action:expired() then
+		if action:expired() and not highperformance then
 			data.logic._upd_aim(data, my_data)
 		end
 	end

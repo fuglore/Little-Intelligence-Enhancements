@@ -5,7 +5,7 @@ if RequiredScript == "lib/managers/menumanager" then
 		save_path = SavePath .. "LittleIntelligenceEnhancementS.txt",
 		default_loc_path = ModPath .. "loc/en.txt",
 		options_path = ModPath .. "menu/options.txt",
-		version = "V7.91",
+		version = "V8.47",
 		settings = {
 			lua_cover = false,
 			jokerhurts = false,
@@ -20,7 +20,8 @@ if RequiredScript == "lib/managers/menumanager" then
 			interruptoncontact = true,
 			teamaihelpers = true,
 			spawngroupdelays = 1,
-			hhtacs = false
+			hhtacs = false,
+			highperformance = false
 		}
 	}
 	LIES.update_url = "https://raw.githubusercontent.com/fuglore/Little-Intelligence-Enhancements/auto-updates/autoupdate.json"
@@ -178,7 +179,7 @@ if RequiredScript == "lib/managers/menumanager" then
 			end
 		end
 		
-		nav_path = CopActionWalk._calculate_simplified_path(path[1], nav_path, 3, true, true)
+		nav_path = CopActionWalk._calculate_simplified_path(path[1], nav_path, 1, true, true)
 		
 		for i = 1, #nav_path do
 			local nav_point = nav_path[i]
@@ -764,6 +765,14 @@ if RequiredScript == "lib/managers/menumanager" then
 			LIES:Save()
 		end
 		
+		MenuCallbackHandler.callback_lies_highperformance = function(self, item)
+			local on = item:value() == "on"
+			LIES.settings.highperformance = on
+			log("high performance mode: "..tostring(LIES.settings.highperformance))
+
+			LIES:Save()
+		end
+		
 		--called when the menu is closed
 		MenuCallbackHandler.callback_lies_close = function(self)
 		end
@@ -779,6 +788,11 @@ if RequiredScript == "lib/managers/menumanager" then
 		end
 		
 		if type(LIES.settings.fixed_spawngroups) ~= "number" then
+			log("LIES: Thanks for downloading the newest version. <3")
+			LIES.settings.fixed_spawngroups = 1
+			
+			LIES:Save()
+		elseif LIES.settings.fixed_spawngroups > 2 then
 			log("LIES: Thanks for downloading the newest version. <3")
 			LIES.settings.fixed_spawngroups = 1
 			

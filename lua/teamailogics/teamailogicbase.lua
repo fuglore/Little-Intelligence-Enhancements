@@ -1,5 +1,5 @@
 function TeamAILogicBase._get_logic_state_from_reaction(data, reaction)
-	if data.last_engage_t and data.t - data.last_engage_t <= 7 then
+	if data.last_engage_t and data.t - data.last_engage_t <= 15 then
 		return "assault"
 	elseif not reaction or reaction <= AIAttentionObject.REACT_SCARED then
 		return "idle"

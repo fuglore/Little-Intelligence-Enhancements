@@ -109,6 +109,11 @@ local swat_vars = {
 
 
 function CharacterTweakData:setup_hhtacs()
+	self.tank.ecm_vulnerability = nil
+	self.tank_mini.ecm_vulnerability = nil
+	self.tank_medic.ecm_vulnerability = nil
+	self.tank_hw.ecm_vulnerability = nil
+
 	self.tank_mini.throwable = "frag"
 	self.drug_lord_boss.throwable = "launcher_frag"
 	
@@ -138,6 +143,11 @@ function CharacterTweakData:setup_hhtacs()
 	self.spooc.spooc_attack_use_smoke_chance = 0
 	
 	if difficulty_index > 5 then
+		if difficulty_index == 8 then
+			self.zeal_heavy_swat.ecm_vulnerability = nil
+			self.shield.ecm_vulnerability = nil
+		end
+	
 		self.civilian.faster_reactions = true
 		self.civilian.submission_max = {30, 60}
 		self.civilian.submission_intimidate = 15

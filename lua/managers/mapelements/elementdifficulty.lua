@@ -141,6 +141,9 @@ Hooks:PostHook(ElementDifficulty, "init", "lies_alter_diff_values", function(sel
 		
 		if to_adjust[self._id] then
 			self._values.difficulty = to_adjust[self._id]
+			if Global.game_settings.difficulty == "sm_wish" then
+				self._values.difficulty = self._values.difficulty + 0.1
+			end
 		end
 	end
 	

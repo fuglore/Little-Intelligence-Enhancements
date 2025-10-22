@@ -53,6 +53,10 @@
 			"script_path": "lua/props/securitycamera.lua"
 		},
 		{
+			"hook_id": "lib/units/props/carrydata",
+			"script_path": "lua/props/carrydata.lua"
+		},
+		{
 			"hook_id": "lib/units/props/drill",
 			"script_path": "lua/props/drill.lua"
 		},
@@ -195,6 +199,10 @@
 		{
 			"hook_id": "lib/units/enemies/boss/logics/bosslogicattack",
 			"script_path": "lua/coplogics/boss/bosslogicattack.lua"
+		},
+		{
+			"hook_id": "lib/units/player_team/teamaidamage",
+			"script_path": "lua/teamaiextensions/teamaidamage.lua"
 		},
 		{
 			"hook_id": "lib/units/player_team/teamaimovement",

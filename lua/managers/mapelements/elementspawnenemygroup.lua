@@ -8,13 +8,15 @@ Hooks:PostHook(ElementSpawnEnemyGroup, "_finalize_values", "lies_finalize_values
 			self._values.team = tweak_data.levels:get_default_team_ID("combatant")
 		end
 	end
+	
+	if not LIES.settings.hhtacs then
+		if type(LIES.settings.fixed_spawngroups) ~= "number" then
+			return
+		end
 
-	if type(LIES.settings.fixed_spawngroups) ~= "number" then
-		return
-	end
-
-	if LIES.settings.fixed_spawngroups == true or LIES.settings.fixed_spawngroups < 3 then
-		return
+		if LIES.settings.fixed_spawngroups == true or LIES.settings.fixed_spawngroups < 2 then
+			return
+		end
 	end
 	
 	if not self._values.preferred_spawn_groups then

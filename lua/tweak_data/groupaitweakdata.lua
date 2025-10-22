@@ -47,7 +47,7 @@ function GroupAITweakData:_LIES_setup()
 	self._tactics.tazer_flanking = { 
 		"flank", --set to "flanking" in vanilla which is not an actual tactic
 		"charge",
-		"provide_coverfire",
+		"provide_coverfire_LIES",
 		"smoke_grenade",
 		"murder"
 	}
@@ -55,7 +55,7 @@ function GroupAITweakData:_LIES_setup()
 	local difficulty = Global.game_settings and Global.game_settings.difficulty or "normal"
 	local difficulty_index = tweak_data:difficulty_to_index(difficulty)
 	
-	if not LIES.settings.hhtacs and LIES.settings.fixed_spawngroups > 2 and not self._LIES_fix then
+	if not LIES.settings.hhtacs and LIES.settings.fixed_spawngroups > 1 and not self._LIES_fix then
 		log("LIES: Attempting to fix spawngroups...")
 		
 		if self.enemy_spawn_groups.tac_swat_shotgun_rush then
@@ -1180,30 +1180,6 @@ function GroupAITweakData:_LIES_setup()
 		end
 	end
 	
-	self.enemy_spawn_groups.Phalanx = {
-		amount = {
-			self.phalanx.minions.amount + 1,
-			self.phalanx.minions.amount + 1
-		},
-		spawn = {
-			{
-				amount_min = 1,
-				freq = 1,
-				amount_max = 1,
-				rank = 1, --equal ranks so they wait for eachother
-				unit = "Phalanx_vip",
-				tactics = self._tactics.Phalanx_vip
-			},
-			{
-				freq = 1,
-				amount_min = 1,
-				rank = 1,
-				unit = "Phalanx_minion",
-				tactics = self._tactics.Phalanx_minion
-			}
-		}
-	}
-	
 	if LIES.settings.hhtacs then
 		log("LIES: Initializing Hyper Taktikz. Poggers.")
 		
@@ -1229,13 +1205,24 @@ function GroupAITweakData:_LIES_setup()
 			"blockade",
 			"smoke_grenade"
 		}
-		self._tactics.spooc = {
-			"flank",
-			"charge",
-			"shield_cover",
-			"smoke_grenade",
-			"sabotage"
-		}
+		if difficulty_index == 8  then
+			self._tactics.spooc = {
+				"flank",
+				"charge",
+				"shield_cover",
+				"smoke_grenade",
+				"sabotage",
+				"tackle"
+			}
+		else
+			self._tactics.spooc = {
+				"flank",
+				"charge",
+				"shield_cover",
+				"smoke_grenade",
+				"sabotage"
+			}
+		end
 		self._tactics.shield_wall_ranged = {
 			"shield",
 			"ranged_fire",
@@ -1269,9 +1256,8 @@ function GroupAITweakData:_LIES_setup()
 			self._tactics.swat_rifle_flank = { --this is the group ever
 				"ranged_fire",
 				"flank",
-				"provide_coverfire",
+				"provide_coverfire_LIES",
 				"provide_support",
-				"flash_grenade",
 				"smoke_grenade",
 				"harass"
 			}
@@ -1279,30 +1265,48 @@ function GroupAITweakData:_LIES_setup()
 			self._tactics.swat_rifle_flank = { --this is the group ever
 				"ranged_fire",
 				"flank",
-				"provide_coverfire",
+				"provide_coverfire_LIES",
 				"provide_support",
-				"flash_grenade",
-				"smoke_grenade",
+				"smoke_grenade"
 			}
 		end
 		
 		self._tactics.tazer_charge = {
 			"charge",
 			"flash_grenade",
-			"provide_coverfire",
+			"provide_coverfire_LIES",
 			"murder"
 		}
 		
-		self._tactics.hrt = {
-			"hrt",
-			"sabotage",
-			"flank"
-		}
-		self._tactics.taser_sabo = {
-			"flank",
-			"charge",
-			"sabotage"
-		}
+		if difficulty_index == 8  then
+			self._tactics.hrt = {
+				"hrt",
+				"sabotage",
+				"flank",
+				"tackle"
+			}
+		else
+			self._tactics.hrt = {
+				"hrt",
+				"sabotage",
+				"flank"
+			}
+		end
+		
+		if difficulty_index == 8  then
+			self._tactics.taser_sabo = {
+				"flank",
+				"charge",
+				"sabotage",
+				"tackle"
+			}
+		else
+			self._tactics.taser_sabo = {
+				"flank",
+				"charge",
+				"sabotage"
+			}
+		end
 		
 		--chad wuz here
 	end
@@ -1328,10 +1332,33 @@ function GroupAITweakData:_LIES_setup()
 		0,
 		0
 	}
-	
-	
+
 	--spawngroup setups for spicy tacs
 	if LIES.settings.hhtacs then
+		self.enemy_spawn_groups.Phalanx = {
+			amount = {
+				self.phalanx.minions.amount + 1,
+				self.phalanx.minions.amount + 1
+			},
+			spawn = {
+				{
+					amount_min = 1,
+					freq = 1,
+					amount_max = 1,
+					rank = 1, --equal ranks so they wait for eachother
+					unit = "Phalanx_vip",
+					tactics = self._tactics.Phalanx_vip
+				},
+				{
+					freq = 1,
+					amount_min = 1,
+					rank = 1,
+					unit = "Phalanx_minion",
+					tactics = self._tactics.Phalanx_minion
+				}
+			}
+		}
+	
 		if difficulty_index == 6 then
 			self.unit_categories.FBI_tank.unit_types.america = {
 				Idstring("units/payday2/characters/ene_bulldozer_1/ene_bulldozer_1"),
@@ -2500,6 +2527,48 @@ function GroupAITweakData:_LIES_setup()
 			acrobatic = true,
 			walk = true
 		}
+		self.unit_categories.phalanx_pusher = {
+			unit_types = {
+				america = {
+					Idstring("units/pd2_dlc_vip/characters/ene_phalanx_1/ene_phalanx_1")
+				},
+				russia = {
+					Idstring("units/pd2_dlc_vip/characters/ene_phalanx_1/ene_phalanx_1")
+				},
+				zombie = {
+					Idstring("units/pd2_dlc_vip/characters/ene_phalanx_1/ene_phalanx_1")
+				},
+				murkywater = {
+					Idstring("units/pd2_dlc_vip/characters/ene_phalanx_1/ene_phalanx_1")
+				},
+				federales = {
+					Idstring("units/pd2_dlc_vip/characters/ene_phalanx_1/ene_phalanx_1")
+				}
+			},
+			access = access_type_all
+		}
+		
+		self.enemy_spawn_groups.phalanx_aggressors = {
+			amount = {
+				2,
+				2
+			},
+			spawn = {
+				{
+					amount_min = 2,
+					amount_max = 2,
+					rank = 2,
+					freq = 1,
+					access = "swat",
+					unit = "phalanx_pusher",
+					tactics = self._tactics.tank_rush
+				}
+			},
+			spawn_point_chk_ref = table.list_to_set({
+				"Phalanx",
+				"tac_bull_rush"
+			})
+		}
 		
 		local actually_finished_factions = {
 			america = true,
@@ -3172,6 +3241,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 2,
 						rank = 1,
 						freq = 1,
+						access = "swat",
 						unit = "CS_fbi_all",
 						tactics = self._tactics.hrt
 					}
@@ -3218,7 +3288,6 @@ function GroupAITweakData:_LIES_setup()
 						}
 					},
 					spawn_point_chk_ref = table.list_to_set({
-						"FBI_spoocs",
 						"single_spooc"
 					})
 				}
@@ -3351,6 +3420,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 2,
 						rank = 1,
 						freq = 1,
+						access = "swat",
 						unit = "CS_cop_all",
 						tactics = self._tactics.hrt
 					}
@@ -3381,6 +3451,7 @@ function GroupAITweakData:_LIES_setup()
 						amount_min = 2,
 						rank = 1,
 						freq = 1,
+						access = "swat",
 						unit = "CS_fbi_all",
 						tactics = self._tactics.hrt
 					}
@@ -3569,7 +3640,6 @@ function GroupAITweakData:_LIES_setup()
 						}
 					},
 					spawn_point_chk_ref = table.list_to_set({
-						"FBI_spoocs",
 						"single_spooc"
 					})
 				}
@@ -3601,6 +3671,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 2,
 							rank = 1,
 							freq = 1,
+							access = "swat",
 							unit = "CS_cop_all",
 							tactics = self._tactics.hrt
 						}
@@ -3625,7 +3696,7 @@ function GroupAITweakData:_LIES_setup()
 				self._tactics.tazer_flanking = { 
 					"flank", --set to "flanking" in vanilla which is not an actual tactic
 					"charge",
-					"provide_coverfire",
+					"provide_coverfire_LIES",
 					"smoke_grenade",
 					"murder",
 					"sabotage"
@@ -3648,6 +3719,7 @@ function GroupAITweakData:_LIES_setup()
 							amount_min = 2,
 							rank = 1,
 							freq = 1,
+							access = "swat",
 							unit = "CS_fbi_all",
 							tactics = self._tactics.hrt
 						}
@@ -3777,7 +3849,6 @@ function GroupAITweakData:_LIES_setup()
 							}
 						},
 						spawn_point_chk_ref = table.list_to_set({
-							"FBI_spoocs",
 							"single_spooc"
 						})
 					}
@@ -3795,13 +3866,6 @@ function GroupAITweakData:_LIES_setup()
 				end
 			end
 		end
-
-		for group_id, group_type in pairs(self.besiege.assault.groups) do
-			if not self.enemy_spawn_groups[group_id] then
-				self.besiege.assault.groups[group_id] = {0, 0, 0}
-			end
-		end
-		
 		
 		if not self._tactics.smg then
 			self._tactics.smg = {
@@ -3900,7 +3964,7 @@ function GroupAITweakData:_LIES_setup()
 			self.enemy_spawn_groups.tac_swat_smg = {
 				amount = {
 					2,
-					2
+					3
 				},
 				spawn = {
 					{
@@ -3951,11 +4015,20 @@ function GroupAITweakData:_LIES_setup()
 				},
 				access = access_type_all
 			}
+			
+			if difficulty_index == 7 then
+				self._tactics.smg = {
+					"flank",
+					"charge",
+					"smoke_grenade",
+					"flash_grenade"
+				}
+			end
 		
 			self.enemy_spawn_groups.tac_swat_smg = {
 				amount = {
-					2,
-					2
+					3,
+					4
 				},
 				spawn = {
 					{
@@ -3994,10 +4067,19 @@ function GroupAITweakData:_LIES_setup()
 				})
 			}
 		else
+			if difficulty_index == 7 then
+				self._tactics.smg = {
+					"flank",
+					"charge",
+					"smoke_grenade",
+					"flash_grenade"
+				}
+			end
+		
 			self.enemy_spawn_groups.tac_swat_smg = {
 				amount = {
-					2,
-					3
+					3,
+					4
 				},
 				spawn = {
 					{
@@ -4196,6 +4278,24 @@ function GroupAITweakData:_LIES_setup()
 		end
 	end
 
+	for group_id, group_info in pairs(self.enemy_spawn_groups) do
+		if not self.besiege.assault.groups[group_id] then
+			self.besiege.assault.groups[group_id] = {0, 0, 0}
+		end
+		
+		if not self.skirmish.assault.groups[group_id] then
+			self.besiege.assault.groups[group_id] = {0, 0, 0}
+		end
+		
+		if not self.besiege.recon.groups[group_id] then
+			self.besiege.recon.groups[group_id] = {0, 0, 0}
+		end
+		
+		if not self.skirmish.recon.groups[group_id] then
+			self.skirmish.recon.groups[group_id] = {0, 0, 0}
+		end
+	end
+
 	self.street = deep_clone(self.besiege)
 	self.safehouse = deep_clone(self.besiege)
 	
@@ -4287,10 +4387,13 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 	
 	if difficulty_index < 6 then
 		self.smoke_grenade_lifetime = 7.5
+		self.max_smoke_grenades = 1
 	elseif difficulty_index < 8 then
 		self.smoke_grenade_lifetime = 12
+		self.max_smoke_grenades = 2
 	else
 		self.smoke_grenade_lifetime = 16
+		self.max_smoke_grenades = 3
 	end
 	
 	if difficulty_index < 6 then
@@ -4305,24 +4408,45 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 		}
 	end
 	
-	if difficulty_index < 8 then
-		self.besiege.assault.force = {
-			8,
-			14,
-			18
-		}
-	else
-		self.besiege.assault.force = {
-			6,
-			10,
-			14
+	if difficulty_index > 7 then
+		self.besiege.assault.force_balance_mul = {
+			1.675,
+			2.675,
+			3.675,
+			4.675
 		}
 	end
 	
-	self.besiege.assault.force_pool = {
-		72,
-		84,
-		108
+	if difficulty_index <= 6 then
+		self.besiege.assault.force_pool = {
+			36,
+			54,
+			72
+		}
+	else
+		self.besiege.assault.force_pool = {
+			72,
+			108,
+			144
+		}
+		self.besiege.assault.build_duration = 70
+		self.besiege.assault.sustain_duration_min = {
+			60,
+			180,
+			240
+		}
+		self.besiege.assault.sustain_duration_max = {
+			80,
+			240,
+			300
+		}
+	end
+	
+	self.besiege.assault.force_pool_balance_mul = {
+		1.5,
+		1.75,
+		2.25,
+		2.75
 	}
 	self.besiege.assault.delay = { 
 		60,
@@ -4330,20 +4454,22 @@ function GroupAITweakData:_setup_hhtacs_task_data(difficulty_index)
 		30
 	}
 	
+	self.phalanx.max_soldier_groups = 4
 	self.phalanx.move_interval = 20
 	
 	if difficulty_index > 6 then
+		self.phalanx.max_soldier_groups = 6
 		self.phalanx.move_interval = 15
 		self.phalanx.check_spawn_intervall = 120
 		self.phalanx.respawn_delay = 1200
-		
-		self.phalanx.vip.damage_reduction = {
-			max = 0.65,
-			start = 0.25,
-			increase_intervall = 5,
-			increase = 0.05
-		}
 	end
+	
+	self.phalanx.vip.damage_reduction = {
+		max = 0.2,
+		start = 0.025,
+		increase_intervall = 15,
+		increase = 0.025
+	}
 end
 
 Hooks:PostHook(GroupAITweakData, "_init_chatter_data", "lies_chatter", function(self)

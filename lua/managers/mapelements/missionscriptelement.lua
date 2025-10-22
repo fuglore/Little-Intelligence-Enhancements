@@ -1,3 +1,110 @@
+local nav_fixes_on_executed = {
+	wwh = { --alaskan deal traincar doors fix
+		[100944] = function (self)
+			local nav_obstacle_info = {
+				{
+					pos = Vector3(4978, -1786, 1374.61)
+				},
+				{
+					pos = Vector3(3372, -1786, 1374.61)
+				}
+			}
+			
+			local rotation = Rotation(-90, 0, -0)
+			local nav_obstacle_unit = Idstring("units/dev_tools/level_tools/dev_door_blocker/dev_door_blocker_1x4x3")
+			local obstacle_obj_name = Idstring("rp_dev_door_blocker_1x4x3")
+			local disable_obstacles = managers.mission:get_element_by_id(100945)
+			
+			for i = 1, #nav_obstacle_info do
+				local obstacle_info = nav_obstacle_info[i]
+				local obstacle_unit = World:spawn_unit(nav_obstacle_unit, obstacle_info.pos, rotation)
+				
+				managers.navigation:add_obstacle(obstacle_unit, obstacle_obj_name)
+				
+				if not disable_obstacles._obstacle_units or #disable_obstacles._obstacle_units == 0 then
+					disable_obstacles._obstacle_units = {}
+				end
+				
+				table.insert(disable_obstacles._obstacle_units, {
+					unit = obstacle_unit,
+					obj_name = obstacle_obj_name
+				})
+				
+				obstacle_unit:set_visible(false)
+			end
+		end,
+		[100945] = function(self)
+			if self._obstacle_units then
+				for _, data in ipairs(self._obstacle_units) do
+					managers.navigation:remove_obstacle(data.unit, data.obj_name)
+				end
+			end
+		end
+	},
+	pal = { --counterfeit wilson's house table and swat van fixes
+		[100292] = function (self)
+			local nav_obstacle_info = {
+				{
+					pos = Vector3(-2085, -280, 26.7)
+				},
+				{
+					pos = Vector3(-2085, -351, 26.7)
+				},
+				{
+					pos = Vector3(-2223, -291, 26.7)
+				},
+				{
+					pos = Vector3(-2223, -360, 26.7)
+				},
+			}
+			
+			local nav_obstacle_unit = Idstring("units/dev_tools/level_tools/dev_door_blocker/dev_door_blocker_1x1x3")
+			local rotation = Rotation(0, 0, -0)
+			local disable_obstacles = managers.mission:get_element_by_id(101797)
+			local obstacle_obj_name = Idstring("rp_dev_door_blocker_1x1x3")
+			
+			for i = 1, #nav_obstacle_info do
+				local obstacle_info = nav_obstacle_info[i]
+				local obstacle_unit = World:spawn_unit(nav_obstacle_unit, obstacle_info.pos, rotation)
+				
+				managers.navigation:add_obstacle(obstacle_unit, obstacle_obj_name)
+				
+				table.insert(disable_obstacles._obstacle_units, {
+					unit = obstacle_unit,
+					obj_name = obstacle_obj_name
+				})
+				
+				obstacle_unit:set_visible(false)
+			end
+		end,
+		[101797] = function (self)
+			local nav_obstacle_info = {
+				{
+					pos = Vector3(-2085, -280, 26.7)
+				},
+				{
+					pos = Vector3(-2085, -351, 26.7)
+				},
+				{
+					pos = Vector3(-2223, -291, 26.7)
+				}
+			}
+			
+			local rotation = Rotation(20, 0, -0)
+			local nav_obstacle_unit = Idstring("units/dev_tools/level_tools/dev_door_blocker/dev_door_blocker_1x1x3")
+			
+			for i = 1, #nav_obstacle_info do
+				local obstacle_info = nav_obstacle_info[i]
+				local obstacle_unit = World:spawn_unit(nav_obstacle_unit, obstacle_info.pos, rotation)
+				
+				managers.navigation:add_obstacle(obstacle_unit, Idstring("rp_dev_door_blocker_1x1x3"))
+				
+				obstacle_unit:set_visible(false)
+			end
+		end
+	},
+}
+
 local blockade_ids = {
 	run = {
 		[103773] = true,
@@ -102,7 +209,20 @@ local entirely_unique_stuff = {
 	},
 }
 
-Hooks:PostHook(MissionScriptElement, "on_executed", "lies_blockade", function(self)
+Hooks:PostHook(MissionScriptElement, "on_executed", "lies_nav_and_modify", function(self)
+	if not self._values.enabled then
+		return
+	end
+
+	if nav_fixes_on_executed[Global.level_data.level_id] then
+		local stuff = nav_fixes_on_executed[Global.level_data.level_id]
+		local func = stuff[self._id]
+		
+		if func then
+			func(self)
+		end
+	end
+
 	if not LIES.settings.hhtacs and not Network:is_server() then
 		return
 	end

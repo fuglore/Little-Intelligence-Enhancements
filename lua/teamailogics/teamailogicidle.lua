@@ -50,18 +50,22 @@ function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
 	if data.cool or data.unit:movement()._should_stay or not objective or not objective.follow_unit then
 		return
 	end
-
+	
+	
+	local m_pos = objective.relocate_pos or data.m_pos
 	local follow_unit = objective.follow_unit
-	local follow_pos = follow_unit:movement():m_pos()
+	local follow_pos = follow_unit:movement().m_newest_pos and follow_unit:movement():m_newest_pos() or follow_unit:movement():m_pos()
 	local max_allowed_dis = 700
-	local z_diff = math.abs(data.m_pos.z - follow_pos.z)
+	local z_diff = math.abs(m_pos.z - follow_pos.z)
 	
 	if z_diff > 250 then
+		objective.relocate_pos = mvector3.copy(follow_pos)
 		return true
 	else
 		max_allowed_dis = math.lerp(max_allowed_dis, 0, z_diff / 250)
 		
 		if mvector3.distance(data.m_pos, follow_pos) > max_allowed_dis then
+			objective.relocate_pos = mvector3.copy(follow_pos)
 			return true
 		end
 	end
@@ -248,6 +252,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								else
 									target_priority_slot = 6
 								end
+							elseif attention_unit:base():has_tag("phalanx_vip") or managers.groupai:state():phalanx_vip() and attention_unit:base()._tweak_table == "phalanx_minion" then
+								target_priority_slot = 2
 							elseif attention_unit:base():has_tag("medic") then
 								if near and (has_alerted and has_damaged) then
 									target_priority_slot = 2
@@ -427,7 +433,7 @@ function TeamAILogicIdle._upd_enemy_detection(data)
 
 	TeamAILogicBase._set_attention_obj(data, new_attention, new_reaction)
 	
-	if new_attention and (new_attention.nearly_visible or new_attention.verified) and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.dis < 2000 then
+	if new_attention and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction then
 		data.last_engage_t = data.t
 	end
 	

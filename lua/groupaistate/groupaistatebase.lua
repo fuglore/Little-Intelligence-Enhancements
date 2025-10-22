@@ -82,6 +82,21 @@ function GroupAIStateBase:set_importance_weight(u_key, wgt_report)
 	end
 end
 
+function GroupAIStateBase._get_group_acces_mask(group)
+	local quadfield = managers.navigation._quad_field
+	local union_mask = quadfield:convert_access_filter_to_number("0")
+
+	for u_key, u_data in pairs(group.units) do
+		if alive(u_data.unit) then
+			local access_num = u_data.unit:brain():SO_access()
+
+			union_mask = quadfield:access_filter_union(access_num, union_mask)
+		end
+	end
+
+	return union_mask
+end
+
 function GroupAIStateBase:_get_balancing_multiplier_hhtacs(balance_multipliers)
 	local nr_players = 0
 
@@ -103,6 +118,10 @@ function GroupAIStateBase:_get_balancing_multiplier_hhtacs(balance_multipliers)
 	nr_players = math.clamp(nr_players, 1, 4)
 
 	return balance_multipliers[nr_players]
+end
+
+function GroupAIStateBase:_add_drama_hhtacs(amount)
+	--no
 end
 
 function GroupAIStateBase:_calculate_difficulty_ratio_hhtacs()
@@ -139,6 +158,23 @@ function GroupAIStateBase:on_unit_pathing_failed(unit)
 	end
 end
 
+function GroupAIStateBase:on_nav_link_unregistered(element_id)
+	local all_ai = {
+		self._police,
+		self._ai_criminals,
+		managers.enemy:all_civilians()
+	}
+
+	for _, ai_group in pairs(all_ai) do
+		for u_key, u_data in pairs(ai_group) do
+			u_data.unit:movement():on_nav_link_unregistered(element_id)
+			u_data.unit:brain():on_nav_link_unregistered(element_id)
+		end
+	end
+	
+	managers.navigation:_check_LIES_invalidated_navlink_cached_paths(element_id)
+end
+
 function GroupAIStateBase:on_objective_failed(unit, objective)
 	local fail_clbk
 	if not unit:brain() then
@@ -171,7 +207,34 @@ function GroupAIStateBase:on_objective_failed(unit, objective)
 				no_arrest = objective and objective.no_arrest,
 				grp_objective = objective and objective.grp_objective,
 				attitude = objective and objective.attitude or objective and objective.grp_objective and objective.grp_objective.attitude,
+				pos = objective and not self._enemy_weapons_hot and (objective.pos or mvector3.copy(unit:movement():m_pos()))
 			}
+			
+			if new_objective.pos then
+				new_objective.nav_seg = unit:movement():nav_tracker():nav_segment()
+				new_objective.area = self:get_area_from_nav_seg_id(new_objective.nav_seg)
+			end
+			
+			if objective and not self._enemy_weapons_hot and unit:movement():cool() and (not objective.action or table.contains(ElementSpecialObjective._stealth_idles, objective.action.variant)) then
+				new_objective.followup_SO = objective and objective.followup_SO
+				local variant = ElementSpecialObjective._stealth_idles_no_loop[math.random(#ElementSpecialObjective._stealth_idles_no_loop)]
+				new_objective.action = {
+					needs_full_blend = true,
+					type = "act",
+					body_part = 1,
+					variant = variant,
+					blocks = {
+						light_hurt = -1,
+						hurt = -1,
+						action = -1,
+						heavy_hurt = -1,
+						act = -1,
+						crouch = -1,
+						walk = -1
+					}
+				}
+				new_objective.type = "act"
+			end
 
 			if u_data.assigned_area then
 				local seg = unit:movement():nav_tracker():nav_segment()
@@ -275,13 +338,9 @@ function GroupAIStateBase:on_criminal_nav_seg_change(unit, nav_seg_id)
 	local prev_seg = u_sighting.seg
 	local prev_area = u_sighting.area
 
-	if u_sighting.undetected then
-		u_sighting.undetected = nil
-	end
-
 	u_sighting.seg = nav_seg_id
 
-	u_sighting.tracker:m_position(u_sighting.pos)
+	u_sighting.tracker:m_position(u_sighting.m_pos)
 	local area = nil
 
 	if prev_area and prev_area.nav_segs[nav_seg_id] then
@@ -512,7 +571,7 @@ function GroupAIStateBase:_get_spawn_unit_name(weights, wanted_access_type)
 	local total_weight = 0
 	local candidates = {}
 	local candidate_weights = {}
-	local fixed_specialcaps = LIES.settings.fixed_specialcaps
+	--local fixed_specialcaps = LIES.settings.fixed_specialcaps
 
 	for cat_name, cat_weights in pairs(weights) do
 		local cat_weight = self:_get_difficulty_dependent_value(cat_weights)
@@ -525,16 +584,6 @@ function GroupAIStateBase:_get_spawn_unit_name(weights, wanted_access_type)
 
 			if tweak_data.group_ai.special_unit_spawn_limits[special_type] <= nr_active then
 				suitable = false
-			end
-		end
-		
-		if not fixed_specialcaps then 
-			if suitable and cat_data.special_type and not self._special_units[cat_name] then
-				local nr_boss_types_present = table.size(self._special_units)
-
-				if tweak_data.group_ai.max_nr_simultaneous_boss_types <= nr_boss_types_present then
-					suitable = false
-				end
 			end
 		end
 

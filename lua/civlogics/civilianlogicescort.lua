@@ -134,7 +134,6 @@ function CivilianLogicEscort._begin_advance_action(data, my_data)
 		type = "walk",
 		body_part = 2,
 		nav_path = my_data.advance_path,
-		path_simplified = my_data.path_is_precise,
 		variant = haste
 	}
 	local going_to_index = my_data.coarse_path_index + 1

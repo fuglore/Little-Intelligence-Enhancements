@@ -7,6 +7,74 @@ local adjust_ids = {
 			new_action = "e_nl_up_4m"
 		}
 	},
+	red2 = { --so many defend and hunt SOs...LET THE AI DO THEIR THING!!!
+		[103369] = {
+			disable = true
+		},
+		[103370] = {
+			disable = true
+		},
+		[103375] = {
+			disable = true
+		},
+		[103066] = {
+			disable = true
+		},
+		[100335] = {
+			disable = true
+		},
+		[103065] = {
+			disable = true
+		},
+		[102584] = {
+			disable = true
+		},
+		[100345] = {
+			disable = true
+		},
+		[100697] = {
+			disable = true
+		},
+		[103368] = {
+			disable = true
+		},
+		[103372] = {
+			disable = true
+		},
+		[100557] = {
+			disable = true
+		},
+		[100653] = {
+			disable = true
+		},
+		[100656] = {
+			disable = true
+		},
+		[100679] = {
+			disable = true
+		},
+		[100681] = {
+			disable = true
+		},
+		[100846] = {
+			disable = true
+		},
+		[100852] = {
+			disable = true
+		},
+		[100853] = {
+			disable = true
+		},
+		[100854] = {
+			disable = true
+		},
+		[100890] = {
+			disable = true
+		},
+		[106545] = {
+			disable = true
+		},
+	},
 	rvd1 = {
 		[100449] = {
 			action_duration = {20, 20}
@@ -173,6 +241,10 @@ Hooks:PostHook(ElementSpecialObjective, "_finalize_values", "lies_send_navlink_e
 				self._values.position = params.new_pos
 			end
 			
+			if params.disable then
+				self._values.enabled = false
+			end
+			
 			if params.new_rotation then
 				self._values.rotation = mrotation.yaw(params.new_rotation)
 			end
@@ -259,7 +331,24 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 		end
 	end
 	
-	if self._stealth_patrol and managers.groupai:state():whisper_mode() or not self._values.patrol_path and self._values.path_style == "destination" then
+	local is_AI_SO = self._is_AI_SO or string.begins(self._values.so_action, "AI")
+	
+	local is_scripted_AI_SO = {
+		AI_escort = true,
+		AI_sniper = true,
+		AI_phalanx = true,
+		AI_idle = true
+	}
+	
+	if is_AI_SO and not is_scripted_AI_SO[self._values.so_action] and unit:brain() and not self._stealth_patrol then
+		local group_type = unit:brain()._logic_data and unit:brain()._logic_data.group and unit:brain()._logic_data.group.type
+		
+		if group_type ~= "custom" or unit:brain():objective() and unit:brain():objective().type ~= "free" or unit:brain():objective() and unit:brain():objective().grp_objective then
+			return false
+		end
+	end
+	
+	if self._stealth_patrol and managers.groupai:state():whisper_mode() or self._values.path_style == "destination" then
 		if unit:movement()._nav_tracker and unit:brain():SO_access() then
 			local to_pos = self._values.position
 			
@@ -292,68 +381,4 @@ function ElementSpecialObjective:clbk_verify_administration(unit)
 	end
 
 	return true
-end
-
-function ElementSpecialObjective:choose_followup_SO(unit, skip_element_ids)
-	if not self._values.followup_elements then
-		return
-	end
-
-	if skip_element_ids == nil then
-		if self._values.allow_followup_self and self:enabled() and (not LIES.settings.hhtacs or not self._stealth_patrol) then
-			skip_element_ids = {}
-		else
-			skip_element_ids = {
-				[self._id] = true
-			}
-		end
-	end
-
-	if self._values.SO_access and unit and not managers.navigation:check_access(self._values.SO_access, unit:brain():SO_access(), 0) then
-		return
-	end
-
-	local total_weight = 0
-	local pool = {}
-
-	for _, followup_element_id in ipairs(self._values.followup_elements) do
-		local weight = nil
-		local followup_element = managers.mission:get_element_by_id(followup_element_id)
-
-		if followup_element:enabled() then
-			followup_element, weight = followup_element:get_as_followup(unit, skip_element_ids)
-
-			if followup_element and followup_element:enabled() and weight > 0 then
-				table.insert(pool, {
-					element = followup_element,
-					weight = weight
-				})
-
-				total_weight = total_weight + weight
-			end
-		end
-	end
-
-	if not next(pool) or total_weight <= 0 then
-		if self._stealth_patrol and managers.groupai:state():whisper_mode() then --we have followup elements...but none of them are accessible...aaaaa repeat!!!
-			local weight
-			local followup_element = managers.mission:get_element_by_id(self._id)
-			followup_element, weight = followup_element:get_as_followup(unit, {})
-			
-			return followup_element
-		end
-
-		return
-	end
-
-	local lucky_w = math.random() * total_weight
-	local accumulated_w = 0
-
-	for i, followup_data in ipairs(pool) do
-		accumulated_w = accumulated_w + followup_data.weight
-
-		if lucky_w <= accumulated_w then
-			return pool[i].element
-		end
-	end
 end

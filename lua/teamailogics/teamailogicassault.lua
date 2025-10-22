@@ -31,6 +31,8 @@ function TeamAILogicAssault.enter(data, new_logic_name, enter_params)
 
 	if data.objective then
 		my_data.attitude = data.objective.attitude
+	else
+		my_data.attitude = "engage"
 	end
 
 	data.unit:movement():set_cool(false)
@@ -54,8 +56,6 @@ function TeamAILogicAssault.update(data)
 			return
 		end
 	end
-	
-	local focus_enemy = data.attention_obj
 
 	CopLogicAttack._process_pathing_results(data, my_data)
 
@@ -72,67 +72,138 @@ function TeamAILogicAssault.update(data)
 	end
 	
 	local action_taken = my_data.advancing or my_data.turning or data.unit:movement():chk_action_forbidden("walk") or my_data.moving_to_cover or my_data.walking_to_cover_shoot_pos or my_data._turning_to_intimidate
-	
-	local enemy_visible = focus_enemy.verified
 		
 	my_data.want_to_take_cover = TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 	local want_to_take_cover = my_data.want_to_take_cover
-	action_taken = action_taken or CopLogicAttack._upd_pose(data, my_data)
+	CopLogicAttack._upd_pose(data, my_data)
 	
 	if not data.unit:movement()._should_stay then
+		if data.objective and data.objective.type == "revive" then
+			objective.in_place = nil
+
+			TeamAILogicBase._exit(data.unit, "travel")
+			
+			if my_data ~= data.internal_data then
+				CopLogicBase.cancel_queued_tasks(my_data)
+			
+				return
+			end
+		end
+	
 		if my_data.cover_chk_t < data.t then
 			CopLogicAttack._update_cover(data)
 
 			my_data.cover_chk_t = data.t + TeamAILogicAssault._COVER_CHK_INTERVAL
 		end
-	
-		
+
 		local in_cover = my_data.in_cover
 		local best_cover = my_data.best_cover
+		local enemy_visible = focus_enemy.verified
+		local enemy_visible_soft = focus_enemy.verified_t and t - focus_enemy.verified_t < 7
+		local enemy_visible_softer = focus_enemy.verified_t and t - focus_enemy.verified_t < 15
+		local move_to_cover = nil
 		
-		if in_cover and best_cover and in_cover[1] ~= best_cover[1] then
-			in_cover = false
+		if my_data.cover_test_step ~= 0 and not enemy_visible_softer and (action_taken or want_to_take_cover or not in_cover) then
+			my_data.cover_test_step = 0
 		end
-
+		
+		if my_data.stay_out_time and (enemy_visible and focus_enemy.aimed_at or not my_data.at_cover_shoot_pos or action_taken or want_to_take_cover) then
+			my_data.stay_out_time = nil
+		elseif not want_to_take_cover and not my_data.stay_out_time and not enemy_visible and my_data.at_cover_shoot_pos and not action_taken then
+			my_data.stay_out_time = t + 7
+		end
+		
 		if action_taken then
 			-- Nothing
-		else
-			if not in_cover then
-				if my_data.cover_path then
-					action_taken = CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
-				elseif best_cover and (not my_data.cover_path_failed_t or data.t - my_data.cover_path_failed_t > 2) then
-					CopLogicAttack._cancel_cover_pathing(data, my_data)
-				
-					local search_id = tostring(data.key) .. "cover"
-
-					if data.unit:brain():search_for_path_to_cover(search_id, best_cover[1], best_cover[5]) then
-						my_data.cover_path_search_id = search_id
-						my_data.processing_cover_path = best_cover
-					end
-					
-					action_taken = true
-				end
-				
-				action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
-			else
+		elseif want_to_take_cover then
+			move_to_cover = true
+		elseif not enemy_visible then
+			if focus_enemy.verified_t and t - focus_enemy.verified_t < 2 and best_cover and (not in_cover or best_cover[1] ~= in_cover[1]) then
+				move_to_cover = true
+			elseif in_cover then
 				local my_tracker = unit:movement():nav_tracker()
 				local m_tracker_pos = my_tracker:position()
 				
-				if not action_taken and my_data.in_cover[7] then
+				if my_data.in_cover[7] then
 					local path = {
-						mvector3.copy(m_tracker_pos),
+						m_tracker_pos,
 						mvector3.copy(my_data.in_cover[5])
 					}
 					
 					action_taken = CopLogicAttack._chk_request_action_walk_to_cover_offset_pos(data, my_data, path)
+				elseif my_data.cover_test_step <= 2 then
+					local height = nil
+
+					if in_cover[4] then
+						height = 140
+					else
+						height = 82.5
+					end
+					
+					local aim_pos = not focus_enemy.lost_track and focus_enemy.last_verified_pos or focus_enemy.verified_pos
+					
+					--make this into a loop to save updates
+					local reservation = {
+						radius = 30,
+						filter = data.pos_rsrv_id
+					}
+					
+					while my_data.cover_test_step < 3 do
+						local shoot_from_pos = CopLogicAttack._peek_for_pos_sideways(data, my_data, my_tracker, aim_pos, height)
+
+						if shoot_from_pos then
+							reservation.position = shoot_from_pos
+							if not managers.navigation:is_pos_free(reservation) then
+								local path = {
+									m_tracker_pos,
+									shoot_from_pos
+								}
+								action_taken = CopLogicAttack._chk_request_action_walk_to_cover_shoot_pos(data, my_data, path, "walk")
+
+								break
+							end
+						end
+						
+						my_data.cover_test_step = my_data.cover_test_step + 1
+					end
+					
+					if not action_taken then 
+						move_to_cover = true
+					end
+				elseif not enemy_visible_soft then
+					move_to_cover = true
 				end
-				
-				action_taken = action_taken or CopLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
+			elseif my_data.walking_to_cover_shoot_pos then
+				-- Nothing
+			elseif my_data.at_cover_shoot_pos then
+				if not my_data.stay_out_time or my_data.stay_out_time < t then
+					move_to_cover = true
+				end
+			else
+				move_to_cover = true
 			end
+		elseif my_data.at_cover_shoot_pos then
+			if not my_data.stay_out_time or my_data.stay_out_time < t then
+				move_to_cover = true
+			end
+		else
+			move_to_cover = true
+		end
+		
+		if not action_taken and move_to_cover and my_data.cover_path then
+			if not best_cover then
+				my_data.cover_path = nil
+			else
+				action_taken = CopLogicAttack._chk_request_action_walk_to_cover(data, my_data)
+			end
+		elseif not my_data.cover_path and not my_data.cover_path_search_id and not action_taken and best_cover and (not in_cover or best_cover[1] ~= in_cover[1]) and (not my_data.cover_path_failed_t or data.t - my_data.cover_path_failed_t > 2) then
+			my_data.cover_path_search_id = tostring(unit:key()) .. "cover"
+
+			data.unit:brain():search_for_path_to_cover(my_data.cover_path_search_id, best_cover[1], best_cover[5])
 		end
 	end
 
-	if not data.objective and (not data.path_fail_t or data.t - data.path_fail_t > 1) then
+	if not data.objective and (not data.path_fail_t or data.t > data.path_fail_t + 3) then
 		managers.groupai:state():on_criminal_jobless(unit)
 
 		if my_data ~= data.internal_data then
@@ -157,7 +228,7 @@ function TeamAILogicAssault._on_player_slow_pos_rsrv_upd(data)
 			return
 		end
 	elseif not objective then
-		if not data.path_fail_t or data.t - data.path_fail_t > 1 then
+		if not data.path_fail_t or data.t > data.path_fail_t + 3 then
 			managers.groupai:state():on_criminal_jobless(unit)
 
 			if my_data ~= data.internal_data then
@@ -190,13 +261,13 @@ function TeamAILogicAssault._upd_enemy_detection(data, is_synchronous)
 	
 	local chk_exit_logic = true
 	
-	if new_attention and (new_attention.nearly_visible or new_attention.verified) and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction and new_attention.dis < 2000 then
+	if new_attention and new_reaction and AIAttentionObject.REACT_COMBAT <= new_reaction then
 		data.last_engage_t = data.t
 		chk_exit_logic = nil
 	end
 
 	if chk_exit_logic then
-		if not data.last_engage_t or data.t - data.last_engage_t > 7 then
+		if not data.last_engage_t or data.t - data.last_engage_t > 15 then
 			TeamAILogicAssault._chk_exit_attack_logic(data, new_reaction)
 		end
 	end
@@ -216,7 +287,11 @@ function TeamAILogicAssault._upd_enemy_detection(data, is_synchronous)
 
 		return
 	end
-
+	
+	if not data.important then
+		data.important = true --gonna be quick about this for laziness purposes
+	end
+	
 	CopLogicAttack._upd_aim(data, my_data)
 
 	if not my_data._intimidate_t or my_data._intimidate_t + 2 < data.t and not my_data._turning_to_intimidate and data.unit:character_damage():health_ratio() > 0.5 then
@@ -348,7 +423,7 @@ function TeamAILogicAssault.action_complete_clbk(data, action)
 				my_data.in_cover = my_data.moving_to_cover
 				my_data.in_cover[7] = nil
 				my_data.cover_enter_t = data.t
-				my_data.cover_test_step = 3
+				my_data.cover_test_step = 0
 				my_data.flank_cover = nil
 			end
 
@@ -406,10 +481,6 @@ end
 function TeamAILogicAssault._chk_wants_to_take_cover(data, my_data)
 	if not data.attention_obj or data.attention_obj.reaction < AIAttentionObject.REACT_COMBAT then
 		return
-	end
-
-	if my_data.moving_to_cover then 
-		return true
 	end
 	
 	if data.unit:character_damage()._health_ratio < 0.75 then

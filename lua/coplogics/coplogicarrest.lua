@@ -109,14 +109,51 @@ function CopLogicArrest._say_call_the_police(data, my_data)
 	data.unit:sound():say(blame_list[my_data.call_in_event] or "a23", true)
 end
 
+function CopLogicArrest._verify_arrest_targets(data, my_data)
+	local all_attention_objects = data.detected_attention_objects
+	local arrest_targets = my_data.arrest_targets
+	local group_ai = managers.groupai:state()
+
+	for u_key, arrest_data in pairs(arrest_targets) do
+		local drop, penalty = nil
+		local record = group_ai:criminal_record(u_key)
+
+		if not record then
+			-- Nothing
+		elseif arrest_data.intro_pos and mvector3.distance_sq(arrest_data.attention_obj.m_pos, arrest_data.intro_pos) > 28900 then
+			drop = true
+			penalty = true
+		elseif record.status ~= "tased" and arrest_data.intro_t and record.assault_t and record.assault_t > arrest_data.intro_t + 0.6 then
+			drop = true
+			penalty = true
+		elseif record.status and record.status ~= "tased" then
+			drop = true
+		elseif all_attention_objects[u_key] ~= arrest_data.attention_obj or not arrest_data.attention_obj.identified then
+			drop = true
+
+			if arrest_data.intro_pos then
+				penalty = true
+			end
+		end
+
+		if drop then
+			if penalty then
+				record.arrest_timeout = data.t + arrest_data.attention_obj.unit:base():arrest_settings().arrest_timeout
+			end
+
+			group_ai:on_arrest_end(data.key, u_key)
+
+			arrest_targets[u_key] = nil
+		end
+	end
+end
 
 function CopLogicArrest._upd_enemy_detection(data)
 	managers.groupai:state():on_unit_detection_updated(data.unit)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
-	local min_reaction = AIAttentionObject.REACT_AIM
-	local delay = CopLogicBase._upd_attention_obj_detection(data, min_reaction, nil)
+	local delay = CopLogicBase._upd_attention_obj_detection(data, nil, nil)
 	local all_attention_objects = data.detected_attention_objects
 	local arrest_targets = my_data.arrest_targets
 
@@ -128,16 +165,14 @@ function CopLogicArrest._upd_enemy_detection(data)
 	CopLogicBase._set_attention_obj(data, new_attention, new_reaction)
 
 	local should_arrest = new_reaction == AIAttentionObject.REACT_ARREST
-	local should_stand_close = new_reaction == AIAttentionObject.REACT_SCARED
+	local should_stand_close = new_reaction == AIAttentionObject.REACT_SCARED or new_attention and new_attention.criminal_record and new_attention.criminal_record.status
 
 	if should_arrest ~= my_data.should_arrest or should_stand_close ~= my_data.should_stand_close then
+		my_data.should_arrest = should_arrest
+		my_data.should_stand_close = should_stand_close
+
 		CopLogicArrest._cancel_advance(data, my_data)
 	end
-	
-	my_data.should_arrest = should_arrest
-	my_data.should_stand_close = should_stand_close
-	--log("should_arrest: " .. tostring(should_arrest))
-	--log("should_stand_close: " .. tostring(should_stand_close))
 
 	if should_arrest and not my_data.arrest_targets[new_attention.u_key] then
 		my_data.arrest_targets[new_attention.u_key] = {
@@ -150,7 +185,7 @@ function CopLogicArrest._upd_enemy_detection(data)
 	CopLogicArrest._mark_call_in_event(data, my_data, new_attention)
 	CopLogicArrest._chk_say_discovery(data, my_data, new_attention)
 
-	if not should_arrest and not should_stand_close then
+	if not my_data.should_arrest and not my_data.should_stand_close then
 		my_data.in_position = true
 	end
 
@@ -165,42 +200,26 @@ function CopLogicArrest._upd_enemy_detection(data)
 	end
 
 	if new_reaction ~= AIAttentionObject.REACT_ARREST then
-		if (not new_reaction or new_reaction < AIAttentionObject.REACT_SHOOT or not new_attention.verified or new_attention.dis >= 1500) and my_data.in_position then
-			--log("a")
-			if data.char_tweak.calls_in and my_data.next_action_delay_t < data.t and managers.groupai:state():can_police_be_called() and not managers.groupai:state():is_police_called() and not my_data.calling_the_police and not my_data.turning then
-				CopLogicArrest._call_the_police(data, my_data, true)
+		local wanted_state = CopLogicBase._get_logic_state_from_reaction(data)
 
-				return delay
+		if wanted_state and wanted_state ~= data.name then
+			if my_data.calling_the_police then
+				local action_data = {
+					body_part = 3,
+					type = "idle"
+				}
+
+				data.unit:brain():action_request(action_data)
 			end
 
-			if not managers.groupai:state():can_police_be_called() or (managers.groupai:state():is_police_called() or managers.groupai:state():chk_enemy_calling_in_area(managers.groupai:state():get_area_from_nav_seg_id(data.unit:movement():nav_tracker():nav_segment()), data.key)) and not my_data.calling_the_police then
-				local wanted_state = CopLogicBase._get_logic_state_from_reaction(data) or "idle"
-				
-				if wanted_state and wanted_state ~= data.name then
-					CopLogicBase._exit(data.unit, wanted_state)
-					CopLogicBase._report_detections(data.detected_attention_objects)
+			CopLogicBase._exit(data.unit, wanted_state)
+			CopLogicBase._report_detections(data.detected_attention_objects)
 
-					return delay
-				end
-			end
-		else
-			local wanted_state = CopLogicBase._get_logic_state_from_reaction(data)
-
-			if wanted_state and wanted_state ~= data.name then
-				if my_data.calling_the_police then
-					local action_data = {
-						body_part = 3,
-						type = "idle"
-					}
-
-					data.unit:brain():action_request(action_data)
-				end
-
-				CopLogicBase._exit(data.unit, wanted_state)
-				CopLogicBase._report_detections(data.detected_attention_objects)
-
-				return delay
-			end
+			return delay
+		elseif not my_data.calling_the_police and my_data.in_position then
+			CopLogicArrest._call_the_police(data, my_data, true)
+			
+			return delay
 		end
 	end
 	
@@ -241,9 +260,7 @@ function CopLogicArrest.queued_update(data)
 					type = "shoot"
 				}
 
-				if data.unit:brain():action_request(shoot_action) then
-					my_data.shooting = true
-				end
+				my_data.shooting = data.unit:brain():action_request(shoot_action)
 			end
 		elseif my_data.shooting and not data.unit:anim_data().reload then
 			local idle_action = {
@@ -294,52 +311,6 @@ function CopLogicArrest.queued_update(data)
 	CopLogicArrest._upd_cover(data)
 	CopLogicBase.queue_task(my_data, my_data.update_task_key, CopLogicArrest.queued_update, data, data.t + delay, data.important)
 	CopLogicBase._report_detections(data.detected_attention_objects)
-end
-
-function CopLogicArrest._chk_reaction_to_attention_object(data, attention_data, stationary)
-	local record = attention_data.criminal_record
-
-	if not record or not attention_data.is_person then
-		return attention_data.settings.reaction
-	end
-
-	local att_unit = attention_data.unit
-
-	if attention_data.is_deployable or data.t < record.arrest_timeout then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_SHOOT)
-	end
-
-	local can_disarm = not stationary
-	local can_arrest = CopLogicBase._can_arrest(data)
-	local visible = attention_data.verified
-
-	if record.status == "dead" then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-	elseif record.status == "disabled" then
-		if record.assault_t and record.assault_t - record.disabled_t > 0.6 then
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
-		else
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-		end
-	elseif record.being_arrested then
-		local my_data = data.internal_data
-
-		if record.being_arrested[data.key] then
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
-		end
-
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-	end
-
-	if can_arrest and (not record.assault_t or att_unit:base():arrest_settings().aggression_timeout < data.t - record.assault_t) and record.arrest_timeout < data.t and not record.status then
-		if attention_data.dis < 2000 and visible then
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
-		else
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-		end
-	end
-
-	return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
 end
 
 function CopLogicArrest._call_the_police(data, my_data, paniced)
@@ -466,6 +437,25 @@ function CopLogicArrest._upd_advance(data, my_data, attention_obj, arrest_data)
 		else
 			my_data.in_position = true --just call it in, whatever
 		end
+	end
+end
+
+function CopLogicArrest._process_pathing_results(data, my_data)
+	if data.pathing_results then
+		for path_id, path in pairs(data.pathing_results) do
+			if path_id == my_data.path_search_id then
+				if path ~= "failed" then
+					my_data.advance_path = path
+				elseif my_data.should_arrest or my_data.should_stand_close then
+					my_data.in_position = true
+				end
+
+				my_data.processing_path = nil
+				my_data.path_search_id = nil
+			end
+		end
+
+		data.pathing_results = nil
 	end
 end
 

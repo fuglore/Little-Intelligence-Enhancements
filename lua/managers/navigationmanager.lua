@@ -32,6 +32,40 @@ local math_up = math.UP
 NavigationManager.has_registered_cover_units_for_LIES = nil
 NavigationManager._LIES_navlink_elements = {}
 
+function NavigationManager:find_segment_doors(from_seg_id, approve_clbk)
+	local all_doors = self._room_doors
+	local all_nav_segs = self._nav_segments
+	local from_seg = all_nav_segs[from_seg_id]
+	local found_doors = {}
+
+	for neighbour_seg_id, door_list in pairs(from_seg.neighbours) do
+		if not all_nav_segs[neighbour_seg_id].disabled and (not approve_clbk or approve_clbk(neighbour_seg_id)) then
+			for _, i_door in ipairs(door_list) do
+				if type(i_door) == "number" then
+					table.insert(found_doors, all_doors[i_door])
+				elseif alive(i_door) and not i_door:is_obstructed() then
+					local nl_element = i_door:script_data().element
+					local nl_tracker = self._quad_field:create_nav_tracker(nl_element:value("position"), true) 
+			
+					if nl_tracker:nav_segment() == from_seg_id then
+						local end_pos = nl_element:nav_link_end_pos()
+						local fake_door = {
+							center = nl_element:value("position"),
+							end_pos = nl_element:nav_link_end_pos()
+						}
+						
+						table.insert(found_doors, fake_door)
+					end
+					
+					self:destroy_nav_tracker(nl_tracker)
+				end
+			end
+		end
+	end
+
+	return found_doors
+end
+
 function NavigationManager:find_segment_doors_with_nav_links(from_seg_id, approve_clbk)
 	local all_doors = self._room_doors
 	local all_nav_segs = self._nav_segments
@@ -86,7 +120,12 @@ function NavigationManager:draw_coarse_path(path, alt_color)
 	if alt_color then
 		for path_i = 1, #path do
 			local seg_pos = all_nav_segs[path[path_i][1]].pos
-			line2:cylinder(seg_pos, seg_pos + math_up * 185, 20)
+			line2:cylinder(seg_pos, seg_pos + math_up * 185, 10)
+			
+			if path[path_i - 1] then
+				local prev_seg_pos = all_nav_segs[path[path_i - 1][1]].pos
+				line2:cylinder(prev_seg_pos, seg_pos, 10)
+			end
 		end
 	else
 		for path_i = 1, #path do
@@ -382,7 +421,7 @@ function NavigationManager:register_cover_units()
 
 					local location_script_data = self._quad_field:get_script_data(tracker, true)
 
-					if not location_script_data.covers or #location_script_data.covers < 12 then
+					if not location_script_data.covers or #location_script_data.covers < 16 then
 						if not location_script_data.covers then
 							location_script_data.covers = {}
 						end
@@ -457,7 +496,7 @@ function NavigationManager:register_cover_units()
 								t_ins(location_script_data.covers, cover)
 								t_ins(covers, cover)
 								
-								if #location_script_data.covers >= 12 or #covers >= max_cover_points then
+								if #location_script_data.covers >= 24 or #covers >= max_cover_points then
 									break
 								end
 							elseif c_tracker then
@@ -489,16 +528,463 @@ function NavigationManager:register_cover_units()
 	end
 	
 	self:_change_funcs()
+	
+	managers.enemy:add_delayed_clbk("NavigationManager._do_nav_fixes", callback(self, self, "_do_nav_fixes"), TimerManager:game():time() + 2)
 end
 
---Hooks:PostHook(NavigationManager, "update", "lies_cover", function(self, t, dt)
+local nav_fixes_on_init = {
+	red2 = { --fwb fix vault door open obstacle delays
+		[101658] = function (self)
+			local vault_blocker_id = 102362
+			for i = 1, #self._values.on_executed do
+				local on_executed_params = self._values.on_executed[i]
+				
+				if on_executed_params.id == vault_blocker_id then
+					on_executed_params.delay = 10
+					
+					break
+				end
+			end
+		end
+	}
+}
+
+function NavigationManager:_do_nav_fixes()
+	if nav_fixes_on_init[Global.level_data.level_id] then
+		local stuff = nav_fixes_on_init[Global.level_data.level_id]
+		
+		for id, func in pairs(stuff) do
+			local element
+			
+			for _, data in pairs(managers.mission._scripts) do
+				element = data:element(id)
+				
+				if element then
+					break
+				end
+			end
+			
+			if element then
+				func(element)
+			end
+		end
+	end
+end
+
+Hooks:PostHook(NavigationManager, "update", "lies_cover", function(self, t, dt)
+	self:_update_LIES_cached_paths(t)
+
 	--self:_draw_covers()
 	--self:_draw_rooms_LIES()
 	--self:_draw_doors_LIES()
 	--self:_draw_anim_nav_links()
 	--self:_draw_coarse_graph()
 	--self:_draw_coarse_graph_areas()
---end)
+end)
+
+function NavigationManager:_add_LIES_cached_path(cached_path_data)
+	if not self._cached_paths then
+		self._cached_paths = {}
+	end
+	
+	self._cached_paths[#self._cached_paths + 1] = cached_path_data
+end
+
+function NavigationManager:_update_LIES_cached_paths(t)
+	if not self._cached_paths then
+		self._cached_paths = {}
+	end
+	
+	if #self._cached_paths == 0 then
+		return
+	end
+	
+	for i = #self._cached_paths, 1, -1 do
+		local cached_path_data = self._cached_paths[i]
+
+		if cached_path_data then
+			if cached_path_data.invalidated or t - cached_path_data.last_useful_t > 60 then
+				table.remove(self._cached_paths, i)
+			end
+		end
+	end
+end
+
+function NavigationManager:_check_LIES_invalidated_navlink_cached_paths(element_id)
+	if not self._cached_paths or #self._cached_paths == 0 then
+		return
+	end
+	
+	for i = 1, #self._cached_paths do
+		local cached_path_data = self._cached_paths[i]
+		
+		if cached_path_data then
+			local cached_path = cached_path_data.path
+		
+			for cached_path_i = 1, #cached_path do
+				local check_navpoint = cached_path[cached_path_i]
+				
+				if not check_navpoint.x then
+					if not alive(check_navpoint) or check_navpoint:script_data().element._id == element_id then
+						cached_path_data.invalidated = true
+						
+						break
+					end
+				end
+			end
+		end
+	end
+end
+
+local access_inclusions = {
+	swat = {
+		swat = true,
+		taser = true,
+		fbi = true,
+		spooc = true
+	},
+	cop = {
+		cop = true,
+		swat = true,
+		taser = true,
+		fbi = true,
+		spooc = true
+	},
+	fbi = {
+		swat = true,
+		taser = true,
+		fbi = true,
+		spooc = true
+	}
+}
+
+function NavigationManager:search_pos_to_pos(params)
+	if params.access_pos then
+		params.blocked_nav_segs = params.access_pos
+	end
+	
+	local start_pos, end_pos
+	
+	if params.tracker_from then
+		start_pos = params.tracker_from:field_position()
+	elseif params.pos_from then
+		start_pos = params.pos_from
+	end
+	
+	if params.tracker_to then
+		end_pos = params.tracker_to:field_position()
+	elseif params.pos_to then
+		end_pos = params.pos_to
+	end
+	
+	if LIES:_path_is_straight_line(start_pos, end_pos) then
+		local path = {
+			start_pos,
+			end_pos
+		}
+		
+		--managers.navigation:draw_path(path, nil, nil, 5)
+		local result_clbk = params.result_clbk
+		result_clbk(path, true)
+		
+		return
+	elseif self._cached_paths and #self._cached_paths > 0 then
+		local t = TimerManager:game():time()
+	
+		for i = 1, #self._cached_paths do
+			local cached_path_info = self._cached_paths[i]
+			
+			local inclusions = access_inclusions[cached_path_info.access_pos_str]
+			
+			if not cached_path_info.invalidated and LIES:_path_is_straight_line(start_pos, cached_path_info.start_pos) and LIES:_path_is_straight_line(end_pos, cached_path_info.end_pos) and (inclusions and inclusions[params.access_pos_str] == true or cached_path_info.access_pos_str == params.access_pos_str) then
+				local good_path = true
+				
+				for cached_path_i = 1, #cached_path_info.path do
+					local check_navpoint = cached_path_info.path[cached_path_i]
+
+					if check_navpoint.x and params.nav_segs then
+						local check_seg = self:get_nav_seg_from_pos(check_navpoint, true)
+						
+						if not params.nav_segs[check_seg] then
+							good_path = false
+							
+							break
+						end
+					elseif not check_navpoint.x and (not alive(check_navpoint) or check_navpoint:delay_time() > t) then
+						good_path = false
+						
+						break
+					end
+				end
+
+				if good_path then
+					cached_path_info.last_useful_t = TimerManager:game():time()
+				
+					local result_path = {
+						start_pos
+					}
+					
+					--log(#cached_path_info.path)
+					
+					for cached_path_i = 1, #cached_path_info.path do
+						result_path[#result_path + 1] = cached_path_info.path[cached_path_i]
+					end
+					
+					result_path[#result_path + 1] = end_pos
+					--managers.navigation:draw_path(result_path, nil, nil, 5)
+					local result_clbk = params.result_clbk
+					result_clbk(result_path, true)
+					
+					return
+				end
+			end
+		end
+	end
+
+	self._quad_field:detailed_search(params)
+end
+
+function NavigationManager:draw_path(path, color_link, color_node, duration)
+	if path then
+		color_node = color_node and Color(unpack(color_node)) or Color(0.2, math.random(), math.random(), math.random())
+		color_link = color_link and Color(unpack(color_link)) or Color(0.1, math.random(), math.random(), math.random())
+		local brush_node = Draw:brush(color_node, duration)
+		local brush_link = Draw:brush(color_link, duration)
+
+		brush_node:sphere(CopActionWalk._nav_point_pos(path[1]), 15)
+
+		for i = 2, #path do
+			if path[i].x then
+				brush_node:sphere(path[i], 8)
+
+				if path[i - 1].x then
+					brush_link:cylinder(path[i], path[i - 1], 5)
+				else
+					local prev_pos
+					
+					if path[i - 1].element then
+						prev_pos = CopActionWalk._nav_point_pos(path[i - 1])
+					else
+						prev_pos = CopActionWalk._nav_point_pos(path[i - 1]:script_data())
+					end
+					
+					brush_link:cylinder(path[i], prev_pos, 5)
+				end
+			else
+				local nav_link = path[i]
+				local start_pos, end_pos
+				
+				if nav_link.element then
+					start_pos = CopActionWalk._nav_point_pos(nav_link)
+					end_pos = start_pos + Rotation(path[i].element:value("rotation"), 0, 0):y() * 100
+				else
+					start_pos = CopActionWalk._nav_point_pos(nav_link:script_data())
+					end_pos = start_pos + Rotation(nav_link:script_data().element:value("rotation"), 0, 0):y() * 100
+				end
+
+				brush_node:sphere(start_pos, 8)
+				brush_node:sphere(end_pos, 8)
+				brush_link:cone(end_pos, start_pos, 30)
+				
+				if path[i - 1].x then
+					brush_link:cylinder(start_pos, path[i - 1], 5)
+				else
+					local prev_pos
+					
+					if path[i - 1].element then
+						prev_pos = CopActionWalk._nav_point_pos(path[i - 1])
+					else
+						prev_pos = CopActionWalk._nav_point_pos(path[i - 1]:script_data())
+					end
+				
+					brush_link:cylinder(start_pos, prev_pos, 5)
+				end
+			end
+		end
+	end
+end
+
+function NavigationManager:add_obstacle(obstacle_unit, obstacle_obj_name)
+	if self._debug then
+		for i, obs_data in ipairs(self._obstacles) do
+			if obstacle_unit == obs_data.unit and obstacle_obj_name == obs_data.obstacle_obj_name then
+				debug_pause_unit(obstacle_unit, "[NavigationManager:add_obstacle] obstacle added twice", obstacle_unit, obstacle_obj_name)
+
+				return
+			end
+		end
+	end
+
+	local obstacle_obj = obstacle_unit:get_object(obstacle_obj_name)
+	
+	if self._cached_paths and #self._cached_paths > 0 then
+		for i = 1, #self._cached_paths do
+			local cached_path_data = self._cached_paths[i]
+			
+			if cached_path_data then
+				local cached_path = cached_path_data.path
+			
+				for cached_path_i = 1, #cached_path do
+					local check_navpoint = cached_path[cached_path_i]
+					
+					if check_navpoint.x then
+						if obstacle_obj:inside_bv(check_navpoint) then
+							cached_path_data.invalidated = true
+							
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	local id = self._quad_field:add_obstacle(obstacle_obj)
+
+	table.insert(self._obstacles, {
+		unit = obstacle_unit,
+		obstacle_obj_name = obstacle_obj_name,
+		id = id
+	})
+end
+
+local function convert_bastards(ai_group_name)
+	if ai_group_name == "chavez" or ai_group_name == "bank_manager_old_man" or ai_group_name == "escort_guy_1" or ai_group_name == "escort_guy_2" or ai_group_name == "escort_guy_3" or ai_group_name == "escort_guy_5" then
+		return "bastards"
+	end
+	
+	return ai_group_name
+end
+
+local ai_groups_so_accesses = {
+	friendlies = {
+		teamAI1 = true,
+		teamAI2 = true,
+		teamAI3 = true,
+		teamAI4 = true
+	},
+	enemies = {
+		cop = true,
+		security_patrol = true,
+		shield = true,
+		tank = true,
+		security = true,
+		gangster = true,
+		swat = true,
+		fbi = true,
+		taser = true,
+		sniper = true,
+		murky = true,
+		spooc = true
+	},
+	civilians = {
+		civ_male = true,
+		civ_female = true,
+		SO_ID1 = true,
+		SO_ID2 = true,
+		SO_ID3 = true
+	},
+	bastards = {
+		SO_ID1 = true
+	},
+	escort_guy_4 = {
+		SO_ID2 = true
+	},
+	unique_patrol_forbid = {
+		security_patrol = true
+	}
+}
+
+function NavigationManager:set_nav_segment_state(id, state, filter_group)
+	if not self._nav_segments[id] then
+		debug_pause("[NavigationManager:set_nav_segment_state] inexistent nav_segment", id)
+
+		return
+	end
+
+	if state == "forbid_custom" then
+		local access_filter = self:convert_SO_AI_group_to_access(filter_group)
+
+		self._quad_field:set_nav_segment_blocked_filter(id, access_filter)
+
+		self._nav_segments[id].blocked_group = filter_group
+		
+		if self._nav_segments[id].blocked_group and self._cached_paths and #self._cached_paths > 0 then
+			local so_ai_group = convert_bastards(filter_group)
+			local bad_accesses = ai_groups_so_accesses[so_ai_group]
+			
+			if bad_accesses then
+				for i = 1, #self._cached_paths do
+					local cached_path_data = self._cached_paths[i]
+					
+					if cached_path_data and bad_accesses[cached_path_data.access_pos_str] then
+						local cached_path = cached_path_data.path
+					
+						for cached_path_i = 1, #cached_path do
+							local check_navpoint = cached_path[cached_path_i]
+							
+							if check_navpoint.x then
+								local check_seg = self:get_nav_seg_from_pos(check_navpoint, true)
+								
+								if check_seg == id then
+									cached_path_data.invalidated = true
+									--log("path invalidated")
+									
+									break
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+
+		return
+	end
+
+	self._quad_field:set_nav_segment_blocked_filter(id, 0)
+
+	self._nav_segments[id].blocked_group = nil
+	local wanted_state = state == "allow_access" and true or false
+	local cur_state = self._quad_field:is_nav_segment_enabled(id)
+	local seg_disabled_state = nil
+
+	if not wanted_state then
+		seg_disabled_state = true
+	end
+
+	self._nav_segments[id].disabled = seg_disabled_state
+
+	if wanted_state ~= cur_state then
+		self._quad_field:set_nav_segment_enabled(id, wanted_state)
+		managers.groupai:state():on_nav_segment_state_change(id, wanted_state)
+	end
+	
+	if seg_disabled_state and self._cached_paths and #self._cached_paths > 0 then
+		for i = 1, #self._cached_paths do
+			local cached_path_data = self._cached_paths[i]
+			
+			if cached_path_data then
+				local cached_path = cached_path_data.path
+			
+				for cached_path_i = 1, #cached_path do
+					local check_navpoint = cached_path[cached_path_i]
+					
+					if check_navpoint.x then
+						local check_seg = self:get_nav_seg_from_pos(check_navpoint, true)
+						
+						if check_seg == id then
+							cached_path_data.invalidated = true
+							--log("path invalidated")
+							
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+end
 
 function NavigationManager:_draw_coarse_graph_areas()
 	if not managers.groupai:state()._area_data then
@@ -638,21 +1124,21 @@ function NavigationManager:find_cover_in_cone_from_threat_pos_1_LUA(threat_pos, 
 		local ray_from = temp_vec1
 
 		mvec3_set(ray_from, math_up)
-		mvec3_mul(ray_from, 90)
+		mvec3_mul(ray_from, 82.5)
 		mvec3_add(ray_from, cover_pos)
 		
 		local ray_to_pos = temp_vec2
 		
 		mvec3_set(ray_to_pos, math_up)
-		mvec3_mul(ray_to_pos, 90)
+		mvec3_mul(ray_to_pos, 82.5)
 		mvec3_add(ray_to_pos, threat_pos)
 
 		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
-			mvec3_set_z(ray_from, ray_from.z + 90)
-			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
+			mvec3_set_z(ray_from, ray_from.z + 67.5)
+			mvec3_set_z(ray_to_pos, ray_to_pos.z + 67.5)
 
 			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		end
@@ -735,21 +1221,21 @@ function NavigationManager:find_cover_from_threat_LUA(nav_seg_id, optimal_threat
 		local ray_from = temp_vec1
 
 		mvec3_set(ray_from, math_up)
-		mvec3_mul(ray_from, 90)
+		mvec3_mul(ray_from, 82.5)
 		mvec3_add(ray_from, cover_pos)
 		
 		local ray_to_pos = temp_vec2
 		
 		mvec3_set(ray_to_pos, math_up)
-		mvec3_mul(ray_to_pos, 90)
+		mvec3_mul(ray_to_pos, 82.5)
 		mvec3_add(ray_to_pos, threat_pos)
 
 		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
-			mvec3_set_z(ray_from, ray_from.z + 90)
-			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
+			mvec3_set_z(ray_from, ray_from.z + 67.5)
+			mvec3_set_z(ray_to_pos, ray_to_pos.z + 67.5)
 
 			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		end
@@ -836,21 +1322,21 @@ function NavigationManager:find_cover_in_nav_seg_3_LUA(nav_seg_id, max_near_dis,
 		local ray_from = temp_vec1
 
 		mvec3_set(ray_from, math_up)
-		mvec3_mul(ray_from, 90)
+		mvec3_mul(ray_from, 82.5)
 		mvec3_add(ray_from, cover_pos)
 		
 		local ray_to_pos = temp_vec2
 		
 		mvec3_set(ray_to_pos, math_up)
-		mvec3_mul(ray_to_pos, 90)
+		mvec3_mul(ray_to_pos, 82.5)
 		mvec3_add(ray_to_pos, threat_pos)
 
 		local low_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		local high_ray = nil
 
 		if low_ray then
-			mvec3_set_z(ray_from, ray_from.z + 90)
-			mvec3_set_z(ray_to_pos, ray_to_pos.z + 90)
+			mvec3_set_z(ray_from, ray_from.z + 67.5)
+			mvec3_set_z(ray_to_pos, ray_to_pos.z + 67.5)
 
 			high_ray = world_g:raycast("ray", ray_from, ray_to_pos, "slot_mask", self._vis_check_slotmask, "ray_type", "ai_vision", "report")
 		end
@@ -977,7 +1463,10 @@ function NavigationManager:pad_out_position(position, nr_rays, dis)
 	
 	local altered_pos = altered_pos:with_z(position.z)
 	local position_tracker = self._quad_field:create_nav_tracker(altered_pos, true)
-	altered_pos = position_tracker:field_position()
+	
+	if not position_tracker:lost() then
+		altered_pos = position_tracker:field_position()
+	end
 
 	self._quad_field:destroy_nav_tracker(position_tracker)
 	
@@ -1136,7 +1625,6 @@ function NavigationManager:_strip_nav_field_for_gameplay()
 	self._builder = nil
 	self._covers = {}
 end
-
 
 function NavigationManager:_execute_coarce_search(search_data)
 	local search_id = search_data.id
@@ -1301,7 +1789,6 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ign
 				elseif not i_door:is_obstructed() and i_door:check_access(access_pos, access_neg) then
 					local end_pos = i_door:script_data().element:nav_link_end_pos()
 					local my_weight = mvec3_dis(from_pos, end_pos) + mvec3_dis(end_pos, to_pos)
-					my_weight = my_weight * 1.15
 
 					if found_segs then
 						if found_segs[neighbour_seg_id] then
@@ -1342,4 +1829,63 @@ function NavigationManager:_sort_nav_segs_after_pos(to_pos, from_pos, i_seg, ign
 	end
 
 	return found_segs
+end
+
+function NavigationManager:find_walls_across_pos(pos, across_vec, angle, nr_rays)
+	local from_tracker = self._quad_field:create_nav_tracker(pos)
+	angle = angle or 180
+	local center_pos = from_tracker:field_position()
+	nr_rays = math.max(2, nr_rays or 4)
+	local rot_step = angle / (nr_rays - 1)
+	local rot_offset = (math.random() * 2 - 1) * angle * 0.5
+	local ray_rot = Rotation(-angle * 0.5 + rot_offset - rot_step)
+	local vec_to = Vector3(across_vec.x, across_vec.y)
+
+	mvec3_rot(vec_to, ray_rot)
+
+	local pos_to = Vector3()
+
+	mrotation.set_yaw_pitch_roll(ray_rot, rot_step, 0, 0)
+
+	local tracker_from, pos_from = nil
+
+	if from_tracker:lost() then
+		pos_from = center_pos
+	else
+		tracker_from = from_tracker
+	end
+
+	local ray_params = {
+		trace = true,
+		tracker_from = tracker_from,
+		pos_from = pos_from,
+		pos_to = pos_to
+	}
+	local ray_results = {}
+	local i_ray = 1
+
+	while nr_rays >= i_ray do
+		mvec3_rot(vec_to, ray_rot)
+		mvec3_set(pos_to, vec_to)
+		mvec3_add(pos_to, center_pos)
+
+		local hit = self:raycast(ray_params)
+
+		if hit then
+			table.insert(ray_results, {
+				ray_params.trace[1],
+				true
+			})
+		else
+			table.insert(ray_results, {
+				ray_params.trace[1]
+			})
+		end
+
+		i_ray = i_ray + 1
+	end
+	
+	self._quad_field:destroy_nav_tracker(from_tracker)
+	
+	return #ray_results > 0 and ray_results
 end

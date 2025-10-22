@@ -8,6 +8,10 @@ Hooks:PostHook(CopMovement, "_upd_actions", "lies_actions", function(self, t)
 	end
 	
 	self._unit:brain():check_upd_aim()
+	
+	if not self._need_upd then
+		self._need_upd = self._ext_anim.move or self._ext_anim.react_enter
+	end
 end)
 
 function CopMovement:force_upd_z_ray()

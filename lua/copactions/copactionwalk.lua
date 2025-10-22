@@ -97,7 +97,7 @@ function CopActionWalk:_init()
 		self._simplified_path = self._nav_path
 	else
 		local good_pos = mvector3.copy(common_data.pos)
-		self._simplified_path = self._calculate_simplified_path(good_pos, self._nav_path, (not self._sync or self._common_data.stance.name == "ntl") and 3 or 2, self._sync, true)
+		self._simplified_path = self._calculate_simplified_path(good_pos, self._nav_path, 1, self._sync, true)
 	end
 
 	if not self._simplified_path[2].x then
@@ -251,83 +251,158 @@ function CopActionWalk._apply_padding_to_simplified_path(path)
 	end
 end
 
-function CopActionWalk:append_path_mid_logic(path)
-	--local line = Draw:brush(Color.yellow:with_alpha(1), 3)
-		
-	if line then
-		local simpath = self._simplified_path
-		for i = 1, #simpath do
-			if simpath[i + 1] then
-				if simpath[i].z and simpath[i + 1].z then
-					line:cylinder(simpath[i], simpath[i + 1], 5)
-				elseif simpath[i].z then
-					line:sphere(simpath[i], 20)
-				elseif simpath[i + 1].z then
-					line:sphere(simpath[i + 1], 20)
-				elseif simpath[i - 1] and simpath[i - 1].z then
-					line:sphere(simpath[i - 1], 20)
-				end
-			end
-		end
+function CopActionWalk._calculate_simplified_path(good_pos, original_path, nr_iterations, z_test, apply_padding)
+	local simplified_path = {
+		good_pos
+	}
+	local original_path_size = #original_path
+	
+	if nr_iterations == 1 then
+		original_path = CopActionWalk.enforce_gravity_on_path(original_path)
+		original_path_size = #original_path
 	end
 
-	local nav_path = {}
-		
-	for i = 1, #path do
-		local nav_point = path[i]
+	for i_nav_point, nav_point in ipairs(original_path) do
+		if nav_point.x and i_nav_point ~= original_path_size and (i_nav_point == 1 or simplified_path[#simplified_path].x) then
+			local pos_from = simplified_path[#simplified_path]
+			local pos_to = CopActionWalk._nav_point_pos(original_path[i_nav_point + 1])
+			local add_point
+			
+			if z_test then
+				if math.abs(pos_from.z - nav_point.z) > 60 then
+					add_point = true
+				elseif math.abs(nav_point.z - pos_to.z) > 60 then
+					add_point = true
+				else
+					local z_diff = math.abs(pos_from.z - nav_point.z) + math.abs(nav_point.z - pos_to.z)
+					add_point = z_diff > 60
+				end
+			end
 
-		if nav_point.x then
-			nav_path[#nav_path + 1] = nav_point
-		elseif alive(nav_point) then
-			nav_path[#nav_path + 1] = {
-				element = nav_point:script_data().element,
-				c_class = nav_point
-			}
+			add_point = add_point or CopActionWalk._chk_shortcut_pos_to_pos(pos_from, pos_to)
+
+			if add_point then
+				table.insert(simplified_path, mvec3_cpy(nav_point))
+			end
 		else
-			return
+			table.insert(simplified_path, nav_point)
 		end
 	end
 
-	for i = 1, #nav_path do
-		local nav_point = nav_path[i]
-		table.insert(self._simplified_path, nav_point)
+	if apply_padding and #simplified_path > 2 then
+		CopActionWalk._apply_padding_to_simplified_path(simplified_path)
+		CopActionWalk._calculate_shortened_path(simplified_path)
 	end
 	
-	if not self._simplified_path[1].x then
-		self._simplified_path[1] = self._simplified_path[1].c_class:end_position()
-	end
-	
-	if #self._simplified_path == 2 then
-		table.insert(self._simplified_path, 2, path[1])
+	if LIES.settings.highperformance and nr_iterations > 2 then
+		return simplified_path
 	end
 
-	if self._curve_path and self._simplified_path[2] ~= self._curve_path[#self._curve_path] then
-		table.insert(self._simplified_path, 2, self._curve_path[#self._curve_path])
+	if #simplified_path > 2 and #simplified_path < #original_path then
+		simplified_path = CopActionWalk._calculate_simplified_path(good_pos, simplified_path, nr_iterations + 1, z_test, apply_padding)
 	end
 
-	self._unit:brain():add_pos_rsrv("move_dest", {
-		radius = 30,
-		position = mvector3.copy(self._simplified_path[#self._simplified_path])
-	})
+	return simplified_path
+end
+
+function CopActionWalk.enforce_gravity_on_path(path, twice)
+	local path_size = #path
+	local test_pos = tmp_vec1
+	local inbetweens = {}
 	
-	--local line2 = Draw:brush(Color.blue:with_alpha(0.5), 6)
+	for i_nav_point, nav_point in ipairs(path) do
+		local next_point = path[i_nav_point + 1]
+		if nav_point.z and next_point and next_point.z and mvec3_dis(nav_point, next_point) > 100 then
+			local dis_to_point = mvec3_dis(nav_point, next_point)
+			mvec3_lerp(test_pos, nav_point, next_point, 0.5)
+			local z_diff = math.abs(next_point.z - nav_point.z)
+			local from_pos = test_pos:with_z(test_pos.z + 140)
+			local to_pos = test_pos:with_z(test_pos.z - 440)
+			local gnd_ray = World:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_graph_obstacle_check"), "ray_type", "walk", "sphere_cast_radius", 3)
+			
+			if gnd_ray then
+				test_pos = gnd_ray.position
+			end
+			
+			inbetweens[i_nav_point] = mvec3_cpy(test_pos)
+		end
+	end
+	
+	if #inbetweens > 0 then
+		local new_path  = {}
 		
-	if line2 then
-		local simpath = self._simplified_path
-		for i = 1, #simpath do
-			if simpath[i + 1] then
-				if simpath[i].z and simpath[i + 1].z then
-					line2:cylinder(simpath[i], simpath[i + 1], 5)
-				elseif simpath[i].z then
-					line2:sphere(simpath[i], 20)
-				elseif simpath[i + 1].z then
-					line2:sphere(simpath[i + 1], 20)
-				elseif simpath[i - 1] and simpath[i - 1].z then
-					line2:sphere(simpath[i - 1], 20)
-				end
+		for i_nav_point, nav_point in ipairs(path) do
+			new_path[#new_path + 1] = nav_point
+			
+			if inbetweens[i_nav_point] then
+				new_path[#new_path + 1] = inbetweens[i_nav_point]
 			end
 		end
+		
+		if new_path and not twice then
+			new_path = CopActionWalk.enforce_gravity_on_path(new_path, true)
+		end
+		
+		return new_path
 	end
 	
-	return true
+	return path
+end
+
+function CopActionWalk.enforce_gravity_on_simple_path(path)
+	local test_pos = tmp_vec1
+	mvec3_lerp(test_pos, path[1], path[2], 0.5)
+	local from_pos = test_pos:with_z(test_pos.z + 90)
+	local to_pos = test_pos:with_z(test_pos.z - 440)
+	local gnd_ray = World:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_graph_obstacle_check"), "ray_type", "walk")
+	
+	if gnd_ray then
+		test_pos = gnd_ray.position
+	else
+		test_pos = to_pos
+	end
+	
+	path[3] = mvec3_cpy(path[2])
+	path[2] = mvec3_cpy(test_pos)
+	
+	mvec3_lerp(test_pos, path[2], path[3], 0.5)
+	local from_pos = test_pos:with_z(test_pos.z + 90)
+	local to_pos = test_pos:with_z(test_pos.z - 440)
+	local gnd_ray = World:raycast("ray", from_pos, to_pos, "slot_mask", managers.slot:get_mask("AI_graph_obstacle_check"), "ray_type", "walk")
+	
+	if gnd_ray then
+		test_pos = gnd_ray.position
+	end
+	
+	path[4] = mvec3_cpy(path[3])
+	path[3] = test_pos
+end
+
+--this doesn't sync to clients, but it's better than not having it working at all.
+function CopActionWalk:on_attention(attention)
+	if attention then
+		self._attention = attention
+
+		if attention.handler then
+			if self._common_data.stance.name ~= "ntl" then
+				if AIAttentionObject.REACT_AIM <= attention.reaction then
+					self._attention_pos = attention.handler:get_attention_m_pos()
+				else
+					self._attention_pos = false
+				end
+			elseif AIAttentionObject.REACT_SURPRISED <= attention.reaction then
+				self._attention_pos = attention.handler:get_attention_m_pos()
+			else
+				self._attention_pos = false
+			end
+		elseif self._common_data.stance.name ~= "ntl" then
+			if attention.unit then
+				self._attention_pos = attention.unit:movement():m_pos()
+			elseif attention.pos then
+				self._attention_pos = attention.pos
+			end
+		end
+	else
+		self._attention_pos = false
+	end
 end

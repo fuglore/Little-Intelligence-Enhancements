@@ -10,6 +10,7 @@ local temp_vec3 = Vector3()
 local mvec3_dir = mvector3.direction
 local mvec3_set_z = mvector3.set_z
 local mvec3_dot = mvector3.dot
+local mvec3_dis = mvector3.distance
 local mvec3_dis_sq = mvector3.distance_sq
 
 function CopLogicIdle.enter(data, new_logic_name, enter_params)
@@ -187,7 +188,7 @@ function CopLogicIdle.queued_update(data)
 
 	if data.is_converted or data.check_crim_jobless or data.unit:in_slot(16) then
 		if not data.objective or data.objective.type == "free" then
-			if not data.path_fail_t or data.t - data.path_fail_t > 3 then
+			if not data.path_fail_t or data.t > data.path_fail_t + 3 then
 				managers.groupai:state():on_criminal_jobless(data.unit)
 
 				if my_data ~= data.internal_data then
@@ -764,6 +765,9 @@ function CopLogicIdle._upd_focus_on_undetected_criminal(data, my_data, attention
 					my_data.chasing = true
 					my_data.chase_duration = data.t + 5
 					attention_info.being_chased = true
+					if data.objective then
+						data.objective.in_place = nil
+					end
 				end
 			end
 		elseif not my_data.chase_crim_path_id and (not my_data.chase_crim_path_failed_t or data.t - my_data.chase_crim_path_failed_t > 1) then
@@ -1055,9 +1059,7 @@ function CopLogicIdle._check_needs_reload(data, my_data)
 					type = "shoot"
 				}
 
-				if data.unit:brain():action_request(shoot_action) then
-					my_data.shooting = true
-				end
+				my_data.shooting =  data.unit:brain():action_request(shoot_action)
 			end
 		end
 	end
@@ -1126,14 +1128,36 @@ function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, st
 
 	local att_unit = attention_data.unit
 
-	if attention_data.is_deployable or data.t < record.arrest_timeout then
+	if attention_data.is_deployable then
 		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
 	end
 
 	local visible = attention_data.verified
 
 	if record.status == "dead" then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)	
+		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_SCARED)
+	elseif record.being_arrested and not record.being_arrested[data.key] then
+		if LIES.settings.hhtacs then
+			if data.internal_data.tasing and attention_data.reaction and attention_data.reaction >= AIAttentionObject.REACT_COMBAT then
+				return attention_data.reaction
+			end
+			
+			if not managers.groupai:state():is_police_called() then
+				return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+			end
+		else
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+		end
+	end
+	
+	if record.status == "tased" and not data.internal_data.tasing and LIES.settings.hhtacs then
+		if data.tactics and data.tactics.tackle and can_arrest then
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
+		elseif data.tactics and data.tactics.murder then
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
+		end
+
+		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
 	elseif record.status == "disabled" then
 		if LIES.settings.hhtacs then
 			if data.tactics and data.tactics.murder then
@@ -1146,8 +1170,6 @@ function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, st
 		else
 			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
 		end
-	elseif record.being_arrested then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
 	elseif can_arrest and (not record.assault_t or att_unit:base():arrest_settings().aggression_timeout < data.t - record.assault_t) and record.arrest_timeout < data.t and not record.status then
 		local under_threat = nil
 
@@ -1169,6 +1191,10 @@ function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, st
 			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
 		else
 			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
+		end
+	elseif LIES.settings.hhtacs and data.tactics and data.tactics.tackle and can_arrest then
+		if attention_data.verified_t and attention_data.busy and (not record.assault_t or data.t - record.assault_t > 1) and not attention_data.aimed_at then
+			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
 		end
 	end
 
@@ -1317,8 +1343,12 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					reaction_too_mild = true
 				end
 			end
-
-			if not reaction_too_mild then
+			
+			local arrest_targets = data.internal_data.arrest_targets
+			
+			if best_target and not reaction_too_mild and arrest_targets and (arrest_targets[best_target.u_key] and not arrest_targets[u_key] or arrest_targets[best_target.u_key] and arrest_targets[best_target.u_key].intro_t and arrest_targets[u_key] and not arrest_targets[u_key].intro_t) then
+				--nope
+			elseif not reaction_too_mild then	
 				local aimed_at = CopLogicIdle.chk_am_i_aimed_at(data, attention_data, attention_data.aimed_at and 0.95 or 0.985)
 				attention_data.aimed_at = aimed_at
 				local alert_dt = attention_data.alert_t and data.t - attention_data.alert_t or 10000
@@ -1349,14 +1379,18 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						weight_mul = (weight_mul or 1) * mul
 					end
 					
-					if tactics_harass then
-						if cur_state:_is_reloading() or cur_state:_interacting() or cur_state:is_equipping() then
-							weight_mul = (weight_mul or 1) * 1.25
-						end
+					local interact_params = att_unit:movement():current_state()._interact_params
+					
+					if cur_state:_is_reloading() or cur_state:_interacting() or cur_state:is_equipping() or interact_params then
+						attention_data.busy = true
+					else
+						attention_data.busy = nil
+					end
+					
+					if tactics_harass and attention_data.busy then
+						weight_mul = (weight_mul or 1) * 1.25
 					elseif not tactics_dg then
-						local iparams = att_unit:movement():current_state()._interact_params
-
-						if iparams and managers.criminals:character_name_by_unit(iparams.object) ~= nil then
+						if interact_params and managers.criminals:character_name_by_unit(interact_params.object) ~= nil then
 							weight_mul = (weight_mul or 1) * 0.75
 						end
 					end
@@ -1374,15 +1408,39 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						weight_mul = (weight_mul or 1) * mul
 					end
 					
-					if tactics_harass and att_unit:anim_data() then
-						local att_anim_data = att_unit:anim_data()
-
+					local att_anim_data = att_unit:anim_data()
+					
+					if att_anim_data then
 						if att_anim_data.interact or att_anim_data.reload or att_anim_data.switch_weapon or att_anim_data.revive then
-							weight_mul = (weight_mul or 1) * 1.25
+							attention_data.busy = true
+						else
+							attention_data.busy = nil
 						end
-					elseif not tactics_dg and att_unit:anim_data() and att_unit:anim_data().revive then
+					else
+						attention_data.busy = nil
+					end
+						
+					if tactics_harass and attention_data.busy then
+						weight_mul = (weight_mul or 1) * 1.25
+					elseif not tactics_dg and att_anim_data.revive then
 						weight_mul = (weight_mul or 1) * 0.75
 					end
+				else
+					local att_anim_data = att_unit:anim_data()
+					
+					if att_anim_data then
+						if att_anim_data.interact or att_anim_data.reload or att_anim_data.switch_weapon or att_anim_data.revive then
+							attention_data.busy = true
+						else
+							attention_data.busy = nil
+						end
+					else
+						attention_data.busy = nil
+					end
+				end
+				
+				if attention_data.lost_track then
+					weight_mul = (weight_mul or 1) * 0.5
 				end
 				
 				if hhtacs then
@@ -1463,10 +1521,10 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 				local has_damaged = dmg_dt < 5
 				local reviving = nil
 
-				local target_priority = distance
+				local target_priority = visible and distance or 20000
 				local target_priority_slot = 0
 
-				if visible or old_enemy or data.logic._keep_player_focus_t and attention_data.is_human_player and attention_data.verified_t and data.t - attention_data.verified_t < data.logic._keep_player_focus_t then
+				if visible or old_enemy and not attention_data.lost_track or data.logic._keep_player_focus_t and attention_data.is_human_player and attention_data.verified_t and data.t - attention_data.verified_t < data.logic._keep_player_focus_t then
 					if distance < 500 then
 						target_priority_slot = 2
 					elseif distance < 1500 then
@@ -1508,15 +1566,11 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					target_priority_slot = 11
 					
 					if old_enemy then
-						target_priority_slot = target_priority_slot - 3
-					elseif has_damaged then
-						target_priority_slot = target_priority_slot - 2
-					elseif has_alerted then
 						target_priority_slot = target_priority_slot - 1
 					end
 				end
 
-				if reaction < AIAttentionObject.REACT_COMBAT then
+				if reaction < AIAttentionObject.REACT_COMBAT and not reaction == AIAttentionObject.REACT_ARREST then
 					target_priority_slot = 11 + target_priority_slot + math.max(0, AIAttentionObject.REACT_COMBAT - reaction)
 				end
 
@@ -1554,7 +1608,15 @@ function CopLogicIdle.on_new_objective(data, old_objective)
 
 	if new_objective then
 		local objective_type = new_objective.type
-
+		
+		if not my_data.needs_logic_reset then
+			if old_objective and old_objective.pos and old_objective.in_place and new_objective.pos then
+				if old_objective.nav_seg == new_objective.nav_seg and mvector3.equal(old_objective.pos, new_objective.pos) then
+					new_objective.in_place = true
+				end
+			end
+		end
+		
 		if CopLogicIdle._chk_objective_needs_travel(data, new_objective) then
 			CopLogicBase._exit(data.unit, "travel")
 		elseif objective_type == "guard" then
@@ -1918,7 +1980,21 @@ function CopLogicIdle.on_alert(data, alert_data)
 				att_obj_data.criminal_record.gun_called_out = managers.groupai:state():chk_say_enemy_chatter(data.unit, data.m_pos, "criminalhasgun")
 			end
 		end
-
+		
+		if not att_obj_data.verified and not LIES.settings.highperformance then
+			if not att_obj_data.verified_t or att_obj_data.lost_track then
+				local my_pos = data.unit:movement():m_head_pos()
+				if not data.unit:raycast("ray", my_pos, att_obj_data.m_head_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report") then
+					att_obj_data.verified = true
+					att_obj_data.verified_t = TimerManager:game():time()
+					att_obj_data.lost_track = nil
+					att_obj_data.last_verified_pos = mvector3.copy(att_obj_data.m_head_pos)
+					att_obj_data.last_verified_m_pos = mvector3.copy(att_obj_data.m_pos)
+					att_obj_data.last_verified_dis = att_obj_data.verified_dis
+				end
+			end
+		end
+				
 		if att_obj_data.criminal_record then
 			if data.group then
 				managers.groupai:state():criminal_spotted(alert_unit)
@@ -1997,69 +2073,4 @@ function CopLogicIdle._chk_start_action_move_out_of_the_way(data, my_data)
 			return my_data.advancing
 		end
 	end
-end
-
-function CopLogicIdle._chk_reaction_to_attention_object(data, attention_data, stationary)
-	local record = attention_data.criminal_record
-	local can_arrest = CopLogicBase._can_arrest(data)
-
-	if not record or not attention_data.is_person then
-		if attention_data.settings.reaction == AIAttentionObject.REACT_ARREST and not can_arrest then
-			return AIAttentionObject.REACT_AIM
-		else
-			return attention_data.settings.reaction
-		end
-	end
-
-	local att_unit = attention_data.unit
-
-	if attention_data.is_deployable or data.t < record.arrest_timeout then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
-	end
-
-	local visible = attention_data.verified
-
-	if record.status == "dead" then
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-	elseif record.status == "disabled" then
-		if record.assault_t and record.assault_t - record.disabled_t > 0.6 then
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
-		else
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-		end
-	elseif record.being_arrested then
-		if record.being_arrested[data.key] then
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
-		end
-	
-		return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-	elseif can_arrest and (not record.assault_t or att_unit:base():arrest_settings().aggression_timeout < data.t - record.assault_t) and record.arrest_timeout < data.t and not record.status then
-		local under_threat = nil
-
-		if attention_data.dis < 2000 then
-			local m_key = att_unit and att_unit:key()
-			
-			for u_key, other_crim_rec in pairs(managers.groupai:state():all_criminals()) do
-				if m_key and u_key ~= m_key then
-					local other_crim_attention_info = data.detected_attention_objects[u_key]
-
-					if other_crim_attention_info and (other_crim_attention_info.is_deployable or other_crim_attention_info.verified and other_crim_rec.assault_t and data.t - other_crim_rec.assault_t < other_crim_rec.unit:base():arrest_settings().aggression_timeout) then
-						under_threat = true
-
-						break
-					end
-				end
-			end
-		end
-
-		if under_threat then
-			-- Nothing
-		elseif attention_data.dis < 2000 and visible then
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_ARREST)
-		else
-			return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_AIM)
-		end
-	end
-
-	return math.min(attention_data.settings.reaction, AIAttentionObject.REACT_COMBAT)
 end

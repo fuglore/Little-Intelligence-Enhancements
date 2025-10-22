@@ -58,6 +58,7 @@ function LIESBossLogicAttack.enter(data, new_logic_name, enter_params)
 		new_internal_data.firing = old_internal_data.firing
 		new_internal_data.shooting = old_internal_data.shooting
 		new_internal_data.attention_unit = old_internal_data.attention_unit
+		new_internal_data.expected_pos_last_check_t = old_internal_data.expected_pos_last_check_t
 	end
 
 	if data.cool then
@@ -95,7 +96,8 @@ function LIESBossLogicAttack.enter(data, new_logic_name, enter_params)
 	end
 
 	local objective = data.objective
-	new_internal_data.attitude = objective and objective.attitude or "engage"
+	new_internal_data.attitude = data.unit:base():has_tag("medic") and "avoid" or objective and objective.attitude or "engage"
+	
 	local key_str = tostring(data.key)
 
 	CopLogicIdle._chk_has_old_action(data, new_internal_data)
@@ -116,7 +118,7 @@ function LIESBossLogicAttack.enter(data, new_logic_name, enter_params)
 	brain_ext:set_update_enabled_state(true)
 
 	if data.char_tweak.throwable then
-		new_internal_data.last_seen_throwable_pos = Vector3()
+		--new_internal_data.last_seen_throwable_pos = Vector3()
 	end
 end
 
@@ -224,11 +226,10 @@ function LIESBossLogicAttack.update(data)
 	else
 		LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
 	end
-	
-	--this isn't even working anyways lol
-	--if not data.logic.action_taken then
-		--LIESBossLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
-	--end
+
+	if not data.logic.action_taken(data, my_data) then
+		LIESBossLogicAttack._chk_start_action_move_out_of_the_way(data, my_data)
+	end
 
 	if not my_data.update_queue_id then
 		data.brain:set_update_enabled_state(false)
@@ -482,7 +483,7 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 	local chase = nil
 
 	if not action_taken then
-		if my_data.chase_path then
+		if my_data.chase_path and not data.unit:anim_data().reload then
 			local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
 			local run_dist = enemy_visible and 800 or 400
 			local speed = "run"
@@ -495,9 +496,11 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 			
 			my_data.at_shoot_pos = nil
 
-			LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed)
+			if LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed) then
+				my_data.charging = true
+			end
 		elseif not my_data.chase_path_search_id and focus_enemy.nav_tracker then
-			if data.unit:anim_data().reload or data._visor_broken then
+			if data.unit:anim_data().reload or data._visor_broken or my_data.attitude == "avoid" then
 				if focus_enemy.verified and (focus_enemy.dis < 1400 or data._visor_broken and focus_enemy.aimed_at) and CopLogicAttack._can_move(data) then
 					local from_pos = mvec3_cpy(data.m_pos)
 					local threat_tracker = focus_enemy.nav_tracker
@@ -545,7 +548,7 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 			
 			if not data.unit:anim_data().reload then
 				if not my_data.at_shoot_pos then
-					if my_data.chase_path_failed_t and data.t - my_data.chase_path_failed_t < 1 or data._visor_broken then
+					if my_data.chase_path_failed_t and data.t - my_data.chase_path_failed_t < 1 or data._visor_broken or my_data.attitude == "avoid" then
 						if not enemy_visible and focus_enemy.verified_t and t - focus_enemy.verified_t < 4 then
 							local my_tracker = data.unit:movement():nav_tracker()
 							local aim_pos = focus_enemy.verified_pos
@@ -632,6 +635,46 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 				return
 			end
 		end
+		
+		if my_data.charging then
+			local walk_action = my_data.advancing
+			local enemy_dis = enemy_visible and focus_enemy.dis or focus_enemy.verified_dis
+			local run_dist = enemy_visible and 800 or 400
+			local speed = "run"
+								
+			if data.char_tweak.walk_only then
+				speed = "walk"
+			elseif not data.enrage_data or not data.enrage_data.enraged then
+				speed = enemy_dis < run_dist and "walk" or speed
+			end
+			
+			if speed ~= walk_action._haste and walk_action._simplified_path then
+				local act_path = walk_action._simplified_path
+				local path = {}
+				
+				for i, nav_point in ipairs(act_path) do
+					if nav_point.x then
+						table.insert(path, nav_point)
+					elseif nav_point.c_class and alive(nav_point.c_class) then
+						table.insert(path, nav_point.c_class)
+					else
+						path = nil
+						break
+					end
+				end
+				
+				if path then
+					LIESBossLogicAttack._cancel_chase_attempt(data, my_data)
+					
+					my_data.at_shoot_pos = nil
+					my_data.chase_path = path
+
+					if LIESBossLogicAttack._chk_request_action_walk_to_chase_pos(data, my_data, speed) then
+						my_data.charging = true
+					end
+				end
+			end
+		end
 	end
 end
 
@@ -668,6 +711,10 @@ function LIESBossLogicAttack.action_complete_clbk(data, action)
 		
 		if my_data.defensive_move then
 			my_data.defensive_move = nil
+		end
+		
+		if my_data.charging then
+			my_data.charging = nil
 		end
 		
 		if action:expired() then

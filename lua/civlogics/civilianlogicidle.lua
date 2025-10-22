@@ -53,11 +53,9 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 
 	my_data.tmp_vec3 = tmp_vec1
 	
-	if not managers.groupai:state():enemy_weapons_hot() or not my_data.acting or CivilianLogicIdle._objective_can_be_interrupted(data) then
-		my_data.detection_task_key = "CivilianLogicIdle._upd_detection" .. key_str
+	my_data.detection_task_key = "CivilianLogicIdle._upd_detection" .. key_str
 
-		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
-	end
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
 	
 	if not data.been_outlined and data.char_tweak.outline_on_discover then
 		my_data.outline_detection_task_key = "CivilianLogicIdle._upd_outline_detection" .. tostring(data.key)
@@ -93,7 +91,7 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 end
 
 function CivilianLogicIdle._objective_can_be_interrupted(data)
-	return data.objective and (data.objective.interrupt_dis or data.objective.interrupt_suppression or data.objective.interrupt_health)
+	return not data.objective or data.objective and (data.objective.interrupt_dis or data.objective.interrupt_suppression or data.objective.interrupt_health)
 end
 
 function CivilianLogicIdle._upd_detection(data)
@@ -138,7 +136,7 @@ function CivilianLogicIdle._upd_detection(data)
 		return
 	end
 
-	if not data.unit:movement():cool() and (not my_data.acting or not not data.unit:anim_data().act_idle) then
+	if not data.unit:movement():cool() and (not my_data.acting or data.unit:anim_data().act_idle) then
 		local objective = data.objective
 
 		if not objective or objective.interrupt_dis == -1 or objective.is_default then
@@ -163,11 +161,7 @@ function CivilianLogicIdle._upd_detection(data)
 		return
 	end
 	
-	if managers.groupai:state():whisper_mode() or not my_data.acting or CivilianLogicIdle._objective_can_be_interrupted(data) then
-		CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t + delay)
-	else
-		my_data.detection_task_key = nil
-	end
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t + delay)
 end
 
 function CivilianLogicIdle.on_alert(data, alert_data)
@@ -328,14 +322,6 @@ function CivilianLogicIdle.action_complete_clbk(data, action)
 				end
 			else
 				data.objective_failed_clbk(data.unit, data.objective)
-			end
-		end
-		
-		if data.internal_data == my_data then
-			if managers.groupai:state():enemy_weapons_hot() and not my_data.detection_task_key then				
-				my_data.detection_task_key = "CivilianLogicIdle._upd_detection" .. tostring(data.key)
-				
-				CivilianLogicIdle._upd_detection(data)
 			end
 		end
 	end

@@ -203,7 +203,10 @@ function CopBase:default_weapon_name(selection_name)
 			cop_female = true
 		}
 		
-		if self._tweak_table == "chavez_boss" then
+		if self._unit_type == "phalanx_pusher" then
+			self._phalanx_pusher = true
+			m_weapon_id = "m249"
+		elseif self._tweak_table == "chavez_boss" then
 			m_weapon_id = "ak47"
 		elseif security_vars[self._tweak_table] then
 			local security_weapon_ids = {
@@ -347,9 +350,10 @@ end
 
 local ids_movement = Idstring("movement")
 local civ_empty = Idstring("civilian/empty")
+local civ_spawn_loop = Idstring("civilian/spawn/loop")
 
 Hooks:PostHook(CopBase, "chk_freeze_anims", "lies_prevent_softlock", function(self)	
-	if self._unit:anim_state_machine():segment_state(Idstring("base")) == civ_empty then
+	if self._unit:anim_state_machine():segment_state(Idstring("base")) == civ_empty or self._unit:anim_state_machine():segment_state(Idstring("base")) == civ_spawn_loop then
 		local full_body_action = self._ext_movement:get_action(1)
 		
 		if full_body_action and full_body_action:type() == "act" then
@@ -369,7 +373,7 @@ Hooks:PostHook(CopBase, "chk_freeze_anims", "lies_prevent_softlock", function(se
 				self._ext_movement:play_redirect("idle")
 			end
 		else
-			self._ext_movement:play_redirect("idle")
+			self._ext_movement:play_redirect("cmf_so_surrender")
 		end
 	end
 end)

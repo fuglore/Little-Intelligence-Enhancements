@@ -169,99 +169,31 @@ function CopLogicPhalanxVip.is_available_for_assignment(data, objective)
 	return false
 end
 
-function CopLogicPhalanxVip.breakup(remote_call)
-	print("CopLogicPhalanxVip.breakup")
-
-	local groupai = managers.groupai:state()
-	local phalanx_vip = groupai:phalanx_vip()
-
-	if phalanx_vip and alive(phalanx_vip) then
-		groupai:unit_leave_group(phalanx_vip, false)
-		managers.groupai:state():unregister_phalanx_vip()
-
-		local nav_seg = phalanx_vip:movement():nav_tracker():nav_segment()
-		local ignore_segments = {}
-		local data = phalanx_vip:brain()._logic_data
-		local flee_pos = managers.groupai:state():flee_point(data.unit:movement():nav_tracker():nav_segment(), ignore_segments)
-	
-		if not flee_pos then
-			managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), 5, false)
-			
-			data.unit:brain():set_active(false)
-			data.unit:base():set_slot(data.unit, 0)
-			
-			if not remote_call then
-				CopLogicPhalanxMinion.breakup(true)
-			end
-			
-			return
-		end
-
-		local iterations = 1
-		local coarse_path = nil
-		local my_data = data.internal_data
-		local search_params = {
-			from_tracker = data.unit:movement():nav_tracker(),
-			id = "CopLogicFlee._get_coarse_flee_path" .. tostring(data.key),
-			access_pos = data.char_tweak.access,
-			verify_clbk = callback(CopLogicTravel, CopLogicTravel, "_investigate_coarse_path_verify_clbk")
-		}
-		local max_attempts = 5
-
-		while iterations < max_attempts do
-			local nav_seg = managers.navigation:get_nav_seg_from_pos(flee_pos)
-			search_params.to_seg = nav_seg
-			
-			if search_params.verify_clbk and iterations > 4 then
-				search_params.verify_clbk = nil
-				iterations = 1
-				ignore_segments = {}
-			end
-			
-			coarse_path = managers.navigation:search_coarse(search_params)
-
-			if not coarse_path then
-				coarse_path = nil
-
-				table.insert(ignore_segments, nav_seg)
-			else
-				break
-			end
-
-			iterations = iterations + 1
-
-			if max_attempts > iterations then
-				flee_pos = managers.groupai:state():flee_point(data.unit:movement():nav_tracker():nav_segment(), ignore_segments)
-
-				if not flee_pos then
-					break
-				end
-			end
-		end
-
-		if flee_pos then
-			local flee_nav_seg = managers.navigation:get_nav_seg_from_pos(flee_pos)
-			local new_objective = {
-				attitude = "avoid",
-				type = "flee",
-				pos = flee_pos,
-				nav_seg = flee_nav_seg
-			}
-
-			if phalanx_vip:brain():objective() then
-				print("Setting VIP flee objective!")
-				phalanx_vip:brain():set_objective(new_objective)
-				phalanx_vip:sound():say("cpw_a04", true, true)
-			end
-		else
-			managers.groupai:state():detonate_smoke_grenade(data.m_pos + math.UP * 10, data.unit:movement():m_head_pos(), 5, false, true)
-	
-			data.unit:brain():set_active(false)
-			data.unit:base():set_slot(data.unit, 0)
-		end
+function CopLogicPhalanxVip.do_vip_flee(unit)
+	if not alive(unit) then
+		return
 	end
 
-	if not remote_call then
-		CopLogicPhalanxMinion.breakup(true)
+	local group_ai_state = managers.groupai:state()
+	local nav_seg = unit:movement():nav_tracker():nav_segment()
+	local flee_pos = group_ai_state:flee_point(nav_seg)
+
+	if flee_pos then
+		local flee_nav_seg = managers.navigation:get_nav_seg_from_pos(flee_pos)
+
+		unit:brain():set_objective({
+			forced = true,
+			attitude = "avoid",
+			type = "flee",
+			pos = flee_pos,
+			nav_seg = flee_nav_seg
+		})
+	else
+		managers.groupai:state():detonate_smoke_grenade(unit:position() + math.UP * 10, unit:movement():m_head_pos(), 5, false)
+		
+		unit:brain():set_active(false)
+		unit:base():set_slot(data.unit, 0)
+		
+		return
 	end
 end

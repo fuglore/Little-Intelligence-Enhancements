@@ -112,7 +112,7 @@ local tmp_vec1 = Vector3()
 function CivilianLogicSurrender.update(data)
 	local my_data = data.internal_data
 	
-	if data.is_tied or data.unit:anim_data().drop and data.t - my_data.last_upd_t < 1 or data.t - my_data.last_upd_t < 0.5 then
+	if data.unit:anim_data().drop and data.t - my_data.last_upd_t < 1 or data.t - my_data.last_upd_t < 0.5 then
 		return
 	end
 
@@ -193,6 +193,8 @@ function CivilianLogicSurrender.progress_to_drop(data, my_data)
 	local anim_data = data.unit:anim_data()
 
 	if not anim_data.drop and not data.is_tied then
+		data.unit:movement():_unfreeze_anims()
+	
 		if CivilianLogicFlee.needs_panic_redirect(data) then
 			local action_data = {
 				clamp_to_graph = true,
@@ -201,7 +203,10 @@ function CivilianLogicSurrender.progress_to_drop(data, my_data)
 				type = "act"
 			}
 
-			data.unit:brain():action_request(action_data)
+			if data.unit:brain():action_request(action_data) then
+				data.unit:movement():enable_update(true)
+			end
+			
 			data.unit:sound():say("a02x_any", true)
 
 			if data.unit:unit_data().mission_element then
@@ -227,6 +232,10 @@ function CivilianLogicSurrender.progress_to_drop(data, my_data)
 				variant = anim_data.move and "halt" or "drop"
 			}
 			local action_res = data.unit:brain():action_request(action_data)
+			
+			if action_res then
+				data.unit:movement():enable_update(true)
+			end
 
 			if action_res and action_data.variant == "drop" then
 				managers.groupai:state():unregister_fleeing_civilian(data.key)
@@ -427,6 +436,9 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 	my_data.scare_meter = math.max(0, my_data.scare_meter + adj_scare)
 
 	if not anim_data.drop then
+		data.unit:movement():_unfreeze_anims()
+		data.unit:movement():enable_update(true)
+	
 		if CivilianLogicFlee.needs_panic_redirect(data) then
 			local action_data = {
 				clamp_to_graph = true,
@@ -453,7 +465,7 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 
 				managers.groupai:state():propagate_alert(alert)
 			end
-		elseif anim_data.panic and (anim_data.crouch or anim_data.move) or anim_data.react and not anim_data.react_enter then
+		elseif anim_data.panic and (anim_data.crouch or anim_data.move) or anim_data.react then
 			local action_data = {
 				clamp_to_graph = true,
 				body_part = 1,

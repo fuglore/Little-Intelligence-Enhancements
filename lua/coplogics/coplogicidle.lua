@@ -1822,8 +1822,18 @@ function CopLogicIdle._chk_relocate(data)
 			
 			return true
 		end
-	
-		if data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
+		
+		if data.is_tied then
+			if CivilianLogicTravel._check_should_relocate(data, data.internal_data, data.objective) then
+				data.objective.in_place = nil
+
+				data.logic._exit(data.unit, "travel")
+
+				return true
+			end
+			
+			return
+		elseif data.unit:in_slot(16) or data.team.id == tweak_data.levels:get_default_team_ID("player") or data.team.friends[tweak_data.levels:get_default_team_ID("player")] then
 			if TeamAILogicIdle._check_should_relocate(data, data.internal_data, data.objective) then
 				data.objective.in_place = nil
 
@@ -1834,11 +1844,13 @@ function CopLogicIdle._chk_relocate(data)
 
 			return
 		end
+		
+		if not LIES.settings.hhtacs then
+			if data.is_tied and data.objective.lose_track_dis and data.objective.lose_track_dis * data.objective.lose_track_dis < mvector3.distance_sq(data.m_pos, data.objective.follow_unit:movement():m_newest_pos()) then
+				data.brain:set_objective(nil)
 
-		if data.is_tied and data.objective.lose_track_dis and data.objective.lose_track_dis * data.objective.lose_track_dis < mvector3.distance_sq(data.m_pos, data.objective.follow_unit:movement():m_newest_pos()) then
-			data.brain:set_objective(nil)
-
-			return true
+				return true
+			end
 		end
 
 		local relocate = nil
@@ -1854,8 +1866,6 @@ function CopLogicIdle._chk_relocate(data)
 		local z_diff = math.abs(old_pos.z - follow_unit_pos.z)
 		
 		if z_diff > 250 then
-			relocate = true
-		elseif data.is_tied and 60 < mvector3.distance(old_pos, follow_unit_pos) then
 			relocate = true
 		elseif data.objective.distance and data.objective.distance < mvector3.distance(old_pos, follow_unit_pos) then
 			relocate = true

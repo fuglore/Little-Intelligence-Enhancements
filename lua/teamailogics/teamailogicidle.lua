@@ -51,7 +51,6 @@ function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
 		return
 	end
 	
-	
 	local m_pos = objective.relocate_pos or data.m_pos
 	local follow_unit = objective.follow_unit
 	local follow_pos = follow_unit:movement().m_newest_pos and follow_unit:movement():m_newest_pos() or follow_unit:movement():m_pos()
@@ -64,7 +63,7 @@ function TeamAILogicIdle._check_should_relocate(data, my_data, objective)
 	else
 		max_allowed_dis = math.lerp(max_allowed_dis, 0, z_diff / 250)
 		
-		if mvector3.distance(data.m_pos, follow_pos) > max_allowed_dis then
+		if mvector3.distance(m_pos, follow_pos) > max_allowed_dis then
 			objective.relocate_pos = mvector3.copy(follow_pos)
 			return true
 		end

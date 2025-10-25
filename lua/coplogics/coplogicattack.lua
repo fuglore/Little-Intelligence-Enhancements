@@ -1129,14 +1129,6 @@ function CopLogicAttack._upd_aim(data, my_data)
 
 		CopLogicAttack._chk_enrage(data, focus_enemy)
 	end
-
-	if not aim then
-		if data.char_tweak.always_face_enemy and not expected_pos then
-			if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-				aim = true
-			end
-		end
-	end
 	
 	if shoot and data.tactics and data.tactics.harass and data.char_tweak.chatter and data.char_tweak.chatter.clear and focus_enemy.verified then
 		if focus_enemy.is_local_player then
@@ -1313,7 +1305,7 @@ function CopLogicAttack._get_expected_pos(data, my_data)
 				i_to_seg = i
 			end
 			
-			if i_from_seg and not good_path then
+			if i_from_seg and not good_path and focus_enemy.lost_track then
 				good_path = true
 			end
 			

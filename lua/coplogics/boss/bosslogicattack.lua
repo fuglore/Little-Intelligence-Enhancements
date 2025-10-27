@@ -501,7 +501,7 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 			end
 		elseif not my_data.chase_path_search_id and focus_enemy.nav_tracker then
 			if data.unit:anim_data().reload or data._visor_broken or my_data.attitude == "avoid" then
-				if focus_enemy.verified and (focus_enemy.dis < 1400 or data._visor_broken and focus_enemy.aimed_at) and CopLogicAttack._can_move(data) then
+				if focus_enemy.verified and (focus_enemy.dis < 1400 or focus_enemy.aimed_at) and CopLogicAttack._can_move(data) then
 					local from_pos = mvec3_cpy(data.m_pos)
 					local threat_tracker = focus_enemy.nav_tracker
 					local threat_head_pos = focus_enemy.m_head_pos
@@ -584,8 +584,10 @@ function LIESBossLogicAttack._upd_combat_movement(data, my_data)
 				
 				if not my_data.chase_path_failed_t or data.t - my_data.chase_path_failed_t > 1 then
 					local height_diff = math_abs(data.m_pos.z - focus_enemy.m_pos.z)
-
-					if height_diff < 300 then
+					
+					if LIES.settings.hhtacs and data.unit:base():has_tag("medic") then
+						chase = nil
+					elseif height_diff < 300 then
 						chase = true
 					else
 						local engage = my_data.attitude == "engage" and not data._visor_broken

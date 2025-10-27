@@ -985,9 +985,15 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 		table.insert(player_importance_wgt, u_key)
 		table.insert(player_importance_wgt, weight)
 	end
-
+	
+	local blind_enemies = Global.blind_enemies
+	
 	for u_key, attention_info in pairs(all_attention_objects) do
-		if u_key ~= my_key and not detected_obj[u_key] then
+		if blind_enemies then
+			if detected_obj[u_key] then
+				detected_obj[u_key] = nil
+			end
+		elseif u_key ~= my_key and not detected_obj[u_key] then
 			local settings = attention_info.handler:get_attention(my_access, min_reaction, max_reaction, data.team)
 
 			if settings then
@@ -1016,7 +1022,9 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 	end
 
 	for u_key, attention_info in pairs(detected_obj) do
-		if min_reaction and attention_info.reaction < min_reaction or max_reaction and attention_info.reaction > max_reaction then
+		if blind_enemies then
+			detected_obj[u_key] = nil
+		elseif min_reaction and attention_info.reaction < min_reaction or max_reaction and attention_info.reaction > max_reaction then
 			detected_obj[u_key] = nil
 		elseif t < attention_info.next_verify_t then
 			if AIAttentionObject.REACT_SUSPICIOUS <= attention_info.reaction then

@@ -349,14 +349,12 @@ function CopBase:change_and_sync_char_tweak(new_tweak_name)
 end
 
 local ids_movement = Idstring("movement")
-local bad_states = {
-	[Idstring("civilian/empty")] = true,
-	[Idstring("civilian/spawn/loop")] = true,
-	[Idstring("civilian/std_drunk_it_idle")] = true
-}
+local civ_empty = Idstring("civilian/empty")
+local civ_spawn_loop = Idstring("civilian/spawn/loop")
+local drunk_it_idle = Idstring("civilian/std_drunk_it_idle")
 
 Hooks:PostHook(CopBase, "chk_freeze_anims", "lies_prevent_softlock", function(self)	
-	if bad_states[self._unit:anim_state_machine():segment_state(Idstring("base"))] then
+	if self._unit:anim_state_machine():segment_state(Idstring("base")) == civ_empty or self._unit:anim_state_machine():segment_state(Idstring("base")) == civ_spawn_loop or self._unit:anim_state_machine():segment_state(Idstring("base")) == drunk_it_idle then
 		local full_body_action = self._ext_movement:get_action(1)
 		
 		if full_body_action and full_body_action:type() == "act" then
@@ -366,7 +364,7 @@ Hooks:PostHook(CopBase, "chk_freeze_anims", "lies_prevent_softlock", function(se
 			
 			if self._ext_movement._need_upd ~= true then
 				self._ext_movement._need_upd = true
-				 
+				
 				self._unit:set_extension_update_enabled(ids_movement, self._ext_movement._need_upd)
 			end
 		end

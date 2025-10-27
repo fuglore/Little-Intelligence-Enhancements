@@ -1248,6 +1248,8 @@ function GroupAITweakData:_LIES_setup()
 		}
 		self._tactics.marshal_shield = {
 			"shield",
+			"hrt",
+			"sabotage",
 			"charge",
 			"murder"
 		}

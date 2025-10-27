@@ -12,6 +12,11 @@ function CopLogicIntimidated.enter(data, new_logic_name, enter_params)
 	data.internal_data = my_data
 	my_data.detection = data.char_tweak.detection.combat
 	my_data.aggressor_unit = enter_params and enter_params.aggressor_unit
+	
+	if my_data.aggressor_unit then
+		my_data.intimidator_units = {}
+		my_data.intimidator_units[my_data.aggressor_unit:key()] = data.t + 2
+	end
 
 	if data.attention_obj then
 		CopLogicBase._set_attention_obj(data, nil, nil)
@@ -125,6 +130,7 @@ end
 
 function CopLogicIntimidated.queued_update(data)
 	local my_data = data.internal_data
+	data.t = TimerManager:game():time()
 
 	CopLogicIntimidated._update_enemy_detection(data, my_data)
 
@@ -132,7 +138,7 @@ function CopLogicIntimidated.queued_update(data)
 		return
 	end
 	
-	if not data.unit:anim_data().hands_tied then
+	if not my_data.tied then
 		if not my_data.update_task_key then
 			log("logic: " .. data.name)
 			
@@ -169,6 +175,18 @@ function CopLogicIntimidated.exit(data, new_logic_name, enter_params)
 	if new_logic_name ~= "inactive" then
 		data.unit:brain():set_update_enabled_state(true)
 		data.unit:interaction():set_active(false, true, false)
+		
+		local anim_data = data.unit:anim_data()
+	
+		if anim_data.hands_up or anim_data.hands_back or anim_data.hands_tied then
+			local new_action = {
+				variant = "stand",
+				body_part = 1,
+				type = "act"
+			}
+
+			data.unit:brain():action_request(new_action)
+		end
 	end
 
 	if my_data.tied then
@@ -254,29 +272,37 @@ function CopLogicIntimidated._update_enemy_detection(data, my_data)
 	end
 
 	local fight = not my_data.tied
+	
+	if fight then
+		if not my_data.surrender_break_t or data.t < my_data.surrender_break_t then
+			local crim_fwd = tmp_vec2
+			local max_intimidation_range = tweak_data.player.long_dis_interaction.intimidate_range_enemies * tweak_data.upgrades.values.player.intimidate_range_mul[1] * tweak_data.upgrades.values.player.passive_intimidate_range_mul[1] * 1.05
 
-	if not my_data.surrender_break_t or data.t < my_data.surrender_break_t then
-		local crim_fwd = tmp_vec2
-		local max_intimidation_range = tweak_data.player.long_dis_interaction.intimidate_range_enemies * tweak_data.upgrades.values.player.intimidate_range_mul[1] * tweak_data.upgrades.values.player.passive_intimidate_range_mul[1] * 1.05
+			for u_key, u_data in pairs(managers.groupai:state():all_criminals()) do
+				if not u_data.is_deployable then
+					if my_data.intimidator_units[u_key] and data.t < my_data.intimidator_units[u_key] then
+						fight = nil
+						
+						break
+					end
+				
+					local crim_unit = u_data.unit
+					local crim_pos = u_data.m_pos
+					local dis = mvector3.direction(tmp_vec1, data.m_pos, crim_pos)
 
-		for u_key, u_data in pairs(managers.groupai:state():all_criminals()) do
-			if not u_data.is_deployable then
-				local crim_unit = u_data.unit
-				local crim_pos = u_data.m_pos
-				local dis = mvector3.direction(tmp_vec1, data.m_pos, crim_pos)
+					if dis < max_intimidation_range then
+						mvector3.set(crim_fwd, crim_unit:movement():detect_look_dir())
+						mvector3.set_z(crim_fwd, 0)
+						mvector3.normalize(crim_fwd)
 
-				if dis < max_intimidation_range then
-					mvector3.set(crim_fwd, crim_unit:movement():detect_look_dir())
-					mvector3.set_z(crim_fwd, 0)
-					mvector3.normalize(crim_fwd)
+						if mvector3.dot(crim_fwd, tmp_vec1) < -0.2 then
+							local vis_ray = data.unit:raycast("ray", data.unit:movement():m_head_pos(), u_data.m_det_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report")
 
-					if mvector3.dot(crim_fwd, tmp_vec1) < -0.2 then
-						local vis_ray = World:raycast("ray", data.unit:movement():m_head_pos(), u_data.m_det_pos, "slot_mask", data.visibility_slotmask, "ray_type", "ai_vision", "report")
+							if not vis_ray then
+								fight = nil
 
-						if not vis_ray then
-							fight = nil
-
-							break
+								break
+							end
 						end
 					end
 				end
@@ -285,9 +311,82 @@ function CopLogicIntimidated._update_enemy_detection(data, my_data)
 	end
 
 	if fight then
-		my_data.surrender_clbk_registered = nil
+		if not my_data.fight_t then
+			my_data.fight_t = data.t + 2
+		end
+		
+		if my_data.fight_t < data.t then
+			my_data.surrender_clbk_registered = nil
 
-		data.brain:set_objective(nil)
-		CopLogicBase._exit(data.unit, "idle")
+			data.brain:set_objective(nil)
+			CopLogicBase._exit(data.unit, "idle")
+		end
+	else
+		my_data.fight_t = nil
+	end
+end
+
+function CopLogicIntimidated.on_intimidated(data, amount, aggressor_unit)
+	local my_data = data.internal_data
+
+	if not my_data.tied then
+		data.t = TimerManager:game():time()
+		
+		if aggressor_unit then
+			my_data.intimidator_units = my_data.intimidator_units or {}
+			my_data.intimidator_units[aggressor_unit:key()] = data.t + 2
+		end
+		
+		my_data.surrender_break_t = data.char_tweak.surrender_break_time and data.t + math.random(data.char_tweak.surrender_break_time[1], data.char_tweak.surrender_break_time[2], math.random())
+		local anim_data = data.unit:anim_data()
+		local anim, blocks = nil
+
+		if anim_data.hands_up then
+			anim = "hands_back"
+			blocks = {
+				heavy_hurt = -1,
+				hurt = -1,
+				action = -1,
+				light_hurt = -1,
+				walk = -1
+			}
+		elseif anim_data.hands_back then
+			anim = "tied"
+			blocks = {
+				heavy_hurt = -1,
+				hurt_sick = -1,
+				action = -1,
+				light_hurt = -1,
+				hurt = -1,
+				walk = -1
+			}
+		else
+			if managers.groupai:state():whisper_mode() then
+				anim = "tied_all_in_one"
+			else
+				anim = "hands_up"
+			end
+
+			blocks = {
+				heavy_hurt = -1,
+				hurt = -1,
+				action = -1,
+				light_hurt = -1,
+				walk = -1
+			}
+		end
+
+		local action_data = {
+			clamp_to_graph = true,
+			type = "act",
+			body_part = 1,
+			variant = anim,
+			blocks = blocks
+		}
+		local act_action = data.unit:brain():action_request(action_data)
+
+		if data.unit:anim_data().hands_tied then
+			CopLogicIntimidated._do_tied(data, aggressor_unit)
+		end
 	end
 end

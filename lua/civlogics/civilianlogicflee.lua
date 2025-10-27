@@ -492,7 +492,7 @@ function CivilianLogicFlee.update(data)
 
 		if not my_data.moving_to_cover or my_data.moving_to_cover ~= best_cover then
 			if not my_data.in_cover or my_data.in_cover ~= best_cover then
-				if not unit:anim_data().panic  and CivilianLogicFlee.ready_for_action(data) then
+				if not unit:anim_data().panic and CivilianLogicFlee.ready_for_action(data) then
 					local action_data = {
 						clamp_to_graph = true,
 						variant = "panic",

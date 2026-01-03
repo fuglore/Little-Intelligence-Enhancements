@@ -250,7 +250,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								else
 									target_priority_slot = 6
 								end
-							elseif attention_unit:base():has_tag("phalanx_vip") or managers.groupai:state():phalanx_vip() and attention_unit:base()._tweak_table == "phalanx_minion" then
+							elseif attention_unit:base():has_tag("phalanx_vip") or managers.groupai:state():phalanx_vip() and attention_unit:base()._tweak_table == "phalanx_minion" or attention_unit:base()._phalanx_pusher then
 								target_priority_slot = 2
 							elseif attention_unit:base():has_tag("medic") then
 								if near and (has_alerted and has_damaged) then

@@ -4069,14 +4069,12 @@ function GroupAITweakData:_LIES_setup()
 				})
 			}
 		else
-			if difficulty_index == 7 then
-				self._tactics.smg = {
-					"flank",
-					"charge",
-					"smoke_grenade",
-					"flash_grenade"
-				}
-			end
+			self._tactics.smg = {
+				"flank",
+				"charge",
+				"smoke_grenade",
+				"flash_grenade"
+			}
 		
 			self.enemy_spawn_groups.tac_swat_smg = {
 				amount = {

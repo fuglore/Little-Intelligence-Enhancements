@@ -339,7 +339,7 @@ function CopLogicIntimidated.on_intimidated(data, amount, aggressor_unit)
 		
 		my_data.surrender_break_t = data.char_tweak.surrender_break_time and data.t + math.random(data.char_tweak.surrender_break_time[1], data.char_tweak.surrender_break_time[2], math.random())
 		local anim_data = data.unit:anim_data()
-		local anim, blocks = nil
+		local anim, blocks, align_sync = nil
 
 		if anim_data.hands_up then
 			anim = "hands_back"
@@ -374,13 +374,17 @@ function CopLogicIntimidated.on_intimidated(data, amount, aggressor_unit)
 				light_hurt = -1,
 				walk = -1
 			}
+			
+			align_sync = true
 		end
 
 		local action_data = {
 			clamp_to_graph = true,
 			type = "act",
 			body_part = 1,
+			align_sync = align_sync,
 			variant = anim,
+			
 			blocks = blocks
 		}
 		local act_action = data.unit:brain():action_request(action_data)

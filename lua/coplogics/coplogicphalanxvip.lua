@@ -192,7 +192,7 @@ function CopLogicPhalanxVip.do_vip_flee(unit)
 		managers.groupai:state():detonate_smoke_grenade(unit:position() + math.UP * 10, unit:movement():m_head_pos(), 5, false)
 		
 		unit:brain():set_active(false)
-		unit:base():set_slot(data.unit, 0)
+		unit:base():set_slot(unit, 0)
 		
 		return
 	end

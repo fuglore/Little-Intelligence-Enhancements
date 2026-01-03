@@ -1443,11 +1443,17 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 					weight_mul = (weight_mul or 1) * 0.5
 				end
 				
-				if hhtacs then
-					if status == "electrified" then
-						weight_mul = (weight_mul or 1) * 1.5
-					end
+				local target_vec = temp_vec3
+				mvec3_dir(target_vec, data.m_pos, attention_data.m_pos)
+				mvec3_set_z(target_vec, 0)
+				local my_fwd = data.unit:movement():m_fwd()
+				local dot = mvec3_dot(target_vec, my_fwd)
 				
+				if dot < 0.6 then
+					weight_mul = (weight_mul or 1) * 0.5
+				end
+				
+				if hhtacs then
 					if crim_record and attention_data.nav_tracker and AIAttentionObject.REACT_COMBAT <= reaction then
 						local hostages = 0
 						local hostage_blocked = false
@@ -1539,16 +1545,6 @@ function CopLogicIdle._get_priority_attention(data, attention_objects, reaction_
 						target_priority_slot = target_priority_slot - 2
 					elseif has_alerted then
 						target_priority_slot = target_priority_slot - 1
-					end
-
-					local target_vec = temp_vec3
-					mvec3_dir(target_vec, data.m_pos, attention_data.m_pos)
-					mvec3_set_z(target_vec, 0)
-					local my_fwd = data.unit:movement():m_fwd()
-					local dot = mvec3_dot(target_vec, my_fwd)
-					
-					if dot < 0.6 then
-						target_priority_slot = target_priority_slot + 1
 					end
 					
 					if old_enemy then

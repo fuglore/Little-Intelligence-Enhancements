@@ -874,9 +874,14 @@ function CopLogicAttack._upd_aim(data, my_data)
 								walking = nil
 								running = nil
 							end
-						elseif not focus_enemy.dmg_t or data.t - focus_enemy.dmg_t > 5 then
-							shoot = false
-							aim = false
+						else
+							local can_turn_to_shoot = focus_enemy.dmg_t and data.t - focus_enemy.dmg_t < 5
+							can_turn_to_shoot = can_turn_to_shoot or focus_enemy.acquire_t and data.t - focus_enemy.acquire_t < 4 and focus_enemy.dis <= my_data.weapon_range.close
+							
+							if not can_turn_to_shoot then
+								shoot = false
+								aim = false
+							end
 						end
 					end
 				end

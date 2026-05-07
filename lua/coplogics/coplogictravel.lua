@@ -2209,7 +2209,7 @@ function CopLogicTravel._get_pos_on_wall(from_pos, max_dist, step_offset, is_rec
 end
 
 function CopLogicTravel.is_available_for_assignment(data, new_objective)
-	if new_objective and new_objective.forced then
+	if new_objective and (new_objective.forced or new_objective.distraction) then
 		return true
 	elseif data.cool and data.objective and data.objective.type == "act" then
 		if (not new_objective or new_objective and new_objective.type == "free") and data.objective.interrupt_dis == -1 then

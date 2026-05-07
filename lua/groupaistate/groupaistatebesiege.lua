@@ -4537,10 +4537,8 @@ local function spawn_group_id(spawn_group)
 	return spawn_group.mission_element:id()
 end
 
-function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_groups, target_pos, max_dis, verify_clbk, task_data)
+function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_groups, target_pos, max_dis, verify_clbk)
 	local all_areas = self._area_data
-	local mvec3_dis = mvector3.distance_sq
-	max_dis = max_dis and max_dis * max_dis
 	local t = self._t
 	local valid_spawn_groups = {}
 	local valid_spawn_group_distances = {}
@@ -4559,7 +4557,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 
 		if spawn_groups then
 			for _, spawn_group in ipairs(spawn_groups) do
-				if (task_data == "phalanx" or spawn_group.delay_t <= t) and (not verify_clbk or verify_clbk(spawn_group)) then
+				if spawn_group.delay_t <= t and (not verify_clbk or verify_clbk(spawn_group)) then
 					local dis_id = make_dis_id(spawn_group.nav_seg, target_area.pos_nav_seg)
 
 					if not self._graph_distance_cache[dis_id] then
@@ -4571,25 +4569,29 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 						}
 						local path = managers.navigation:search_coarse(coarse_params)
 
-						if path and #path >= 2 then
-							local dis = 0
-							local current = spawn_group.pos
+						if path then
+							if #path >= 2 then
+								local dis = 0
+								local current = spawn_group.pos
 
-							for i = 2, #path do
-								local nxt = path[i][2]
+								for i = 2, #path do
+									local nxt = path[i][2]
 
-								if current and nxt then
-									dis = dis + mvec3_dis(current, nxt)
+									if current and nxt then
+										dis = dis + mvector3.distance(current, nxt) --yeah.
+									end
+
+									current = nxt
 								end
 
-								current = nxt
+								self._graph_distance_cache[dis_id] = dis
+							else
+								self._graph_distance_cache[dis_id] = mvector3.distance(spawn_group.pos, target_pos)
 							end
-
-							self._graph_distance_cache[dis_id] = dis
 						end
 					end
 
-					if self._graph_distance_cache[dis_id] then
+					if self._graph_distance_cache[dis_id] then 
 						local my_dis = self._graph_distance_cache[dis_id]
 
 						if not max_dis or my_dis < max_dis then
@@ -4615,11 +4617,11 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 		return
 	end
 
-	local time = TimerManager:game():time()
-	
-	if task_data ~= "phalanx" then
+	if self._spawn_group_timers then
 		for id in pairs(valid_spawn_groups) do
-			if self._spawn_group_timers[id] and time < self._spawn_group_timers[id] then
+			local cooldown = self._spawn_group_timers[id]
+
+			if cooldown and self._t < cooldown then
 				valid_spawn_groups[id] = nil
 				valid_spawn_group_distances[id] = nil
 			end
@@ -4632,26 +4634,78 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 
 	local total_weight = 0
 	local candidate_groups = {}
-	--self._debug_weights = {}
-	local dis_limit = max_dis and max_dis or 25000000
+	self._debug_weights = {}
+	local dis_limit = max_dis or tweak_data.group_ai.ai_spawn_distance_limit
+	local hhtacs = LIES.settings.hhtacs
+	local fast_spawns = hhtacs or self._drama_data.zone == "low"
+	local spawn_cooldown_table = tweak_data.group_ai.ai_spawn_group_cooldowns[fast_spawns and "fast" or "regular"]
+	local spawn_cooldown_min, spawn_cooldown_max = unpack(self:_get_balancing_multiplier(spawn_cooldown_table))
+	local cooldown_double = spawn_cooldown_max * 2
 
 	for i, dis in pairs(valid_spawn_group_distances) do
-		local my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit))
+		local my_wgt 
+		
+		if hhtacs then
+			local wgt_dis = math.lerp(0.5, 1, math.min(1, dis / dis_limit))
+			
+			if self._spawn_group_timers[i] then
+				local last_spawn_t = self._t - self._spawn_group_timers[i]
+				local wgt_cd = math.lerp(0.1, 1, math.min(1, last_spawn_t / cooldown_double))
+				
+				my_wgt = wgt_dis * wgt_cd
+				my_wgt = my_wgt * 5
+			else
+				my_wgt = wgt_dis * 0.5
+				my_wgt = my_wgt * 5
+			end
+		else
+			my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit)) * 5
+		end
+		
 		local my_spawn_group = valid_spawn_groups[i]
 		local my_group_types = my_spawn_group.mission_element:spawn_groups()
 		my_spawn_group.distance = dis
-		total_weight = total_weight + self:_choose_best_groups(candidate_groups, my_spawn_group, my_group_types, allowed_groups, my_wgt, task_data)
+		total_weight = total_weight + self:_choose_best_groups(candidate_groups, my_spawn_group, my_group_types, allowed_groups, my_wgt)
 	end
 
 	if total_weight == 0 then
 		return
 	end
 
-	--for _, group in ipairs(candidate_groups) do
-		--table.insert(self._debug_weights, clone(group))
-	--end
+	for _, group in ipairs(candidate_groups) do
+		table.insert(self._debug_weights, clone(group))
+	end
 
 	return self:_choose_best_group(candidate_groups, total_weight)
+end
+
+function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
+	local rand_wgt = total_weight * math.random()
+	local best_grp, best_grp_type = nil
+	local drama_low = LIES.settings.hhtacs or self._drama_data.zone == "low"
+	local cooldown_table = tweak_data.group_ai.ai_spawn_group_cooldowns[drama_low and "fast" or "regular"]
+	local cooldown_min, cooldown_max = unpack(self:_get_balancing_multiplier(cooldown_table))
+
+	for _, candidate in ipairs(best_groups) do
+		rand_wgt = rand_wgt - candidate.wght
+
+		if rand_wgt <= 0 then
+			local delay = cooldown_min + math.random() * (cooldown_max - cooldown_min)
+			local cooldown = self._t + delay
+			local id = spawn_group_id(candidate.group)
+			self._spawn_group_timers[id] = cooldown
+
+			--math.random(3)
+
+			best_grp = candidate.group
+			best_grp_type = candidate.group_type
+			best_grp.delay_t = self._t + best_grp.interval
+
+			break
+		end
+	end
+
+	return best_grp, best_grp_type
 end
 
 function GroupAIStateBesiege:_spawn_phalanx_LIES()
@@ -4707,45 +4761,6 @@ function GroupAIStateBesiege:_spawn_phalanx_LIES()
 			managers.network:session():send_to_peers_synched("group_ai_event", self:get_sync_event_id("phalanx_spawned"), 0)
 		end
 	end
-end
-
-function GroupAIStateBesiege:_choose_best_group(best_groups, total_weight)
-	local rand_wgt = total_weight * math.random()
-	local best_grp, best_grp_type = nil
-
-	for i, candidate in ipairs(best_groups) do
-		rand_wgt = rand_wgt - candidate.wght
-
-		if rand_wgt <= 0 then
-			if LIES.settings.spawngroupdelays > 1 then
-				local delay_i = LIES.settings.spawngroupdelays
-				local delays = {
-					{5, 9},
-					{10, 15},
-					{12, 18},
-					{15, 20}
-				}
-				
-				local chosen_delays = delays[delay_i]
-				
-				local spawn_timers = math.lerp(chosen_delays[1], chosen_delays[2], math.random())
-
-				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + spawn_timers
-			else
-				local timer = 5 + math.random(3)
-			
-				self._spawn_group_timers[spawn_group_id(candidate.group)] = TimerManager:game():time() + timer
-			end
-			
-			best_grp = candidate.group
-			best_grp_type = candidate.group_type
-			best_grp.delay_t = self._t + best_grp.interval
-
-			break
-		end
-	end
-
-	return best_grp, best_grp_type
 end
 
 function GroupAIStateBesiege:_perform_group_spawning(spawn_task, force, use_last)

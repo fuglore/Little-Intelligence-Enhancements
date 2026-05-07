@@ -19,9 +19,12 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	local my_data = {
 		unit = data.unit
 	}
+	local objective = data.objective
 	local is_cool = data.unit:movement():cool()
-
-	if is_cool then
+	
+	if objective and objective.detection then
+		my_data.detection = objective.detection
+	elseif is_cool then
 		my_data.detection = data.char_tweak.detection.ntl
 	else
 		my_data.detection = data.char_tweak.detection.idle
@@ -71,8 +74,6 @@ function CopLogicIdle.enter(data, new_logic_name, enter_params)
 	my_data.detection_task_key = "CopLogicIdle.update" .. key_str
 
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CopLogicIdle.queued_update, data, data.t, data.important and true)
-
-	local objective = data.objective
 	
 	if objective then
 		my_data.scan = objective.scan
@@ -955,6 +956,10 @@ function CopLogicIdle.is_available_for_assignment(data, objective)
 	end
 
 	if data.objective and data.objective.action then
+		if objective and objective.distraction and (data.unit:anim_data().act_idle or data.unit:anim_data().look) then
+			return true
+		end
+	
 		if my_data.action_started then
 			if not data.unit:anim_data().act_idle then
 				return

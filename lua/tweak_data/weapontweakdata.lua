@@ -11,7 +11,6 @@ function WeaponTweakData:setup_hhtacs()
 			self.heavy_snp_npc.CLIP_AMMO_MAX = 9
 		end
 
-		self.saiga_npc.CLIP_AMMO_MAX = 14
 		self.contraband_npc.CLIP_AMMO_MAX = 45
 		self.m4_npc.CLIP_AMMO_MAX = 45
 		self.m4_yellow_npc.CLIP_AMMO_MAX = 45

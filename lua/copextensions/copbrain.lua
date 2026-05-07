@@ -67,6 +67,7 @@ function CopBrain:post_init()
 		debug_pause_unit(self._unit, "[CopBrain:post_init] character missing contour extension", self._unit)
 	end
 end
+
 local loud_bosses = {
 	triad_boss = true,
 	deep_boss = true,
@@ -1167,6 +1168,10 @@ function CopBrain:objective_is_sabotage(objective)
 	local objective = objective or self._logic_data.objective
 	
 	if not objective or objective.grp_objective or data.cool then
+		return
+	end
+	
+	if objective.distraction then
 		return
 	end
 	

@@ -79,7 +79,7 @@ function TeamAILogicAssault.update(data)
 	
 	if not data.unit:movement()._should_stay then
 		if data.objective and data.objective.type == "revive" then
-			objective.in_place = nil
+			data.objective.in_place = nil
 
 			TeamAILogicBase._exit(data.unit, "travel")
 			

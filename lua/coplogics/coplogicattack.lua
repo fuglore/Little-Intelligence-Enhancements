@@ -1181,14 +1181,18 @@ function CopLogicAttack._upd_aim(data, my_data)
 
 				my_data.attention_unit = focus_enemy.last_verified_pos
 			end
-		else
-			look_pos = focus_enemy.verified_pos
+		elseif focus_enemy.last_expected then
+			look_pos = focus_enemy.last_expected
 
 			if not my_data.attention_unit or my_data.attention_unit == focus_enemy.u_key or my_data.attention_unit ~= look_pos then
 				CopLogicBase._set_attention_on_pos(data, look_pos)
 				
-				my_data.attention_unit = focus_enemy.verified_pos
+				my_data.attention_unit = focus_enemy.last_expected
 			end
+		elseif my_data.attention_unit then
+			CopLogicBase._reset_attention(data)
+
+			my_data.attention_unit = nil
 		end
 
 		if not my_data.shooting and not my_data.spooc_attack and not data.unit:movement():chk_action_forbidden("action") then

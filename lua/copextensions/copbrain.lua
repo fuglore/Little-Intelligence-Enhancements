@@ -292,8 +292,7 @@ local non_scaling_units = {
 
 local no_foff_tank_weapons = {
 	m249 = true,
-	rpk_lmg = true,
-	saiga = true --it'll falloff faster overall due to getting combo'd with real falloff
+	rpk_lmg = true
 }
 
 local smgs = {
@@ -338,13 +337,13 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 		end
 	elseif self._unit:base()._tweak_table == "deep_boss" or self._unit:base()._tweak_table == "drug_lord_boss" or self._unit:base()._tweak_table == "mobster_boss" then
 		if difficulty_index > 7 then
-			local wanted_dmg = 60 / 90
+			local wanted_dmg = 60 / 100
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", wanted_dmg)
 		elseif difficulty_index == 7 then
-			local wanted_dmg = 60 / 75
+			local wanted_dmg = 60 / 90
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", wanted_dmg)
 		elseif difficulty_index == 6 then
-			local wanted_dmg = 60 / 70
+			local wanted_dmg = 60 / 75
 			self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", wanted_dmg)
 		end
 	elseif self._unit:base()._tweak_table == "triad_boss" then
@@ -375,15 +374,16 @@ function CopBrain:_do_hhtacs_damage_modifiers()
 				if ludicrous_damage[self._unit:base()._current_weapon_id] then
 					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.6) --90
 				elseif self._unit:base()._current_weapon_id == "sg417" then
-					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --90
+					local wanted_dmg = 1 - (100 / 150)
+					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --100
 				elseif smgs[self._unit:base()._current_weapon_id] then
-					local wanted_dmg = 1 - (50 / 75)
+					local wanted_dmg = 1 - (60 / 75)
 					self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -wanted_dmg)
 				end
 			end
 		elseif difficulty_index == 8 then
 			if self._unit:base()._current_weapon_id == "g36" or self._unit:base()._current_weapon_id == "smoke" or self._unit:base()._current_weapon_id == "m4_yellow" then
-				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --g36 users deal 75 damage with "good" preset compared to zeal's 90
+				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", -0.4) --g36 users deal 75 damage with "good" preset compared to zeal's 100
 			elseif self._unit:base()._current_weapon_id == "scar" then
 				self._ludicrous_damage_debuff = self._unit:base():add_buff("base_damage", 2) --90
 			elseif self._unit:base()._current_weapon_id == "mossberg" then

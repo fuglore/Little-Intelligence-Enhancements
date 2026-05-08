@@ -37,7 +37,61 @@ function CharacterTweakData:fix_escort()
 	end
 end
 
+function CharacterTweakData:_init_region_america()
+	self._default_chatter = "dispatch_generic_message"
+	self._unit_prefixes = {
+		cop = "l",
+		swat = "l",
+		heavy_swat = "l",
+		taser = "tsr",
+		cloaker = "clk",
+		bulldozer = "bdz",
+		medic = "mdc"
+	}
+end
+
+local fry_vars = {
+	"cop",
+	"gensec",
+	"cop_scared",
+	"cop_female",
+	"security",
+	"security_mex",
+	"security_mex_no_pager",
+	"fbi",
+	"fbi_female"
+}
+local swat_vars = {
+	"swat",
+	"heavy_swat",
+	"fbi_swat",
+	"fbi_heavy_swat",
+	"city_swat"
+}
+
 function CharacterTweakData:_setup_extra_chatter_tweak()
+	if self._default_chatter == "dispatch_generic_message" then
+		for i = 1, #fry_vars do
+			local tweak = self[fry_vars[i]]
+			
+			if tweak.speech_prefix_p1 == "l" then
+				tweak.speech_prefix_count = 5
+			end
+		end
+		
+		for i = 1, #swat_vars do
+			local tweak = self[swat_vars[i]]
+			
+			if tweak.speech_prefix_p1 == "l" then
+				tweak.speech_prefix_count = 5
+			end
+		end
+	end
+	
+	if tweak_data.levels:get_ai_group_type() == "murkywater" then
+		self._speech_prefix_p2 = "n"
+	end
+	
 	self.tank_mini.chatter.entrance = "entrance_elite"
 	self.tank_medic.chatter.entrance = "entrance_elite"
 	
@@ -87,26 +141,6 @@ function CharacterTweakData:_setup_extra_chatter_tweak()
 	self.biker.chatter = ganger
 	self.biker_escape.chatter = ganger
 end
-
-local fry_vars = {
-	"cop",
-	"gensec",
-	"cop_scared",
-	"cop_female",
-	"security",
-	"security_mex",
-	"security_mex_no_pager",
-	"fbi",
-	"fbi_female"
-}
-local swat_vars = {
-	"swat",
-	"heavy_swat",
-	"fbi_swat",
-	"fbi_heavy_swat",
-	"city_swat"
-}
-
 
 function CharacterTweakData:setup_hhtacs()
 	self.tank.ecm_vulnerability = nil

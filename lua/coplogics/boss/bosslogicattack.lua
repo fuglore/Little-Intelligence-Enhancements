@@ -847,22 +847,19 @@ function LIESBossLogicAttack._chk_use_throwable(data, my_data, focus)
 	if dot < 0.6 then
 		return
 	end
-
-	local throw_from = head_pos + mov_ext:m_head_rot():y() * 50
-
-	local slotmask = managers.slot:get_mask("world_geometry")
-
-	if throwable == "launcher_frag" or throwable == "launcher_incendiary" then
-		last_seen_pos = focus.last_verified_m_pos:with_z(focus.last_verified_m_pos.z + 1)
-		slotmask = managers.slot:get_mask("bullet_impact_targets_no_criminals")
-	end
 	
-	
+	local throw_from
 	local obstructed = nil
 	
 	if throwable == "launcher_frag" or throwable == "launcher_incendiary" then
+		throw_from = mvec3_cpy(head_pos)
+		last_seen_pos = focus.last_verified_m_pos:with_z(focus.last_verified_m_pos.z + 1)
+		local slotmask = managers.slot:get_mask("bullet_impact_targets_no_criminals")
 		obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "slot_mask", slotmask, "report")
 	else
+		throw_from = head_pos + mov_ext:m_head_rot():y() * 50
+		local slotmask = managers.slot:get_mask("world_geometry")
+		
 		mvec3_set_z(last_seen_pos, last_seen_pos.z + 15)
 		obstructed = data.unit:raycast("ray", throw_from, last_seen_pos, "sphere_cast_radius", 15, "slot_mask", slotmask, "report")
 	end
@@ -873,14 +870,20 @@ function LIESBossLogicAttack._chk_use_throwable(data, my_data, focus)
 
 	local throw_dir = Vector3()
 
-	mvec3_lerp(throw_dir, throw_from, last_seen_pos, 0.3)
-	mvec3_sub(throw_dir, throw_from)
+	if throwable == "launcher_frag" or throwable == "launcher_incendiary" then
+		mvec3_set(throw_dir, last_seen_pos)
+		mvec3_sub(throw_dir, throw_from)
+		mvec3_norm(throw_dir)
+	else
+		mvec3_lerp(throw_dir, throw_from, last_seen_pos, 0.3)
+		mvec3_sub(throw_dir, throw_from)
 
-	local dis_lerp = math_clamp((throw_dis - 1000) / 1000, 0, 1)
-	local compensation = math_lerp(0, 300, dis_lerp)
+		local dis_lerp = math_clamp((throw_dis - 1000) / 1000, 0, 1)
+		local compensation = math_lerp(0, 300, dis_lerp)
 
-	mvec3_set_z(throw_dir, throw_dir.z + compensation)
-	mvec3_norm(throw_dir)
+		mvec3_set_z(throw_dir, throw_dir.z + compensation)
+		mvec3_norm(throw_dir)
+	end
 	
 	local delay = data.char_tweak.throwable_delay or 10
 	
@@ -894,7 +897,7 @@ function LIESBossLogicAttack._chk_use_throwable(data, my_data, focus)
 		data.unit:sound():play("clk_baton_swing", nil, true)
 		managers.network:session():send_to_peers_synched("play_distance_interact_redirect", data.unit, "throw_grenade")
 	else		
-		data.unit:sound():play("grenade_gas_npc_fire", nil, true)
+		data.unit:sound():play("contrabandm203_npc1a_1shot", nil, true)
 	end
 
 	ProjectileBase.throw_projectile_npc(throwable, throw_from, throw_dir, data.unit)

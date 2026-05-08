@@ -194,6 +194,50 @@ local important_sounds = {
 	mcloaker_taunt_after_assault = true
 }
 
+local l5n_fixes = {
+	c01 = "Play_l5n_c01a",
+    ch1 = "Play_l5n_ch1_con",
+    ch2 = "Play_l5n_ch2_con",
+    ch3 = "Play_l5n_ch3_con",
+    ch4 = "Play_l5n_ch4_con",
+    civ = "Play_l5n_civ_con",
+    clr = "Play_l5n_clr_con",
+    cn1 = "Play_l5n_cn1_con",
+    cr1 = "Play_l5n_cr1_con",
+    d01 = "Play_l5n_d01_con",
+    d02 = "Play_l5n_d02_con",
+    g90 = "Play_l5n_g90",
+    gr1a = "Play_l5n_gr1a_con",
+    gr1b = "Play_l5n_gr1b_con",
+    gr1c = "Play_l5n_gr1c_con",
+    gr1d = "Play_l5n_gr1d_con",
+    gr2a = "Play_l5n_gr2a_con",
+    gr2b = "Play_l5n_gr2b_con",
+    gr2c = "Play_l5n_gr2c_con",
+    gr2d = "Play_l5n_gr2d_con",
+    hlp = "Play_l5n_hlp_con",
+    i01 = "Play_l5n_i01_con",
+    i02 = "Play_l5n_i02_con",
+    i03 = "Play_l5n_i03_con__________________MISSING_i03c",
+    l01 = "Play_l5n_l01_con__________________MISSING_l01b",
+    lk3a = "Play_l5n_lk3_ass",
+    lk3b = "Play_l5n_lk3_con",
+    m01 = "Play_l5n_m01_any",
+    med = "Play_l5n_med_con",
+    mov = "Play_l5n_mov_ass",
+    p01 = "Play_l5n_p01_ass",
+    p02 = "Play_l5n_p02_ass",
+    p03 = "Play_l5n_p03_ass",
+    pos = "Play_l5n_pos_con",
+    prm = "Play_l5n_prm_con",
+    pus = "Play_l5n_pus_con",
+    r01 = "Play_l5n_r01_con",
+    rdy = "Play_l5n_rdy_con",
+    s01x = "Play_l5n_s01x_con",
+	x01a_any_3p = "l1n_x01a_any_3p",
+	x02a_any_3p = "l1n_x02a_any_3p"
+}
+
 function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 	if not sound_name or type(sound_name) ~= "string" then --shouldn't normally happen.
 		return
@@ -229,7 +273,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 			end
 		end
 	
-		if self._prefix == "l5d_" then
+		if self._prefix == "l5d_" or self._prefix == "l5n_" then
 			if sound_name == "c01" then
 				sound_name = "i01"
 			elseif sound_name == "att" then
@@ -323,6 +367,10 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 			end
 		end
 	end
+	
+	if self._prefix == "l5n_" and l5n_fixes[sound_name] then
+		full_sound = l5n_fixes[sound_name]
+	end
 
 	if not full_sound then
 		if skip_prefix then
@@ -344,7 +392,6 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 
 		self._unit:network():send("say", event_id)
 	end
-	
 	
 	--clbk specifically when speaking is used to prevent lines from overlapping
 	local clbk = self.stop_speaking_clbk

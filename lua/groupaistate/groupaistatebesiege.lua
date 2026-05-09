@@ -1522,11 +1522,15 @@ function GroupAIStateBesiege:on_objective_complete(unit, objective)
 			end
 
 			if not self._enemy_weapons_hot and unit:movement():cool() and (not objective.action or table.contains(ElementSpecialObjective._stealth_idles, objective.action.variant)) then
-				new_objective.rot = objective.rot
-				new_objective.followup_SO = objective.followup_SO
+				--new_objective.rot = objective.rot
+				local level_id = Global.level_data and Global.level_data.level_id
+				local fallback_patrol = tweak_data.levels[level_id].fallback_patrol_element
+				
+				--boy, am i glad i'm not an actual payday 2 dev and i can get away with being a hacky fuck.
+				new_objective.followup_SO = objective.followup_SO or fallback_patrol and managers.mission:get_element_by_id(fallback_patrol)
 				local variant = ElementSpecialObjective._stealth_idles_no_loop[math.random(#ElementSpecialObjective._stealth_idles_no_loop)]
 				new_objective.action = {
-					align_sync = true,
+					--align_sync = true,
 					needs_full_blend = true,
 					type = "act",
 					body_part = 1,

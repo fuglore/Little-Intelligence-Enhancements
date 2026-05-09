@@ -97,6 +97,10 @@
 			"script_path": "lua/managers/mapelements/elementspecialobjective.lua"
 		},
 		{
+			"hook_id": "lib/managers/mission/elementspecialobjectivegroup",
+			"script_path": "lua/managers/mapelements/elementspecialobjectivegroup.lua"
+		},
+		{
 			"hook_id": "lib/managers/mission/elementaiglobalevent",
 			"script_path": "lua/managers/mapelements/elementaiglobalevent.lua"
 		},

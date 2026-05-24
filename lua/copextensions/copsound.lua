@@ -367,7 +367,7 @@ function CopSound:say_fix(sound_name, sync, skip_prefix, important, callback)
 			end
 		end
 	end
-	
+
 	if self._prefix == "l5n_" and l5n_fixes[sound_name] then
 		full_sound = l5n_fixes[sound_name]
 	end

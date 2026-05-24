@@ -449,9 +449,9 @@ function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
 					self._guard_hostage_trade_time_map[unit_key] = time
 
 					return {
-						scan = true,
-						type = "free",
+						type = "defend_area",
 						stance = "hos",
+						stay_at_seg = true,
 						nav_seg = hostage.tracker:nav_segment()
 					}
 				end

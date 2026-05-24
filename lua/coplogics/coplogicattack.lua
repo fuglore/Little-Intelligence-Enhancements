@@ -394,16 +394,16 @@ function CopLogicAttack._upd_combat_movement(data)
 	
 	local can_charge = wanted_attack_range and focus_enemy.dis > wanted_attack_range or wanted_attack_range and not enemy_visible or data.unit:base()._tweak_table == "marshal_shield_break"
 	
-	if not can_charge and not data.is_converted and (not data.objective or not data.objective.grp_objective or data.objective.grp_objective.type ~= "reenforce_area" and not data.objective.grp_objective.blockading) and (not data.tactics or not data.tactics.sniper) then
-		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed or data.tactics and data.tactics.charge 
-		can_charge = can_charge or (not data.tactics or not data.tactics.ranged_fire) and not enemy_visible_softer
+	if not can_charge and my_data.attitude == "engage" and not data.is_converted and (not data.objective or not data.objective.grp_objective or data.objective.grp_objective.type ~= "reenforce_area" and not data.objective.grp_objective.blockading) and (not data.tactics or not data.tactics.sniper) then
+		can_charge = aggro_level > 3 or my_data.flank_cover and my_data.flank_cover.failed 
+		can_charge = can_charge or data.tactics and data.tactics.charge and data.objective and data.objective.grp_objective and data.objective.grp_objective.pushed
 	end
 
 	if action_taken then
 		-- Nothing
 	elseif want_to_take_cover then
 		move_to_cover = true
-	elseif not enemy_visible then --no longer requires a group objective to work, takes into account flank cover and just generally not seeing enemies in a while
+	elseif not enemy_visible then
 		if can_charge and (not my_data.charge_path_failed_t or data.t - my_data.charge_path_failed_t > 2) then
 			if my_data.charge_path then
 				local path = my_data.charge_path
@@ -1229,11 +1229,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 	end
 	
 	if not my_data.advancing and CopLogicAttack.chk_should_turn(data, my_data) then
-		if my_data.shooting and my_data.shooting._attention then
-			local turn_pos = my_data.shooting:_get_target_pos(my_data.shooting._shoot_from_pos, my_data.shooting._attention, TimerManager:game():time())
-
-			CopLogicAttack._chk_request_action_turn_to_enemy(data, my_data, data.m_pos, turn_pos)
-		elseif my_data.attention_unit then
+		if my_data.attention_unit then
 			local turn_pos
 			
 			if my_data.attention_unit ~= focus_enemy.u_key then
@@ -1532,6 +1528,7 @@ function CopLogicAttack._chk_enrage(data, focus_enemy)
 			
 			data.unit:sound():play("tire_blow", nil, true)
 			data.unit:sound():play("kick_metal_door", nil, true)
+			data.unit:sound():play("blender_loop_stop", nil, true)
 			data.unit:sound():play("security_camera_explode", nil, true)
 			data.unit:sound():play("pot_large_shatter", nil, true)
 			
@@ -1543,6 +1540,7 @@ function CopLogicAttack._chk_enrage(data, focus_enemy)
 			enrage_data.enrage_meter = 5
 		elseif not enrage_data.played_warning and enrage_data.enrage_meter > enrage_data.enrage_max * 0.75 then
 			data.unit:sound():play("slot_machine_rolling_loop", nil, true)
+			data.unit:sound():play("blender_loop_start", nil, true)
 			data.unit:sound():play("light_bulb_smash", nil, true)
 
 			enrage_data.played_warning = true
@@ -1567,6 +1565,7 @@ function CopLogicAttack._chk_enrage(data, focus_enemy)
 		
 		if enrage_data.played_warning then
 			data.unit:sound():play("slot_machine_loose", nil, true)
+			data.unit:sound():play("blender_loop_stop", nil, true)
 			data.unit:sound():play("trombone_break", nil, true)
 			enrage_data.played_warning = nil
 		end
@@ -2604,19 +2603,11 @@ function CopLogicAttack._find_friend_pos(data, my_data)
 	end
 	
 	if best_pos then
-		if look_for_path then
-			my_data.hide_path_search_id = "hide" .. tostring(data.key)
-
-			if data.unit:brain():search_for_path(my_data.hide_path_search_id, best_pos, nil, nil, nil) then
-				return true
-			end
-		else
-			if not has_medic and not has_tank then
-				try_request_stillness = true
-			end
-		
-			return best_pos, chosen_u_data.unit, try_request_stillness
+		if not has_medic and not has_tank then
+			try_request_stillness = true
 		end
+		
+		return best_pos, chosen_u_data.unit, try_request_stillness
 	end
 end
 
@@ -2791,7 +2782,7 @@ function CopLogicAttack._update_cover(data)
 					local search_nav_seg = nil
 
 					if data.objective and data.objective.type == "defend_area" then
-						if data.objective.grp_objective and data.objective.grp_objective.type == "reenforce_area" then
+						if data.objective.grp_objective and data.objective.grp_objective.type == "reenforce_area" or data.objective.stay_at_seg then
 							search_nav_seg = data.objective.grp_objective.area and data.objective.grp_objective.area.nav_segs or data.objective.nav_seg
 						end
 					end

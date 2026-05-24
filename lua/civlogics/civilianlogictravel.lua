@@ -101,13 +101,7 @@ function CivilianLogicTravel.update(data)
 			else
 				data.brain:rem_pos_rsrv("path")
 
-				local to_pos = nil
-
-				if cur_index >= total_nav_points - 1 then
-					to_pos = CivilianLogicTravel._determine_exact_destination(data, objective)
-				else
-					to_pos = coarse_path[#coarse_path][2]
-				end
+				local to_pos = CivilianLogicTravel._determine_exact_destination(data, objective)
 				
 				my_data.going_to_index = total_nav_points
 				my_data.processing_advance_path = true

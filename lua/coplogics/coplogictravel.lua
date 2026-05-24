@@ -270,15 +270,15 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 		return
 	end
 	
-	local nav_link = my_data.coarse_path[my_data.coarse_path_index + 1][3]
+	local nav_link = my_data.coarse_path[my_data.coarse_path_index + 1][3] --this is checking for the nav link
 	
-	if nav_link and alive(my_data.coarse_path[my_data.coarse_path_index + 1][3]) then
-		if nav_link:delay_time() > data.t then
-			my_data.waiting_for_navlink = nav_link:delay_time() + 0.1
+	if nav_link and alive(my_data.coarse_path[my_data.coarse_path_index + 1][3]) then --check if the navlink is alive
+		if nav_link:delay_time() > data.t then --check the delay
+			my_data.waiting_for_navlink = nav_link:delay_time() + 0.1 --set a "wait" timer, return the function before it completes
 			
 			return
 		end
-	elseif my_data.coarse_path[my_data.coarse_path_index + 1][4] then
+	elseif my_data.coarse_path[my_data.coarse_path_index + 1][4] then --case for when there is MULTIPLE valid nav links, we check all entries instead
 		local entry_found = true
 		local all_nav_segments = managers.navigation._nav_segments
 		local target_seg_id = my_data.coarse_path[my_data.coarse_path_index + 1][1]
@@ -298,7 +298,7 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 				elseif alive(i_door) and not i_door:is_obstructed() and i_door:check_access(data.char_tweak.access) then
 					if not best_delay_t or i_door:delay_time() < best_delay_t then
 						entry_found = nil
-						best_delay_t = i_door:delay_time()
+						best_delay_t = i_door:delay_time() --set the delay to the soonest available nav link
 					end
 				end	
 			end
@@ -335,7 +335,7 @@ function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 			end
 			
 			if max_dis then
-				if my_data.coarse_path[i - 1][3] or my_data.coarse_path[i - 1][4] then --gotta wait for my team
+				if my_data.coarse_path[i - 1][3] or my_data.coarse_path[i - 1][4] then --gotta wait for my team when there's nav links so we all move together
 					index_to_go_to = i
 					
 					break
@@ -1840,32 +1840,7 @@ function CopLogicTravel._find_cover(data, search_nav_seg, near_pos)
 	end
 	
 	near_pos = near_pos or search_area.pos
-	
-	if data.internal_data.criminal or data.unit:in_slot(16) then
-		threat_pos = data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction and data.attention_obj.m_head_pos
-	else
-		local all_criminals = managers.groupai:state():all_char_criminals()
-		local closest_crim_u_data, closest_crim_dis = nil
-
-		for u_key, u_data in pairs(all_criminals) do
-			if not u_data.status or u_data.status == "electrified" then
-				local crim_area = managers.groupai:state():get_area_from_nav_seg_id(u_data.tracker:nav_segment())
-
-				if crim_area == search_area then
-					threat_pos = u_data.unit:movement():m_head_pos()
-
-					break
-				else
-					local crim_dis = mvector3.distance_sq(near_pos, u_data.m_pos)
-
-					if not closest_crim_dis or crim_dis < closest_crim_dis then
-						threat_pos = u_data.unit:movement():m_head_pos()
-						closest_crim_dis = crim_dis
-					end
-				end
-			end
-		end
-	end
+	threat_pos = data.attention_obj and AIAttentionObject.REACT_COMBAT <= data.attention_obj.reaction and data.attention_obj.m_head_pos
 	
 	if threat_pos then
 		cover = managers.navigation:find_cover_from_threat(search_area.nav_segs, optimal_threat_dis, near_pos, threat_pos)

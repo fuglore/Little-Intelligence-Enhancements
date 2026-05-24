@@ -984,7 +984,10 @@ Hooks:PostHook(GroupAIStateBesiege, "_upd_assault_task", "lies_retire", function
 	local task_data = self._task_data.assault
 
 	if task_data and task_data.target_areas and task_data.target_areas[1] then
-		if not task_data.old_target_pos then
+		if not task_data.active or task_data.phase == "fade" or task_data.phase == "anticipation" then
+			task_data.old_target_pos = nil
+			task_data.old_target_pos_t = nil
+		elseif not task_data.old_target_pos then
 			local target_pos
 			
 			local target_pos = task_data.target_areas[1].pos
@@ -2037,12 +2040,12 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, range
 				local focus_enemy = logic_data.attention_obj
 				
 				if focus_enemy and AIAttentionObject.REACT_COMBAT <= focus_enemy.reaction then
-					local seen_enemy = focus_enemy.verified_t and logic_data.t - focus_enemy.verified_t <= 15 and focus_enemy.last_verified_m_pos
+					local seen_enemy = focus_enemy.verified_t and logic_data.t - focus_enemy.verified_t <= 15
 
 					if seen_enemy then
 						local weight_mul = 1 + math.lerp(0, 0.15, (logic_data.t - focus_enemy.verified_t) / 15)
 						
-						if mvec3_dis_sq(focus_enemy.m_pos, focus_enemy.last_verified_m_pos) < dist_sq / 2 and mvec3_dis_sq(logic_data.m_pos, focus_enemy.last_verified_m_pos) < dist_sq then
+						if mvec3_dis_sq(logic_data.m_pos, focus_enemy.verified_pos) < dist_sq then
 							local nav_seg = managers.navigation:get_nav_seg_from_pos(focus_enemy.m_pos, true)
 							local enemy_area = self:get_area_from_nav_seg_id(nav_seg)
 							local dis = mvec3_dis_sq(group.objective.area.pos, u_data.m_pos) * weight_mul * weight_mul
@@ -2059,6 +2062,10 @@ function GroupAIStateBesiege:_chk_group_engaging_area(group, dis_to_check, range
 				end
 			end
 		end
+	end
+	
+	if best_u_area and target_area then
+		return best_u_area, target_area
 	end
 end
 
@@ -2655,6 +2662,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			end
 			
 			if not needs_reassignment then
+				local engaging_area
+				
 				if not current_objective.blockading then
 					local infinite_patience = phase_is_anticipation or tactics_map.sniper or tactics_map.blockade or tactics_map.shield
 					local dis = tactics_map.sniper and 6000 or tactics_map.ranged_fire and 4000 or 2000
@@ -2678,8 +2687,6 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					elseif aggression_level > 2 then
 						dis = dis / (aggression_level - 1)
 					end
-					
-					local engaging_area, target_area
 					
 					engaging_area, target_area = self:_chk_group_engaging_area(group, dis, ranged, impatient)
 				end
@@ -2758,7 +2765,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			end
 			
 			if not engaging then
-				if infinite_patience then
+				if phase_is_anticipation or tactics_map.sniper or tactics_map.blockade or tactics_map.shield then
 					impatient = false
 				elseif group.in_place_t then
 					if aggression_level > 3 then
@@ -2775,7 +2782,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			if charge then --if a shield group has charge, then it'll still charge
 				push = true
 			elseif engaging and phase_is_anticipation then
-				if current_objective.area ~= engaging then
+				if current_objective.area ~= engaging or not group.in_place_t then
 					pull_back = true
 					objective_area = engaging
 				end
@@ -2783,7 +2790,10 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 				approach = true
 			elseif not phase_is_anticipation and not current_objective.open_fire then
 				open_fire = true
-				objective_area = engaging
+				
+				if engaging then
+					objective_area = engaging
+				end
 			elseif not phase_is_anticipation and group.in_place_t then
 				if impatient or too_campy then
 					push = true
@@ -2796,8 +2806,8 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 			elseif phase_is_anticipation and current_objective.open_fire then
 				pull_back = true
 			elseif engaging and current_objective.area ~= engaging then
-				open_fire = true
 				objective_area = engaging
+				pull_back = true
 			end
 		end
 	end

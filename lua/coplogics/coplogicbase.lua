@@ -1030,7 +1030,7 @@ function CopLogicBase._upd_attention_obj_detection(data, min_reaction, max_react
 		if blind_enemies then
 			detected_obj[u_key] = nil
 		elseif min_reaction and attention_info.reaction < min_reaction or max_reaction and attention_info.reaction > max_reaction then
-			detected_obj[u_key] = nil
+			CopLogicBase._destroy_detected_attention_object_data(data, attention_info)
 		elseif t < attention_info.next_verify_t then
 			if AIAttentionObject.REACT_SUSPICIOUS <= attention_info.reaction then
 				delay = math.min(attention_info.next_verify_t - t, delay)
@@ -1311,8 +1311,13 @@ function CopLogicBase.death_clbk(data, damage_info)
 		local is_dead = data.unit:character_damage():dead()
 		if is_dead then
 			data.unit:sound():play("slot_machine_loose", nil, true)
+			data.unit:sound():play("blender_loop_stop", nil, true)
+			data.unit:sound():play("trombone_break", nil, true)
 		else
+			--log("hmm")
 			data.unit:sound():corpse_play("slot_machine_loose", nil, true)
+			data.unit:sound():corpse_play("blender_loop_stop", nil, true)
+			data.unit:sound():corpse_play("trombone_break", nil, true)
 		end
 		
 		data.enrage_data.played_warning = nil

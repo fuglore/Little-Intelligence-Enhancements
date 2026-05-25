@@ -21,42 +21,14 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 	end
 
 	CopLogicBase._reset_attention(data)
-	data.unit:brain():set_update_enabled_state(false)
+	data.unit:brain():set_update_enabled_state(true)
 
 	local key_str = tostring(data.key)
-	local objective = data.objective
-
-	if objective then
-		if objective.action then
-			local action = data.unit:brain():action_request(objective.action)
-
-			if action and objective.action.type == "act" then
-				my_data.acting = action
-
-				if objective.action_start_clbk then
-					objective.action_start_clbk(data.unit)
-
-					if my_data ~= data.internal_data then
-						return
-					end
-				end
-			end
-		end
-
-		if objective.action_duration then
-			my_data.action_timeout_clbk_id = "CivilianLogicIdle_action_timeout" .. key_str
-			local action_timeout_t = data.t + objective.action_duration
-
-			CopLogicBase.add_delayed_clbk(my_data, my_data.action_timeout_clbk_id, callback(CivilianLogicIdle, CivilianLogicIdle, "clbk_action_timeout", data), action_timeout_t)
-		end
-	end
-
-	my_data.tmp_vec3 = tmp_vec1
-	
+	my_data.tmp_vec3 = Vector3()
 	my_data.detection_task_key = "CivilianLogicIdle._upd_detection" .. key_str
 
-	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t)
-	
+	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t + 1)
+
 	if not data.been_outlined and data.char_tweak.outline_on_discover then
 		my_data.outline_detection_task_key = "CivilianLogicIdle._upd_outline_detection" .. tostring(data.key)
 
@@ -72,6 +44,8 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 	if objective and objective.stance then
 		data.unit:movement():set_stance(objective.stance)
 	end
+	
+	CivilianLogicTravel._chk_has_old_action(data, my_data)
 
 	local attention_settings = nil
 
@@ -90,8 +64,46 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 	data.unit:brain():set_attention_settings(attention_settings)
 end
 
-function CivilianLogicIdle._objective_can_be_interrupted(data)
-	return not data.objective or data.objective and (data.objective.interrupt_dis or data.objective.interrupt_suppression or data.objective.interrupt_health)
+function CivilianLogicIdle.update(data)
+	local my_data = data.internal_data
+	
+	if my_data.has_old_action or my_data.old_action_advancing then
+		CivilianLogicTravel._upd_stop_old_action(data, my_data)
+		
+		if my_data.has_old_action or my_data.old_action_advancing then
+			return
+		end
+	end
+	
+	CivilianLogicIdle._perform_objective_action(data, my_data, data.objective)
+	
+	if my_data.action_started then
+		data.unit:brain():set_update_enabled_state(false)
+	end
+end
+
+function CivilianLogicIdle._perform_objective_action(data, my_data, objective)
+	if objective and not my_data.action_started and (data.unit:anim_data().act_idle or not data.unit:movement():chk_action_forbidden("action")) then
+		if objective.action then
+			my_data.action_started = data.unit:brain():action_request(objective.action)
+		else
+			my_data.action_started = true
+		end
+
+		if my_data.action_started then
+			if objective.action_duration or objective.action_timeout_t then
+				my_data.action_timeout_clbk_id = "CivilianLogicIdle_action_timeout" .. tostring(data.key)
+				local action_timeout_t = objective.action_timeout_t or data.t + objective.action_duration
+				objective.action_timeout_t = action_timeout_t
+
+				CopLogicBase.add_delayed_clbk(my_data, my_data.action_timeout_clbk_id, callback(CivilianLogicIdle, CivilianLogicIdle, "clbk_action_timeout", data), action_timeout_t)
+			end
+
+			if objective.action_start_clbk then
+				objective.action_start_clbk(data.unit)
+			end
+		end
+	end
 end
 
 function CivilianLogicIdle._upd_detection(data)
@@ -99,14 +111,8 @@ function CivilianLogicIdle._upd_detection(data)
 
 	data.t = TimerManager:game():time()
 	local my_data = data.internal_data
+	local delay = managers.groupai:state():whisper_mode() and 0 or data.is_tied and data.unit:anim_data().stand and 0 or 1
 	CopLogicBase._upd_attention_obj_detection(data, nil, nil)
-	
-	local delay = 0
-	
-	if not managers.groupai:state():whisper_mode() then
-		delay = 1.4
-	end
-	
 	local new_attention, new_reaction = CivilianLogicIdle._get_priority_attention(data, data.detected_attention_objects)
 
 	CivilianLogicIdle._set_attention_obj(data, new_attention, new_reaction)
@@ -131,12 +137,8 @@ function CivilianLogicIdle._upd_detection(data)
 	elseif not data.char_tweak.ignores_attention_focus then
 		CopLogicIdle._chk_focus_on_attention_object(data, my_data)
 	end
-	
-	if my_data ~= data.internal_data then
-		return
-	end
 
-	if not data.unit:movement():cool() and (not my_data.acting or data.unit:anim_data().act_idle) then
+	if not data.unit:movement():cool() and my_data.action_started == true and CivilianLogicFlee.needs_panic_redirect(data) then
 		local objective = data.objective
 
 		if not objective or objective.interrupt_dis == -1 or objective.is_default then
@@ -156,16 +158,22 @@ function CivilianLogicIdle._upd_detection(data)
 	if CopLogicIdle._chk_relocate(data) then
 		return
 	end
-	
-	if my_data ~= data.internal_data then
-		return
-	end
-	
+
 	CopLogicBase.queue_task(my_data, my_data.detection_task_key, CivilianLogicIdle._upd_detection, data, data.t + delay)
 end
 
 function CivilianLogicIdle.on_alert(data, alert_data)
+	if data.unit:anim_data().dont_flee then
+		return
+	end
+
 	if data.is_tied and data.unit:anim_data().stand then
+		if not LIES.settings.hhtacs then
+			if TimerManager:game():time() - data.internal_data.state_enter_t > 3 then
+				data.unit:brain():on_hostage_move_interaction(nil, "stay")
+			end
+		end
+
 		return
 	end
 
@@ -212,26 +220,36 @@ function CivilianLogicIdle.on_alert(data, alert_data)
 	end
 
 	if my_data == data.internal_data and not data.char_tweak.ignores_aggression then
-		my_dis = my_dis or alert_epicenter and mvector3.distance(my_listen_pos, alert_epicenter) or 3000
-		alert_delay = math.lerp(1, 4, math.min(1, my_dis / 2000)) * math.random()
-		
 		if data.char_tweak.faster_reactions then
-			alert_delay = alert_delay * 0.5
-		end
-
-		if not my_data.delayed_alert_id then
-			my_data.delayed_alert_id = "alert" .. tostring(data.key)
-
-			CopLogicBase.add_delayed_clbk(my_data, my_data.delayed_alert_id, callback(CivilianLogicIdle, CivilianLogicIdle, "_delayed_alert_clbk", {
+			local params = {
 				data = data,
 				alert_data = clone(alert_data)
-			}), TimerManager:game():time() + alert_delay)
+			}
+		
+			CivilianLogicIdle._delayed_alert_clbk(nil, params)
+		else
+			my_dis = my_dis or alert_epicenter and mvector3.distance(my_listen_pos, alert_epicenter) or 3000
+			alert_delay = math.lerp(1, 4, math.min(1, my_dis / 2000)) * math.random()
+
+			if not my_data.delayed_alert_id then
+				my_data.delayed_alert_id = "alert" .. tostring(data.key)
+
+				CopLogicBase.add_delayed_clbk(my_data, my_data.delayed_alert_id, callback(CivilianLogicIdle, CivilianLogicIdle, "_delayed_alert_clbk", {
+					data = data,
+					alert_data = clone(alert_data)
+				}), TimerManager:game():time() + alert_delay)
+			end
 		end
 	end
 end
 
 function CivilianLogicIdle._delayed_alert_clbk(ignore_this, params)
 	local data = params.data
+	
+	if not alive(data.unit) then
+		return
+	end
+	
 	local alert_data = params.alert_data
 	local my_data = data.internal_data
 
@@ -254,15 +272,13 @@ function CivilianLogicIdle._delayed_alert_clbk(ignore_this, params)
 
 	alert_data[5] = alerting_unit
 	
-	if not data.call_police_delay_t then
-		local call_t = TimerManager:game():time() + 20 + 10 * math.random()
-		
-		if data.char_tweak.faster_reactions then
-			call_t = call_t * 0.25
-		end
-
-		data.call_police_delay_t = call_t
+	local delay = 20 + 10 * math.random()
+	
+	if data.char_tweak.faster_reactions then
+		delay = delay * 0.25
 	end
+	
+	data.call_police_delay_t = data.call_police_delay_t or TimerManager:game():time() + delay
 
 	data.unit:brain():set_objective({
 		is_default = true,
@@ -271,58 +287,38 @@ function CivilianLogicIdle._delayed_alert_clbk(ignore_this, params)
 	})
 end
 
-function CivilianLogicIdle.is_obstructed(data, aggressor_unit)
-	if data.unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().act_idle then
-		return
-	end
-	
-	local objective = data.objective
-	
-	if objective and not objective.is_default then ---FFFFFFFFFFFFFFFUCK.
-		if (data.char_tweak.is_escort or data.unit:base()._tweak_table == "drunk_pilot") and objective.element and (objective.nav_seg or objective.pos) then
-			return
-		end
-	end
+function CivilianLogicIdle.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
 
-	if not objective or objective.is_default or (objective.in_place or not objective.nav_seg or objective.type == "free" and not objective.pos) and not objective.action and not objective.action_duration and not objective.followup_SO and (not objective.followup_objective or not objective.followup_objective.action) then
-		return true
-	end
+	if action_type == "turn" then
+		my_data.turning = nil
+	elseif action_type == "walk" then
+		my_data.advancing = nil
+		my_data.old_action_advancing = nil
+	elseif action_type == "act" then
+		local my_data = data.internal_data
 
-	if objective.interrupt_dis == -1 then
-		return true
-	end
-
-	if aggressor_unit and aggressor_unit:movement() and objective.interrupt_dis and mvector3.distance_sq(data.m_pos, aggressor_unit:movement():m_newest_pos()) < objective.interrupt_dis * objective.interrupt_dis then
-		return true
-	end
-
-	if objective.interrupt_health then
-		local health_ratio = data.unit:character_damage():health_ratio()
-
-		if health_ratio < 1 and health_ratio < objective.interrupt_health then
-			return true
+		if my_data.action_started == action then
+			if action:expired() then
+				if not my_data.action_timeout_clbk_id then
+					data.objective_complete_clbk(data.unit, data.objective)
+				end
+			elseif not my_data.action_expired and not my_data.detected_criminal then
+				data.objective_failed_clbk(data.unit, data.objective)
+			else
+				my_data.action_started = nil
+			end
 		end
 	end
 end
 
-function CivilianLogicIdle.action_complete_clbk(data, action)
+function CivilianLogicIdle.is_available_for_assignment(data, objective)
+	if objective and objective.forced then
+		return true
+	end
+
 	local my_data = data.internal_data
 
-	if action:type() == "turn" then
-		my_data.turning = nil
-	elseif action:type() == "act" then
-		local act_action = my_data.acting
-		
-		my_data.acting = nil
-	
-		if act_action == action then			
-			if action:expired() then				
-				if not my_data.action_timeout_clbk_id then
-					data.objective_complete_clbk(data.unit, data.objective)
-				end
-			else
-				data.objective_failed_clbk(data.unit, data.objective)
-			end
-		end
-	end
+	return (my_data.action_started == true or data.unit:anim_data().act_idle or data.unit:anim_data().peaceful or data.unit:anim_data().idle) and not my_data.exiting and not my_data.delayed_alert_id
 end

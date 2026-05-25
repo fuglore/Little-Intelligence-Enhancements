@@ -38,7 +38,7 @@ function CivilianLogicTravel.update(data)
 
 	my_data.last_upd_t = t
 
-	if my_data.has_old_action then
+	if my_data.has_old_action or my_data.old_action_advancing then
 		CivilianLogicTravel._upd_stop_old_action(data, my_data)
 	elseif my_data.warp_pos then
 		local action_desc = {
@@ -101,12 +101,20 @@ function CivilianLogicTravel.update(data)
 			else
 				data.brain:rem_pos_rsrv("path")
 
-				local to_pos = CivilianLogicTravel._determine_exact_destination(data, objective)
-				
-				my_data.going_to_index = total_nav_points
-				my_data.processing_advance_path = true
+				local to_pos = nil
 
-				unit:brain():search_for_path(my_data.advance_path_search_id, to_pos)
+				if cur_index == total_nav_points - 1 then
+					local end_pos = CivilianLogicTravel._determine_exact_destination(data, objective)
+					to_pos = end_pos
+				else
+					to_pos = coarse_path[cur_index + 1][2]
+				end
+
+				if to_pos then
+					my_data.processing_advance_path = true
+
+					unit:brain():search_for_path(my_data.advance_path_search_id, to_pos)
+				end
 			end
 		else
 			local nav_seg = nil
@@ -126,31 +134,43 @@ function CivilianLogicTravel.update(data)
 	end
 end
 
-function CivilianLogicTravel.action_complete_clbk(data, action)
-	local my_data = data.internal_data
-	local action_type = action:type()
+function CivilianLogicTravel._chk_has_old_action(data, my_data)
+	data.unit:movement()._need_upd = true
+	data.unit:movement():_unfreeze_anims()
+	data.unit:set_extension_update_enabled(Idstring("movement"), data.unit:movement()._need_upd)
 
-	if action_type == "walk" then
-		if action:expired() and not my_data.starting_advance_action and my_data.coarse_path_index and not my_data.has_old_action and not my_data.old_action_advancing and my_data.advancing then
-			if my_data.going_to_index then
-				my_data.coarse_path_index = my_data.going_to_index
-			else
-				my_data.coarse_path_index = my_data.coarse_path_index + 1
-			end
-
-			if my_data.coarse_path_index > #my_data.coarse_path then
-				my_data.coarse_path_index = my_data.coarse_path_index - 1
-			end
-		end
+	local anim_data = data.unit:anim_data()
+	my_data.has_old_action = anim_data.to_idle or anim_data.act and anim_data.needs_idle
+	local lower_body_action = data.unit:movement()._active_actions[2]
+	my_data.advancing = lower_body_action and lower_body_action:type() == "walk" and lower_body_action
 	
-		my_data.old_action_advancing = nil
-		my_data.advancing = nil
-		my_data.going_to_index = nil
-	elseif action_type == "act" and my_data.getting_up then
-		my_data.getting_up = nil
+	if my_data.advancing then
+		my_data.old_action_advancing = my_data.advancing
 	end
 end
 
+function CivilianLogicTravel._upd_stop_old_action(data, my_data, objective)
+	if data.unit:anim_data().to_idle then
+		return
+	end
+	
+	if my_data.advancing and my_data.old_action_advancing then
+		if not data.unit:movement():chk_action_forbidden("walk") then
+			data.unit:brain():action_request({
+				body_part = 2,
+				type = "idle"
+			})
+		end
+	end
+	
+	if not data.unit:movement():chk_action_forbidden("idle") and data.unit:anim_data().act and data.unit:anim_data().needs_idle then
+		CopLogicIdle._start_idle_action_from_act(data)
+	end
+
+	CivilianLogicTravel._chk_has_old_action(data, my_data)
+end
+
+--called in coplogicidle.chk_relocate dont get rid of it you PLONKER
 function CivilianLogicTravel._check_should_relocate(data, my_data, objective)
 	if not objective or not objective.follow_unit then
 		return

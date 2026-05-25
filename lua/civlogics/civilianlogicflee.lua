@@ -59,7 +59,7 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 
 	CivilianLogicFlee._chk_add_delayed_rescue_SO(data, my_data)
 
-	if data.objective and data.objective.was_rescued or not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and not data.char_tweak.is_escort and not data.unit:base()._tweak_table == "drunk_pilot" and managers.groupai:state():is_police_called() then
+	if data.objective and data.objective.was_rescued or not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and managers.groupai:state():is_police_called() then
 		local was_freed = data.objective and data.objective.was_rescued ~= nil
 		
 		if data.objective then
@@ -93,7 +93,7 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 		"civ_civ_cbt",
 		"civ_murderer_cbt"
 	}
-
+	
 	CivilianLogicFlee.schedule_run_away_clbk(data)
 
 	if not my_data.delayed_post_react_alert_id and not CivilianLogicFlee.ready_for_action(data) then
@@ -123,11 +123,19 @@ function CivilianLogicFlee.enter(data, new_logic_name, enter_params)
 	my_data.next_action_t = 0
 end
 
-function CivilianLogicFlee.ready_for_action(data) 
+function CivilianLogicFlee.ready_for_action(data)
+	if data.unit:anim_data().dont_flee then
+		return
+	end
+
 	return not data.unit:anim_data().react_enter and data.unit:anim_data().react or data.unit:anim_data().halt or data.unit:anim_data().panic and data.unit:anim_data().crouch
 end
 
 function CivilianLogicFlee.needs_panic_redirect(data)
+	if data.unit:anim_data().dont_flee then
+		return
+	end
+
 	return data.unit:anim_data().peaceful or data.unit:anim_data().call_police or data.unit:anim_data().halt or data.unit:anim_data().panic and not data.unit:anim_data().act_idle and data.unit:anim_data().act
 end
 
@@ -728,11 +736,11 @@ end
 function CivilianLogicFlee._run_away_from_alert(data, alert_data)
 	local my_data = data.internal_data
 	
-	if my_data.coarse_path then
+	if my_data.coarse_path or data.unit:anim_data().dont_flee then
 		return
 	end
 
-	if not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and not data.char_tweak.is_escort and not data.unit:base()._tweak_table == "drunk_pilot" and managers.groupai:state():is_police_called() then --faster reactions = just book it
+	if not data.is_tied and data.char_tweak.faster_reactions and data.char_tweak.flee_type ~= "hide" and managers.groupai:state():is_police_called() then --faster reactions = just book it
 		if CivilianLogicFlee._get_coarse_flee_path(data) then
 			data.unit:brain():set_update_enabled_state(true)
 			

@@ -1560,6 +1560,7 @@ function CopLogicTravel.action_complete_clbk(data, action)
 	local my_data = data.internal_data
 	local action_type = action:type()
 	local highperformance = LIES.settings.highperformance
+	local not_civilian = not CopDamage.is_civilian(data.unit:base()._tweak_table) and not data.char_tweak.flee_type
 
 	if action_type == "walk" then
 		if action:expired() and not my_data.starting_advance_action and my_data.coarse_path_index and not my_data.has_old_action and not my_data.old_action_advancing and my_data.advancing then
@@ -1624,20 +1625,22 @@ function CopLogicTravel.action_complete_clbk(data, action)
 			end
 		end
 		
-		CopLogicTravel._update_cover(nil, data)
+		if not_civilian then
+			CopLogicTravel._update_cover(nil, data)
 
-		if action:expired() and not my_data.starting_advance_action and not highperformance then
-			--log("wee")
-			if my_data == data.internal_data then 
-				my_data.waiting_for_navlink = nil
-				CopLogicAttack._upd_aim(data, my_data)
-				CopLogicTravel.upd_advance(data)
+			if action:expired() and not my_data.starting_advance_action and not highperformance then
+				--log("wee")
+				if my_data == data.internal_data then 
+					my_data.waiting_for_navlink = nil
+					CopLogicAttack._upd_aim(data, my_data)
+					CopLogicTravel.upd_advance(data)
+				end
 			end
 		end
 	elseif action_type == "turn" then
 		data.internal_data.turning = nil
 
-		if action:expired() and not highperformance then
+		if not_civilian and action:expired() and not highperformance then
 			my_data.waiting_for_navlink = nil
 			CopLogicAttack._upd_aim(data, my_data)
 			CopLogicTravel.upd_advance(data)
@@ -1645,13 +1648,13 @@ function CopLogicTravel.action_complete_clbk(data, action)
 	elseif action_type == "shoot" then
 		data.internal_data.shooting = nil
 	elseif action_type == "heal" then
-		if action:expired() and not highperformance then
+		if not_civilian and action:expired() and not highperformance then
 			my_data.waiting_for_navlink = nil
 			CopLogicAttack._upd_aim(data, my_data)
 			CopLogicTravel.upd_advance(data)
 		end
 	elseif action_type == "hurt" or action_type == "healed" or action_type == "act" and not my_data.advancing then
-		if action:expired() and not highperformance then	
+		if not_civilian and action:expired() and not highperformance then	
 			if my_data == data.internal_data then
 				my_data.waiting_for_navlink = nil
 				

@@ -183,23 +183,23 @@ function CharacterTweakData:setup_hhtacs()
 		end
 	
 		self.civilian.faster_reactions = true
-		self.civilian.submission_max = {30, 60}
+		self.civilian.submission_max = {60, 90}
 		self.civilian.submission_intimidate = 15
 		--self.civilian.scare_intimidate = 0
 		self.civilian_female.faster_reactions = true
-		self.civilian_female.submission_max = {30, 60}
+		self.civilian_female.submission_max = {60, 90}
 		self.civilian_female.submission_intimidate = 15
 		--self.civilian_female.scare_intimidate = -2
 		self.civilian_mariachi.faster_reactions = true
-		self.civilian_mariachi.submission_max = {30, 60}
+		self.civilian_mariachi.submission_max = {60, 90}
 		self.civilian_mariachi.submission_intimidate = 15
 		--self.civilian_mariachi.scare_intimidate = -2
 		self.civilian_no_penalty.faster_reactions = true
-		self.civilian_no_penalty.submission_max = {30, 60}
+		self.civilian_no_penalty.submission_max = {60, 90}
 		self.civilian_no_penalty.submission_intimidate = 15
 		--self.civilian_no_penalty.scare_intimidate = -2
 		self.bank_manager.faster_reactions = true
-		self.bank_manager.submission_max = {30, 60}
+		self.bank_manager.submission_max = {60, 90}
 		self.bank_manager.submission_intimidate = 15
 		--self.bank_manager.scare_intimidate = -2
 		

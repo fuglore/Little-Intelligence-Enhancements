@@ -224,7 +224,7 @@ function CivilianLogicSurrender.progress_to_drop(data, my_data)
 
 				managers.groupai:state():propagate_alert(alert)
 			end
-		elseif anim_data.panic and (anim_data.crouch or anim_data.move) or anim_data.react and not anim_data.react_enter then
+		elseif anim_data.panic and (anim_data.crouch or anim_data.move) or anim_data.react and not anim_data.react_enter or anim_data.halt and anim_data.to_idle then
 			local action_data = {
 				clamp_to_graph = true,
 				body_part = 1,
@@ -360,8 +360,6 @@ function CivilianLogicSurrender._update_enemy_detection(data, my_data)
 		my_data.submission_meter = my_data.submission_max
 	elseif visible then
 		my_data.submission_meter = math.min(my_data.submission_max, my_data.submission_meter + delta_t)
-	elseif not data.unit:anim_data().drop and data.char_tweak.faster_reactions then
-		my_data.submission_meter = 0
 	else
 		local subtract = data.char_tweak.faster_reactions and delta_t * 1.25 or delta_t
 		my_data.submission_meter = math.max(0, my_data.submission_meter - subtract)
@@ -391,7 +389,7 @@ function CivilianLogicSurrender.on_intimidated(data, amount, aggressor_unit, ski
 	local my_data = data.internal_data
 	
 	if not skip_delay then
-		skip_delay = CivilianLogicFlee.needs_panic_redirect(data)
+		skip_delay = CivilianLogicFlee.needs_panic_redirect(data) or data.unit:anim_data().halt and data.unit:anim_data().to_idle
 	end
 
 	if not my_data.delayed_intimidate_id or not my_data.delayed_clbks or not my_data.delayed_clbks[my_data.delayed_intimidate_id] then
@@ -465,7 +463,7 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 
 				managers.groupai:state():propagate_alert(alert)
 			end
-		elseif anim_data.panic and (anim_data.crouch or anim_data.move) or anim_data.react then
+		elseif anim_data.panic and (anim_data.crouch or anim_data.move) or anim_data.react and not anim_data.react_enter or anim_data.halt and anim_data.to_idle then
 			local action_data = {
 				clamp_to_graph = true,
 				body_part = 1,

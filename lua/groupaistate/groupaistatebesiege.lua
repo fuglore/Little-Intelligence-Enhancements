@@ -4660,18 +4660,7 @@ function GroupAIStateBesiege:_find_spawn_group_near_area(target_area, allowed_gr
 		local my_wgt 
 		
 		if hhtacs then
-			local wgt_dis = math.lerp(0.5, 1, math.min(1, dis / dis_limit))
-			
-			if self._spawn_group_timers[i] then
-				local last_spawn_t = self._t - self._spawn_group_timers[i]
-				local wgt_cd = math.lerp(0.1, 1, math.min(1, last_spawn_t / cooldown_double))
-				
-				my_wgt = wgt_dis * wgt_cd
-				my_wgt = my_wgt * 5
-			else
-				my_wgt = wgt_dis * 0.5
-				my_wgt = my_wgt * 5
-			end
+			my_wgt = math.lerp(0.5, 1, math.min(1, dis / dis_limit))
 		else
 			my_wgt = math.lerp(1, 0.2, math.min(1, dis / dis_limit)) * 5
 		end

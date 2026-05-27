@@ -128,7 +128,7 @@ function CivilianLogicFlee.ready_for_action(data)
 		return
 	end
 
-	return not data.unit:anim_data().react_enter and data.unit:anim_data().react or data.unit:anim_data().halt or data.unit:anim_data().panic and data.unit:anim_data().crouch
+	return not data.unit:anim_data().react_enter and data.unit:anim_data().react or data.unit:anim_data().halt and not data.unit:anim_data().to_idle or data.unit:anim_data().panic and data.unit:anim_data().crouch
 end
 
 function CivilianLogicFlee.needs_panic_redirect(data)
@@ -136,7 +136,7 @@ function CivilianLogicFlee.needs_panic_redirect(data)
 		return
 	end
 
-	return data.unit:anim_data().peaceful or data.unit:anim_data().call_police or data.unit:anim_data().halt or data.unit:anim_data().panic and not data.unit:anim_data().act_idle and data.unit:anim_data().act
+	return data.unit:anim_data().peaceful or data.unit:anim_data().call_police or data.unit:anim_data().halt and not data.unit:anim_data().to_idle or data.unit:anim_data().panic and not data.unit:anim_data().act_idle and data.unit:anim_data().act
 end
 
 function CivilianLogicFlee.on_alert(data, alert_data)
@@ -228,7 +228,7 @@ function CivilianLogicFlee.on_intimidated(data, amount, aggressor_unit)
 
 	local my_data = data.internal_data
 	
-	if CivilianLogicFlee.needs_panic_redirect(data) then
+	if CivilianLogicFlee.needs_panic_redirect(data) or data.unit:anim_data().halt and data.unit:anim_data().to_idle then
 		local params = {
 			data,
 			amount,

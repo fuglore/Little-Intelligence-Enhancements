@@ -137,8 +137,10 @@ function CivilianLogicIdle._upd_detection(data)
 	elseif not data.char_tweak.ignores_attention_focus then
 		CopLogicIdle._chk_focus_on_attention_object(data, my_data)
 	end
+	
+	local should_alert = data.name ~= "idle" or my_data.action_started
 
-	if not data.unit:movement():cool() and my_data.action_started == true and CivilianLogicFlee.needs_panic_redirect(data) then
+	if not data.unit:movement():cool() and should_alert and CivilianLogicFlee.needs_panic_redirect(data) then
 		local objective = data.objective
 
 		if not objective or objective.interrupt_dis == -1 or objective.is_default then

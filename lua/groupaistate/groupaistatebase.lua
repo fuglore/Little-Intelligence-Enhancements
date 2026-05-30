@@ -280,6 +280,7 @@ function GroupAIStateBase:register_criminal(unit)
 	local tracker = ext_mv:nav_tracker()
 	local seg = tracker:nav_segment()
 	local is_AI = nil
+	local had_no_player_criminals
 
 	if unit:base()._tweak_table then
 		is_AI = true
@@ -324,6 +325,14 @@ function GroupAIStateBase:register_criminal(unit)
 
 	if is_AI then
 		unit:movement():set_team(self._teams[tweak_data.levels:get_default_team_ID("player")])
+	end
+	
+	if not is_AI then
+		for c_key, c_record in pairs(self._ai_criminals) do
+			if alive(c_record.unit) and c_record.unit:brain():objective() and c_record.unit:brain():objective().type == "defend_area" then
+				self:on_criminal_jobless(c_record.unit)
+			end
+		end
 	end
 end
 
@@ -439,7 +448,7 @@ function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
 			local hostage = managers.trade:get_best_hostage(ai_pos)
 			skip_hostage_trade_time_reset = hostage
 
-			if hostage and mvector3.distance(ai_pos, hostage.m_pos) > 1500 then
+			if hostage then
 				self._guard_hostage_trade_time_map = self._guard_hostage_trade_time_map or {}
 				local time = Application:time()
 				local unit_key = unit:key()
@@ -452,7 +461,8 @@ function GroupAIStateBase:_determine_objective_for_criminal_AI(unit)
 						type = "defend_area",
 						stance = "hos",
 						stay_at_seg = true,
-						nav_seg = hostage.tracker:nav_segment()
+						nav_seg = hostage.tracker:nav_segment(),
+						hostage_key = hostage.unit:key()
 					}
 				end
 			end

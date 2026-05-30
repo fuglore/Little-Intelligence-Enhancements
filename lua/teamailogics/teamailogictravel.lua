@@ -119,9 +119,59 @@ function TeamAILogicTravel._upd_enemy_detection(data)
 		end
 	end
 	
+	local cant_advance
+	
 	if data.objective then
 		local objective = data.objective
+
+		if objective.hostage_key then
+			if not managers.groupai:state():all_hostages()[objective.hostage_key] then
+				managers.groupai:state():on_criminal_jobless(unit)
+
+				if my_data ~= data.internal_data then
+					return
+				end
+			end
+		end
+		
 		local objective_is_revive = objective.type == "revive"
+		
+		if my_data.coarse_path and objective_is_revive and new_attention and new_attention.dangerous_special then
+			local timer
+			
+			if not new_attention.verified and new_attention.verified_t and data.t - new_attention.verified_t < 5 then
+				timer = objective.follow_unit:base().is_local_player and objective.follow_unit:character_damage()._downed_timer
+				timer = timer or objective.follow_unit:interaction().get_waypoint_time and objective.follow_unit:interaction():get_waypoint_time()
+			end
+			
+			if new_attention.verified or timer and timer > 10 then
+				if mvector3.distance_sq(objective.follow_unit:movement():m_pos(), new_attention.m_pos) < 2250000 then
+					cant_advance = true
+					
+					if my_data.advancing and not data.unit:movement():chk_action_forbidden("walk") then
+						local new_action = {
+							body_part = 2,
+							type = "idle"
+						}
+
+						if data.unit:brain():action_request(new_action) then
+							local current_seg_id = data.unit:movement():nav_tracker():nav_segment()
+							local start_index = nil
+
+							for i, nav_point in ipairs(my_data.coarse_path) do
+								if current_seg_id == nav_point[1] then
+									start_index = i
+								end
+							end
+
+							if start_index then
+								my_data.coarse_path_index = math.min(start_index, #my_data.coarse_path - 1)
+							end
+						end
+					end
+				end
+			end
+		end
 	
 		if objective_is_revive or my_data.called or objective.type == "follow" and mvector3.distance_sq(objective.follow_unit:movement():m_pos(), data.m_pos) > 490000 then
 			if objective_is_revive or not new_prio_slot or new_prio_slot > 1 then
@@ -133,6 +183,8 @@ function TeamAILogicTravel._upd_enemy_detection(data)
 	else
 		my_data.low_value_att = nil
 	end
+
+	my_data.cant_advance = cant_advance or false
 
 	CopLogicAttack._upd_aim(data, my_data)
 

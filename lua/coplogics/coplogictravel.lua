@@ -266,10 +266,14 @@ end
 function CopLogicTravel._chk_start_pathing_to_next_nav_point(data, my_data)
 	my_data.waiting_for_navlink = nil
 
+	if my_data.cant_advance then
+		return
+	end
+
 	if not data.cool and not CopLogicTravel.chk_group_ready_to_move(data, my_data) then
 		return
 	end
-	
+
 	local nav_link = my_data.coarse_path[my_data.coarse_path_index + 1][3] --this is checking for the nav link
 	
 	if nav_link and alive(my_data.coarse_path[my_data.coarse_path_index + 1][3]) then --check if the navlink is alive
@@ -2228,7 +2232,34 @@ function CopLogicTravel._begin_coarse_pathing(data, my_data)
 		elseif data.unit:brain():search_for_coarse_path(my_data.coarse_path_search_id, nav_seg, verify_clbk) then
 			my_data.processing_coarse_path = true
 		end
+	end	
+end
+
+function CopLogicTravel._on_destination_reached(data)
+	local objective = data.objective
+	objective.in_place = true
+
+	if objective.type == "free" then
+		if not objective.action_duration then
+			data.objective_complete_clbk(data.unit, objective)
+
+			return
+		end
+	elseif objective.type == "flee" then
+		data.unit:brain():set_active(false)
+		data.unit:base():set_slot(data.unit, 0)
+
+		return
+	elseif objective.type == "defend_area" then
+		if objective.grp_objective and objective.grp_objective.type == "retire" then
+			data.unit:brain():set_active(false)
+			data.unit:base():set_slot(data.unit, 0)
+
+			return
+		elseif data.team.foes[tweak_data.levels:get_default_team_ID("player")] and data.unit:base():has_tag("law") then
+			managers.groupai:state():on_defend_travel_end(data.unit, objective)
+		end
 	end
 
-	
+	data.logic.on_new_objective(data)
 end

@@ -2783,7 +2783,7 @@ function CopLogicAttack._update_cover(data)
 
 					if data.objective and data.objective.type == "defend_area" then
 						if data.objective.grp_objective and data.objective.grp_objective.type == "reenforce_area" or data.objective.stay_at_seg then
-							search_nav_seg = data.objective.grp_objective.area and data.objective.grp_objective.area.nav_segs or data.objective.nav_seg
+							search_nav_seg = data.objective.grp_objective and data.objective.grp_objective.area and data.objective.grp_objective.area.nav_segs or data.objective.nav_seg
 						end
 					end
 					

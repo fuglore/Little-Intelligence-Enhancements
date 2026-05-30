@@ -142,10 +142,6 @@ end
 function CivilianLogicFlee.on_alert(data, alert_data)
 	local my_data = data.internal_data
 
-	if my_data.coarse_path then
-		return
-	end
-
 	if CopLogicBase.is_alert_aggressive(alert_data[1]) then
 		local aggressor = alert_data[5]
 
@@ -166,6 +162,10 @@ function CivilianLogicFlee.on_alert(data, alert_data)
 				return
 			end
 		end
+	end
+	
+	if my_data.coarse_path then
+		return
 	end
 	
 	local anim_data = data.unit:anim_data()
@@ -245,6 +245,16 @@ function CivilianLogicFlee.on_intimidated(data, amount, aggressor_unit)
 			amount,
 			aggressor_unit
 		}), TimerManager:game():time() + delay)
+	elseif my_data.delayed_intimidate_id then
+		managers.enemy:force_delayed_clbk(my_data.delayed_intimidate_id)
+		
+		if data.name == "surrender" then
+			local new_data = data.internal_data
+			local adj_sumbission = amount * data.char_tweak.submission_intimidate
+			new_data.submission_meter = math.min(new_data.submission_max, new_data.submission_meter + adj_sumbission)
+			local adj_scare = amount * data.char_tweak.scare_intimidate
+			new_data.scare_meter = math.max(0, new_data.scare_meter + adj_scare)
+		end
 	end
 end
 

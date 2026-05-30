@@ -203,11 +203,15 @@ function TeamAILogicAssault.update(data)
 		end
 	end
 
-	if not data.objective and (not data.path_fail_t or data.t > data.path_fail_t + 3) then
-		managers.groupai:state():on_criminal_jobless(unit)
+	local objective = data.objective
 
-		if my_data ~= data.internal_data then
-			return
+	if not objective or objective and objective.hostage_key and not managers.groupai:state():all_hostages()[objective.hostage_key] then
+		if not data.path_fail_t or data.t > data.path_fail_t + 3 then
+			managers.groupai:state():on_criminal_jobless(unit)
+
+			if my_data ~= data.internal_data then
+				return
+			end
 		end
 	end
 end

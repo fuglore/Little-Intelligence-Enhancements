@@ -45,7 +45,11 @@ function CivilianLogicIdle.enter(data, new_logic_name, enter_params)
 		data.unit:movement():set_stance(objective.stance)
 	end
 	
-	CivilianLogicTravel._chk_has_old_action(data, my_data)
+	local old_objective = enter_params and enter_params.old_objective
+	
+	if not old_objective or not old_objective.action then
+		CivilianLogicTravel._chk_has_old_action(data, my_data)
+	end
 
 	local attention_settings = nil
 
@@ -83,11 +87,15 @@ function CivilianLogicIdle.update(data)
 end
 
 function CivilianLogicIdle._perform_objective_action(data, my_data, objective)
-	if objective and not my_data.action_started and (data.unit:anim_data().act_idle or not data.unit:movement():chk_action_forbidden("action")) then
-		if objective.action then
+	if objective and not my_data.action_started then
+		if objective.action and objective.action.type == "act" then
 			my_data.action_started = data.unit:brain():action_request(objective.action)
 		else
 			my_data.action_started = true
+			
+			if objective.action then
+				data.unit:brain():action_request(objective.action)
+			end
 		end
 
 		if my_data.action_started then
@@ -103,6 +111,52 @@ function CivilianLogicIdle._perform_objective_action(data, my_data, objective)
 				objective.action_start_clbk(data.unit)
 			end
 		end
+	end
+end
+
+function CivilianLogicIdle.on_new_objective(data, old_objective, params)
+	local new_objective = data.objective
+
+	CivilianLogicIdle.super.on_new_objective(data, old_objective)
+
+	local my_data = data.internal_data
+
+	if new_objective then
+		if new_objective.type == "escort" then
+			CopLogicBase._exit(data.unit, "escort")
+		elseif CopLogicIdle._chk_objective_needs_travel(data, new_objective) then
+			CopLogicBase._exit(data.unit, "travel")
+		elseif new_objective.type == "act" then
+			local params = {old_objective = old_objective and old_objective.action and old_objective.action.type == "act" and old_objective}
+			CopLogicBase._exit(data.unit, "idle", params)
+		elseif data.is_tied then
+			CopLogicBase._exit(data.unit, "surrender", params)
+		elseif new_objective.type == "free" then
+			if data.unit:movement():cool() or not new_objective.is_default then
+				CopLogicBase._exit(data.unit, "idle")
+			else
+				CopLogicBase._exit(data.unit, "flee")
+			end
+		elseif new_objective.type == "surrender" then
+			CopLogicBase._exit(data.unit, "surrender", params)
+		end
+	elseif data.unit:movement():cool() then
+		CopLogicBase._exit(data.unit, "idle")
+	elseif data.is_tied then
+		CopLogicBase._exit(data.unit, "surrender", params)
+	else
+		CopLogicBase._exit(data.unit, "flee")
+	end
+
+	if new_objective and new_objective.stance then
+		local stance_cool = new_objective.stance == "ntl"
+
+		data.unit:movement():set_cool(stance_cool)
+		data.unit:movement():set_stance(new_objective.stance)
+	end
+
+	if old_objective and old_objective.fail_clbk then
+		old_objective.fail_clbk(data.unit)
 	end
 end
 
@@ -137,7 +191,7 @@ function CivilianLogicIdle._upd_detection(data)
 	elseif not data.char_tweak.ignores_attention_focus then
 		CopLogicIdle._chk_focus_on_attention_object(data, my_data)
 	end
-	
+
 	local should_alert = data.name ~= "idle" or my_data.action_started
 
 	if not data.unit:movement():cool() and should_alert and CivilianLogicFlee.needs_panic_redirect(data) then

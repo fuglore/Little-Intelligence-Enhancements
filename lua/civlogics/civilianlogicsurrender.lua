@@ -255,6 +255,7 @@ function CivilianLogicSurrender._update_enemy_detection(data, my_data)
 	local delta_t = t - my_data.last_upd_t
 	local my_pos = data.unit:movement():m_head_pos()
 	local enemies = managers.groupai:state():all_criminals()
+	local player_criminals = managers.groupai:state():all_player_criminals()
 	local visible, closest_dis, closest_enemy = nil
 	my_data.inside_intimidate_aura = nil
 	local my_tracker = data.unit:movement():nav_tracker()
@@ -293,11 +294,11 @@ function CivilianLogicSurrender._update_enemy_detection(data, my_data)
 				local dis = mvector3.direction(my_vec, enemy_pos, my_pos)
 				local inside_aura = nil
 
-				if u_data.unit:base().is_local_player then
+				if enemy_unit:base().is_local_player then
 					if managers.player:has_category_upgrade("player", "intimidate_aura") and dis < managers.player:upgrade_value("player", "intimidate_aura", 0) then
 						inside_aura = true
 					end
-				elseif u_data.unit:base().is_husk_player and u_data.unit:base():upgrade_value("player", "intimidate_aura") and dis < u_data.unit:base():upgrade_value("player", "intimidate_aura") then
+				elseif enemy_unit:base().is_husk_player and enemy_unit:base():upgrade_value("player", "intimidate_aura") and dis < enemy_unit:base():upgrade_value("player", "intimidate_aura") then
 					inside_aura = true
 				end
 
@@ -314,23 +315,12 @@ function CivilianLogicSurrender._update_enemy_detection(data, my_data)
 					if enemy_unit:base().is_local_player then
 						look_vec = enemy_unit:movement():m_head_rot():y()
 					else
-						if enemy_unit:inventory() and enemy_unit:inventory():equipped_unit() then
-							if enemy_unit:movement()._stance.values[3] >= 0.6 then
-								local weapon_fire_obj = enemy_unit:inventory():equipped_unit():get_object(Idstring("fire"))
-
-								if alive(weapon_fire_obj) then
-									look_vec = weapon_fire_obj:rotation():y()
-								end
-							end
+						look_vec = enemy_unit:movement():detect_look_dir()
+						
+						if not enemy_unit:base().is_husk_player then
+							look_vec = look_vec:with_z(0):normalized()
+							my_vec = my_vec:with_z(0)
 						end
-
-						if not look_vec then
-							look_vec = enemy_unit:movement():m_head_rot():z()
-						end
-					end
-					
-					if look_vec then
-						mvector3.normalize(look_vec)
 					end
 
 					local focus = my_vec:dot(look_vec)
@@ -409,6 +399,11 @@ function CivilianLogicSurrender.on_intimidated(data, amount, aggressor_unit, ski
 				aggressor_unit
 			}), TimerManager:game():time() + delay)
 		end
+	else
+		local adj_sumbission = amount * data.char_tweak.submission_intimidate
+		my_data.submission_meter = math.min(my_data.submission_max, my_data.submission_meter + adj_sumbission)
+		local adj_scare = amount * data.char_tweak.scare_intimidate
+		my_data.scare_meter = math.max(0, my_data.scare_meter + adj_scare)
 	end
 end
 
@@ -422,16 +417,16 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 		my_data.delayed_intimidate_id = nil
 	end
 
-	if data.unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().act_idle and not data.unit:anim_data().peaceful then
-		return
-	end
-
 	local amount = params[2]
 	local anim_data = data.unit:anim_data()
 	local adj_sumbission = amount * data.char_tweak.submission_intimidate
 	my_data.submission_meter = math.min(my_data.submission_max, my_data.submission_meter + adj_sumbission)
 	local adj_scare = amount * data.char_tweak.scare_intimidate
 	my_data.scare_meter = math.max(0, my_data.scare_meter + adj_scare)
+
+	if data.unit:movement():chk_action_forbidden("walk") and not data.unit:anim_data().act_idle and not data.unit:anim_data().peaceful then
+		return
+	end
 
 	if not anim_data.drop then
 		data.unit:movement():_unfreeze_anims()

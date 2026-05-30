@@ -66,6 +66,10 @@ function GroupAIStateBesiege:_draw_enemy_activity(t)
 			text_str = l_data.team.id .. ":" .. text_str
 		end
 		
+		if l_data.internal_data and l_data.internal_data.submission_meter and l_data.internal_data.submission_max then
+			text_str = text_str .. ":submission:" .. tostring(math.floor(l_data.internal_data.submission_meter)) .. "/" .. tostring(math.floor(l_data.internal_data.submission_max))
+		end
+		
 		if l_data.internal_data and l_data.internal_data.attitude then
 			text_str = text_str .. ":" .. l_data.internal_data.attitude
 		end

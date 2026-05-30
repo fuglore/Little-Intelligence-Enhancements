@@ -329,7 +329,9 @@ function GroupAIStateBase:register_criminal(unit)
 	
 	if not is_AI then
 		for c_key, c_record in pairs(self._ai_criminals) do
-			if alive(c_record.unit) and c_record.unit:brain():objective() and c_record.unit:brain():objective().type == "defend_area" then
+			local objective = alive(c_record.unit) and c_record.unit:brain().objective and c_record.unit:brain():objective()
+		
+			if objective and objective.type == "defend_area" then
 				self:on_criminal_jobless(c_record.unit)
 			end
 		end

@@ -3144,7 +3144,7 @@ function GroupAIStateBesiege:_set_assault_objective_to_group(group, phase)
 					for civ_key, civ_data in pairs(managers.enemy:all_civilians()) do
 						local civ_area = managers.groupai:state():get_area_from_nav_seg_id(civ_data.tracker:nav_segment())
 						
-						if civ_area == assault_area or mvector3.distance(civ_data.m_pos, old_target_pos) <= 700 then
+						if civ_area == assault_area or mvector3.distance(civ_data.m_pos, old_target_pos) <= 1000 then
 							use_gas = nil
 							
 							break
@@ -4086,7 +4086,7 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 				for id, data in pairs(self._smoke_grenades) do
 					local smoke_pos = data.detonate_pos
 					
-					if mvec3_dis(smoke_pos, detonate_pos) < 40000 then
+					if mvec3_dis(smoke_pos, detonate_pos) < 90000 then
 						detonate_pos = nil
 						break
 					end
@@ -4167,7 +4167,7 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 											for id, data in pairs(self._smoke_grenades) do
 												local smoke_pos = data.detonate_pos
 												
-												if mvec3_dis(smoke_pos, test_pos) < 40000 then
+												if mvec3_dis(smoke_pos, test_pos) < 90000 then
 													good_pos = nil
 													break
 												end
@@ -4183,6 +4183,8 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 												shooter_pos = mvector3.copy(u_data.m_pos)
 												shooter_u_data = u_data
 												best_dis = dis
+												
+												break
 											end
 										end
 									end
@@ -4213,6 +4215,8 @@ function GroupAIStateBesiege:_chk_group_use_smoke_grenade(group, task_data, deto
 									shooter_pos = mvector3.copy(u_data.m_pos)
 									shooter_u_data = u_data
 									best_dis = dis
+									
+									break
 								end
 							end
 						end
@@ -4327,6 +4331,8 @@ function GroupAIStateBesiege:_chk_group_use_flash_grenade(group, task_data, deto
 											shooter_pos = mvector3.copy(u_data.m_pos)
 											shooter_u_data = u_data
 											best_dis = dis
+											
+											break
 										end
 									end
 								end

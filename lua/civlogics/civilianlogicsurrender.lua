@@ -204,6 +204,7 @@ function CivilianLogicSurrender.progress_to_drop(data, my_data)
 			}
 
 			if data.unit:brain():action_request(action_data) then
+				my_data.progressing_to_drop = true
 				data.unit:movement():enable_update(true)
 			end
 			
@@ -241,8 +242,9 @@ function CivilianLogicSurrender.progress_to_drop(data, my_data)
 				managers.groupai:state():unregister_fleeing_civilian(data.key)
 				data.unit:interaction():set_tweak_data("intimidate")
 				data.unit:interaction():set_active(true, true)
-
 				my_data.interaction_active = true
+			else
+				my_data.progressing_to_drop = true
 			end
 		end
 	end
@@ -440,7 +442,10 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 				type = "act"
 			}
 
-			data.unit:brain():action_request(action_data)
+			if data.unit:brain():action_request(action_data) then
+				my_data.progressing_to_drop = true
+			end
+			
 			data.unit:sound():say("a02x_any", true)
 
 			if data.unit:unit_data().mission_element then
@@ -466,7 +471,11 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 				variant = anim_data.move and "halt" or "drop"
 			}
 			local action_res = data.unit:brain():action_request(action_data)
-
+			
+			if action_res then
+				my_data.progressing_to_drop = true
+			end
+			
 			if action_res and action_data.variant == "drop" then
 				managers.groupai:state():unregister_fleeing_civilian(data.key)
 				data.unit:interaction():set_tweak_data("intimidate")
@@ -474,6 +483,25 @@ function CivilianLogicSurrender._delayed_intimidate_clbk(ignore_this, params)
 
 				my_data.interaction_active = true
 			end
+		end
+	end
+end
+
+function CivilianLogicSurrender.action_complete_clbk(data, action)
+	local my_data = data.internal_data
+	local action_type = action:type()
+
+	if action_type == "act" and my_data.interaction_active then
+		data.unit:interaction():set_active(false, true)
+
+		my_data.interaction_active = nil
+	end
+	
+	if action_type == "act" and action:expired() and my_data.progressing_to_drop then
+		my_data.progressing_to_drop = nil
+		
+		if my_data.submission_meter > 0 or data.is_tied then
+			CivilianLogicSurrender.progress_to_drop(data, my_data)
 		end
 	end
 end

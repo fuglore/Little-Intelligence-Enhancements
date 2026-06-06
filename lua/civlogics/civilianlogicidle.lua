@@ -378,3 +378,27 @@ function CivilianLogicIdle.is_available_for_assignment(data, objective)
 
 	return (my_data.action_started == true or data.unit:anim_data().act_idle or data.unit:anim_data().peaceful or data.unit:anim_data().idle) and not my_data.exiting and not my_data.delayed_alert_id
 end
+
+function CivilianLogicIdle.is_obstructed(data, aggressor_unit)
+	local objective = data.objective
+
+	if not objective or objective.is_default or (objective.in_place or not objective.nav_seg) and not objective.action and not objective.action_duration then
+		return true
+	end
+
+	if objective.interrupt_dis == -1 then
+		return true
+	end
+
+	if aggressor_unit and aggressor_unit:movement() and objective.interrupt_dis and mvector3.distance_sq(data.m_pos, aggressor_unit:movement():m_newest_pos()) < objective.interrupt_dis * objective.interrupt_dis then
+		return true
+	end
+
+	if objective.interrupt_health then
+		local health_ratio = data.unit:character_damage():health_ratio()
+
+		if health_ratio < 1 and health_ratio < objective.interrupt_health then
+			return true
+		end
+	end
+end

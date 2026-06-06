@@ -762,6 +762,53 @@ function CopLogicAttack._upd_aim(data, my_data)
 		local enemy_m_pos = not focus_enemy.lost_track and focus_enemy.last_verified_m_pos or focus_enemy.verified_m_pos or focus_enemy.m_pos
 		local enemy_dis
 		
+		local weapon_range = my_data.weapon_range
+		
+		if not weapon_range then
+			local complained = my_data.complained_about_invalid_range
+			local w_td = alive(data.unit) and data.unit:inventory():equipped_unit() and data.unit:inventory():equipped_unit():base():weapon_tweak_data()
+
+			if w_td then
+				local cw_td = data.char_tweak.weapon[w_td.usage]
+				weapon_range = cw_td and cw_td.range 
+				
+				if not weapon_range then
+					if not complained then
+						log(data.unit:base()._tweak_table)
+						log(data.name)
+						log("CopLogicAttack.upd_aim, weapon invalid, using backup values")
+						complained = true
+					end
+					
+					weapon_range = {
+						optimal = 2000,
+						far = 5000,
+						close = 1000
+					}
+				elseif not complained then
+					log(data.unit:base()._tweak_table)
+					log(data.name)
+					log("CopLogicAttack.upd_aim, range unset, setting range")
+					complained = true
+				end
+			else
+				if not complained then
+					log(data.unit:base()._tweak_table)
+					log(data.name)
+					log("CopLogicAttack.upd_aim, weapon dead or range unset, using backup values")
+					complained = true
+				end
+				
+				weapon_range = {
+					optimal = 2000,
+					far = 5000,
+					close = 1000
+				}
+			end
+			
+			my_data.complained_about_invalid_range = complained
+		end
+		
 		if not focus_enemy.verified and not focus_enemy.lost_track and focus_enemy.last_verified_pos then
 			enemy_dis = mvec3_dis(data.m_pos, focus_enemy.last_verified_m_pos)
 			focus_enemy.last_verified_dis = enemy_dis
@@ -876,7 +923,7 @@ function CopLogicAttack._upd_aim(data, my_data)
 							end
 						else
 							local can_turn_to_shoot = focus_enemy.dmg_t and data.t - focus_enemy.dmg_t < 5
-							can_turn_to_shoot = can_turn_to_shoot or focus_enemy.acquire_t and data.t - focus_enemy.acquire_t < 4 and focus_enemy.dis <= my_data.weapon_range.close
+							can_turn_to_shoot = can_turn_to_shoot or focus_enemy.acquire_t and data.t - focus_enemy.acquire_t < 4 and focus_enemy.dis <= weapon_range.close
 							
 							if not can_turn_to_shoot then
 								shoot = false
@@ -888,7 +935,8 @@ function CopLogicAttack._upd_aim(data, my_data)
 			end
 		end
 		
-		local firing_range = running and my_data.weapon_range.close or my_data.weapon_range.far
+		
+		local firing_range = running and weapon_range.close or weapon_range.far
 		local time_since_verification = focus_enemy.verified_t and data.t - focus_enemy.verified_t
 
 		if focus_enemy.verified or focus_enemy.nearly_visible or time_since_verification and time_since_verification <= 0.2 then
@@ -1347,11 +1395,11 @@ function CopLogicAttack._get_expected_pos(data, my_data)
 			return
 		end
 		
-		local found_doors = managers.navigation:find_segment_doors(from_nav_seg, callback(CopLogicAttack, CopLogicAttack, "_chk_is_right_segment", to_nav_seg))
+		local found_doors = managers.navigation:find_segment_doors(from_nav_seg, callback(CopLogicAttack, CopLogicAttack, "_chk_is_right_segment", to_nav_seg), true)
 		
 		if #found_doors == 0 then
 			if to_nav_seg ~= enemy_seg then
-				found_doors = managers.navigation:find_segment_doors(from_nav_seg, callback(CopLogicAttack, CopLogicAttack, "_chk_is_right_segment", enemy_seg))
+				found_doors = managers.navigation:find_segment_doors(from_nav_seg, callback(CopLogicAttack, CopLogicAttack, "_chk_is_right_segment", enemy_seg), true)
 			end
 			
 			if not #found_doors == 0 then
@@ -1642,7 +1690,10 @@ function CopLogicAttack._move_back_into_field_position(data, my_data)
 	end
 end
 
-function CopLogicAttack._get_cover_offset_pos(data, cover_data, threat_pos)
+function CopLogicAttack._get_cover_offset_pos(data, cover_data, threat_pos) --not sure if this is even doing anything useful...
+	do return end
+
+
 	local threat_vec = threat_pos - cover_data[1][1]
 
 	mvector3.set_z(threat_vec, 0)
@@ -1690,7 +1741,7 @@ function CopLogicAttack._verify_cover(cover, threat_pos, min_dis, max_dis)
 	
 	local cover_dot = mvector3.dot(temp_vec1, cover[2])
 
-	if cover_dot < 0.7 then
+	if LIES.settings.lua_cover < 2 and cover_dot < 0.7 then
 		return
 	end
 
@@ -2680,8 +2731,9 @@ function CopLogicAttack._update_cover(data)
 				local advance_pos = data.objective.follow_unit:brain() and data.objective.follow_unit:brain():is_advancing() --this is fucking crashing
 				local near_pos = advance_pos or data.objective.follow_unit:movement():m_newest_pos()
 				local dis = data.objective.distance and data.objective.distance * 0.6 or 450
+				local needs_vis_cover = want_to_take_cover and LIES.settings.lua_cover > 1 and my_data.in_cover and not my_data.in_cover[3]
 				
-				if not best_cover or mvec3_dis_sq(near_pos, best_cover[1][1]) > dis * dis or not CopLogicAttack._verify_cover(best_cover[1], threat_pos) then
+				if not best_cover or needs_vis_cover or mvec3_dis_sq(near_pos, best_cover[1][1]) > dis * dis or math.abs(best_cover[1][1].z - near_pos.z) > 250 or not CopLogicAttack._verify_cover(best_cover[1], threat_pos) then
 					local follow_unit_seg = data.objective.follow_unit:movement():nav_tracker():nav_segment()
 					local found_cover = managers.navigation:find_cover_in_nav_seg_3(follow_unit_seg, dis, near_pos, threat_pos)
 

@@ -138,18 +138,24 @@ function TeamAILogicIdle.is_available_for_assignment(data, new_objective)
 	return true
 end
 
+local tankboss = {
+	triad_boss = true,
+	deep_boss = true
+}
+
 function TeamAILogicIdle._get_priority_attention(data, attention_objects, reaction_func)
 	reaction_func = reaction_func or TeamAILogicBase._chk_reaction_to_attention_object
 	local best_target, best_target_priority_slot, best_target_priority, best_target_reaction = nil
+
+	local targeted_by_other_AI = {}
+	local all_AI_criminals = managers.groupai:state():all_AI_criminals()
 	
-	local ranges = data.internal_data and data.internal_data.weapon_range
-	
-	if not ranges then
-		ranges = {
-			optimal = 2000,
-			far = 5000,
-			close = 1000
-		}
+	if all_AI_criminals[data.key] then
+		for c_key, e_key in pairs(TeamAILogicBase._current_att_objs) do
+			if e_key and c_key ~= data.key then
+				targeted_by_other_AI[e_key] = true
+			end
+		end
 	end
 
 	for u_key, attention_data in pairs(attention_objects) do
@@ -182,7 +188,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 				local aimed_at = TeamAILogicIdle.chk_am_i_aimed_at(data, attention_data, attention_data.aimed_at and 0.95 or 0.985)
 				attention_data.aimed_at = aimed_at
 				local dangerous_special = nil
-			
+				
+				local verified_dt = attention_data.verified_t and data.t - attention_data.verified_t or 10000
 				local alert_dt = attention_data.alert_t and data.t - attention_data.alert_t or 10000
 				local dmg_dt = attention_data.dmg_t and data.t - attention_data.dmg_t or 10000
 				local mark_dt = attention_data.mark_t and data.t - attention_data.mark_t or 10000
@@ -200,6 +207,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 				local visible = attention_data.verified
 				
 				local target_priority_slot = 0
+				local ignore_other_team_AI_targets
 
 				if visible then
 					local is_shielded = TeamAILogicIdle._ignore_shield and TeamAILogicIdle._ignore_shield(data.unit, attention_data) or nil
@@ -213,7 +221,17 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 						local been_marked = mark_dt < 8
 						local attention_unit = attention_data.unit
 						
-						if attention_unit:base().sentry_gun then
+						if tankboss[att_unit:base()._tweak_table] then
+							ignore_other_team_AI_targets = true
+							
+							if near and (has_alerted and has_damaged) then
+								target_priority_slot = 2
+							elseif near then
+								target_priority_slot = 3
+							else
+								target_priority_slot = 6
+							end
+						elseif att_unit:base().sentry_gun then
 							if near and (has_alerted and has_damaged) then
 								target_priority_slot = 7
 							elseif near then
@@ -221,8 +239,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 							else
 								target_priority_slot = 9
 							end
-						elseif attention_unit:base().has_tag and attention_unit:base():has_tag("special") then
-							if attention_unit:base():has_tag("sniper") and aimed_at then
+						elseif att_unit:base().has_tag and att_unit:base():has_tag("special") then
+							if att_unit:base():has_tag("sniper") and aimed_at then
 								dangerous_special = true
 								
 								if has_alerted then
@@ -230,8 +248,8 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								else
 									target_priority_slot = 7
 								end
-							elseif attention_unit:base():has_tag("spooc") then
-								local trying_to_kick_criminal = attention_unit:brain()._logic_data and attention_unit:brain()._logic_data.internal_data and attention_unit:brain()._logic_data.internal_data.spooc_attack
+							elseif att_unit:base():has_tag("spooc") then
+								local trying_to_kick_criminal = att_unit:brain()._logic_data and att_unit:brain()._logic_data.internal_data and att_unit:brain()._logic_data.internal_data.spooc_attack
 							
 								if distance < 1500 or trying_to_kick_criminal then
 									dangerous_special = true
@@ -240,6 +258,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 										target_priority_slot = 1
 
 										if trying_to_kick_criminal.target_u_key == data.key then
+											ignore_other_team_AI_targets = true
 											target_priority = target_priority * 0.1
 										end
 									else
@@ -250,17 +269,21 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								else
 									target_priority_slot = 6
 								end
-							elseif attention_unit:base():has_tag("phalanx_vip") or managers.groupai:state():phalanx_vip() and attention_unit:base()._tweak_table == "phalanx_minion" or attention_unit:base()._phalanx_pusher then
+							elseif att_unit:base():has_tag("phalanx_vip") or managers.groupai:state():phalanx_vip() and att_unit:base()._tweak_table == "phalanx_minion" or att_unit:base()._phalanx_pusher then
 								target_priority_slot = 2
-							elseif attention_unit:base():has_tag("medic") then
+							elseif att_unit:base():has_tag("medic") then
 								if near and (has_alerted and has_damaged) then
 									target_priority_slot = 2
+									
+									if att_unit:base():has_tag("tank") then
+										ignore_other_team_AI_targets = true
+									end
 								elseif near then
 									target_priority_slot = 3
 								else
 									target_priority_slot = 6
 								end
-							elseif attention_unit:base():has_tag("taser") then
+							elseif att_unit:base():has_tag("taser") then
 								local trying_to_tase_criminal = att_unit:brain()._logic_data and att_unit:brain()._logic_data.internal_data and att_unit:brain()._logic_data.internal_data.tasing
 								
 								if trying_to_tase_criminal or distance < 1500 then
@@ -270,6 +293,7 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 										target_priority_slot = 1 --try to stagger the taser
 
 										if trying_to_tase_criminal.target_u_key == data.key then
+											ignore_other_team_AI_targets = true
 											target_priority = target_priority * 0.1
 										end
 									else
@@ -280,21 +304,22 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 								else
 									target_priority_slot = 6
 								end
-							elseif attention_unit:base():has_tag("tank") or attention_unit:base()._tweak_table == "marshal_shield_break" then
-								local dozer_type = attention_unit:base()._tweak_table
+							elseif att_unit:base():has_tag("tank") or att_unit:base()._tweak_table == "marshal_shield_break" then
+								local dozer_type = att_unit:base()._tweak_table
 								
 								if near or dozer_type == "tank_mini" then
 									--dangerous_special = true
 									
 									if dozer_type == "tank_mini" then
 										target_priority_slot = 4
+										ignore_other_team_AI_targets = true
 									else
 										target_priority_slot = 5
 									end
 								else
 									target_priority_slot = 8
 								end
-							elseif attention_unit:base():has_tag("marksman") then
+							elseif att_unit:base():has_tag("marksman") then
 								if has_damaged then
 									target_priority_slot = 6
 								elseif has_alerted then
@@ -326,6 +351,9 @@ function TeamAILogicIdle._get_priority_attention(data, attention_objects, reacti
 				if reaction < AIAttentionObject.REACT_COMBAT then
 					target_priority = target_priority * 10
 					target_priority_slot = 11 + target_priority_slot + math.max(0, AIAttentionObject.REACT_COMBAT - reaction)
+				elseif not ignore_other_team_AI_targets and targeted_by_other_AI[u_key] then
+					target_priority = target_priority * 2
+					target_priority_slot = target_priority_slot + 3
 				end
 
 				if target_priority_slot ~= 0 then

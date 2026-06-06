@@ -1,4 +1,4 @@
-TeamAILogicAssault._COVER_CHK_INTERVAL = 0.7
+TeamAILogicAssault._COVER_CHK_INTERVAL = 0.2
 
 function TeamAILogicAssault.enter(data, new_logic_name, enter_params)
 	TeamAILogicBase.enter(data, new_logic_name, enter_params)
@@ -460,7 +460,7 @@ function TeamAILogicAssault.action_complete_clbk(data, action)
 		end
 		
 		if action:expired() then
-			data.logic._upd_aim(data, my_data)
+			CopLogicAttack._upd_aim(data, my_data)
 		end
 		
 		if data.attention_obj and (not TeamAILogicAssault._mark_special_t or TeamAILogicAssault._mark_special_t + 6 < data.t) and not my_data.acting and not data.unit:sound():speaking() then

@@ -140,6 +140,12 @@ function CopLogicBase.should_duck_on_alert(data, alert_data)
 	return --let other things tell to crouch
 end
 
+function CopLogicBase.pre_destroy(data)
+	if TeamAILogicBase._current_att_objs[data.key] then
+		TeamAILogicBase._current_att_objs[data.key] = nil
+	end
+end
+
 function CopLogicBase.upd_falloff_sim(data)
 	local my_data = data.internal_data
 	local focus_enemy = data.attention_obj
